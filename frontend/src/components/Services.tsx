@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Play, Square, Trash2, Plus, Terminal, RefreshCw } from 'lucide-react'
+import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import Loading, { SkeletonLoader } from './Loading'
 import ConfirmDialog from './ConfirmDialog'
+import { useWorkspace } from '../contexts/WorkspaceContext'
 
 interface Service {
   id: string
@@ -19,6 +20,7 @@ interface Service {
 }
 
 export default function Services() {
+  const { activeWorkspace } = useWorkspace()
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -45,12 +47,21 @@ export default function Services() {
   })
 
   const fetchServices = async () => {
+    if (!activeWorkspace) {
+      setServices([])
+      return
+    }
+
     setLoading(true)
     try {
       const response = await axios.get('/api/services')
       setServices(response.data.services)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching services:', error)
+      const errorMessage = error.response?.data?.error || error.message
+      if (errorMessage.includes('No active workspace')) {
+        toast.error('Please activate a workspace first')
+      }
     } finally {
       setLoading(false)
     }
@@ -70,7 +81,7 @@ export default function Services() {
     // Auto-refresh every 3 seconds
     const interval = setInterval(fetchServices, 3000)
     return () => clearInterval(interval)
-  }, [])
+  }, [activeWorkspace]) // Refresh when workspace changes
 
   useEffect(() => {
     if (selectedService) {
@@ -148,11 +159,28 @@ export default function Services() {
   }
 
   return (
-    <div className="p-8 h-full flex flex-col">
+    <div className="h-full flex flex-col">
+      {/* No Workspace Warning */}
+      {!activeWorkspace && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
+            <div>
+              <p className="text-sm text-yellow-700">
+                <strong className="font-medium">No active workspace.</strong> Please create or activate a workspace to manage services.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Service Manager</h1>
-          <p className="text-gray-600">Start, stop, and monitor your services</p>
+          <p className="text-gray-600">
+            Start, stop, and monitor your services
+            {activeWorkspace && <span className="text-blue-600 font-medium"> in {activeWorkspace.name}</span>}
+          </p>
         </div>
         <div className="flex gap-3">
           <button
