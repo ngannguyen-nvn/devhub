@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { GitBranch, RefreshCw, Folder, AlertCircle } from 'lucide-react'
 import axios from 'axios'
+import { SkeletonLoader } from './Loading'
 
 interface Repository {
   name: string
@@ -69,6 +70,10 @@ export default function Dashboard() {
           <AlertCircle size={20} />
           {error}
         </div>
+      )}
+
+      {loading && repos.length === 0 && (
+        <SkeletonLoader count={3} />
       )}
 
       {repos.length === 0 && !loading && (

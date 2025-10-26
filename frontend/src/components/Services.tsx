@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Play, Square, Trash2, Plus, Terminal, RefreshCw } from 'lucide-react'
 import axios from 'axios'
+import Loading, { SkeletonLoader } from './Loading'
 
 interface Service {
   id: string
@@ -222,6 +223,10 @@ export default function Services() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-auto">
         {/* Services List */}
         <div className="space-y-4">
+          {loading && services.length === 0 && (
+            <SkeletonLoader count={3} />
+          )}
+
           {services.length === 0 && !loading && (
             <div className="text-center py-12 text-gray-500">
               <Terminal size={48} className="mx-auto mb-4 text-gray-400" />
