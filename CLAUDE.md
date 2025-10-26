@@ -10,10 +10,10 @@ This document contains everything needed to understand and continue developing D
 
 **DevHub** is a developer productivity tool for managing microservices ecosystems locally.
 
-**Current Status:** MVP v1.0 - All 4 priorities complete ✅ + Enhanced Workspace Management
+**Current Status:** MVP v1.0 - All 4 priorities complete ✅ + Full Workspace Scoping
 **Tech Stack:** React + Vite (frontend), Express + TypeScript (backend), SQLite (database)
 **Repository:** https://github.com/ngannguyen-nvn/devhub
-**Branch:** `feature/enhanced-workspace-management`
+**Branch:** `claude/review-workspace-implementation-011CUWCRV4ibC76y9ZFg3Hef`
 
 ---
 
@@ -65,16 +65,18 @@ This document contains everything needed to understand and continue developing D
    - Located: `frontend/src/components/Environment.tsx`, `backend/src/services/envManager.ts`
 
 7. **Hierarchical Workspace Management** (Priority 3)
+   - **Full Resource Scoping:** All resources (services, env profiles, notes) belong to workspaces
    - Workspace → Snapshots hierarchical structure
    - Database migration system with automatic execution
    - Hybrid workspace creation (auto from folder scan + manual)
    - 3-level navigation UI (Workspace List → Workspace Detail → Snapshot Detail)
-   - Breadcrumb navigation
+   - Breadcrumb navigation & workspace switcher in header
    - Capture and restore workspace states (running services, git branches)
-   - Cascade deletion (workspace → snapshots)
+   - Cascade deletion (workspace → snapshots → all resources)
    - Active workspace pattern (single active workspace at a time)
-   - Located: `frontend/src/components/Workspaces.tsx`, `backend/src/services/workspaceManager.ts`
-   - Migration: `backend/src/db/migrations/001_workspace_hierarchy.ts`
+   - Complete isolation between workspaces
+   - Located: `frontend/src/components/Workspaces.tsx`, `frontend/src/contexts/WorkspaceContext.tsx`, `backend/src/services/workspaceManager.ts`
+   - Migrations: `backend/src/db/migrations/001_workspace_hierarchy.ts`, `002_workspace_scoping.ts`
 
 8. **Wiki/Notes System** (Priority 4)
    - Markdown-based documentation system
@@ -99,7 +101,8 @@ devhub/
 │   │   │   ├── index.ts           # SQLite database init
 │   │   │   ├── migrationRunner.ts # Migration execution framework
 │   │   │   └── migrations/
-│   │   │       └── 001_workspace_hierarchy.ts  # Workspace hierarchy migration
+│   │   │       ├── 001_workspace_hierarchy.ts  # Workspace hierarchy migration
+│   │   │       └── 002_workspace_scoping.ts    # Resource scoping migration
 │   │   ├── routes/
 │   │   │   ├── repos.ts           # Repository scanning endpoints
 │   │   │   ├── services.ts        # Service management endpoints
@@ -122,17 +125,20 @@ devhub/
 ├── frontend/             # React + Vite (port 3000)
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Dashboard.tsx      # Repository scanner UI
-│   │   │   ├── Services.tsx       # Service manager UI
-│   │   │   ├── Docker.tsx         # Docker management UI
-│   │   │   ├── Environment.tsx    # Environment variables UI
-│   │   │   ├── Workspaces.tsx     # Workspace snapshots UI
-│   │   │   ├── Wiki.tsx           # Wiki/Notes UI
-│   │   │   └── Sidebar.tsx        # Navigation sidebar
-│   │   ├── App.tsx                # Main app component
-│   │   ├── main.tsx               # React entry point
-│   │   └── index.css              # Tailwind styles
-│   ├── vite.config.ts             # Vite config (includes proxy to backend)
+│   │   │   ├── Dashboard.tsx          # Repository scanner UI
+│   │   │   ├── Services.tsx           # Service manager UI (workspace-scoped)
+│   │   │   ├── Docker.tsx             # Docker management UI
+│   │   │   ├── Environment.tsx        # Environment variables UI (workspace-scoped)
+│   │   │   ├── Workspaces.tsx         # Workspace management UI
+│   │   │   ├── WorkspaceSwitcher.tsx  # Workspace dropdown in header
+│   │   │   ├── Wiki.tsx               # Wiki/Notes UI (workspace-scoped)
+│   │   │   └── Sidebar.tsx            # Navigation sidebar
+│   │   ├── contexts/
+│   │   │   └── WorkspaceContext.tsx   # Global workspace state
+│   │   ├── App.tsx                    # Main app component
+│   │   ├── main.tsx                   # React entry point
+│   │   └── index.css                  # Tailwind styles
+│   ├── vite.config.ts                 # Vite config (includes proxy to backend)
 │   ├── tailwind.config.js
 │   └── package.json
 │
@@ -161,25 +167,29 @@ devhub/
 **Tables:**
 
 ```sql
--- Services table
+-- Services table (workspace-scoped)
 CREATE TABLE services (
   id TEXT PRIMARY KEY,              -- Format: service_{timestamp}_{random}
+  workspace_id TEXT NOT NULL,       -- Foreign key to workspaces table
   name TEXT NOT NULL,
   repo_path TEXT NOT NULL,
   command TEXT NOT NULL,
   port INTEGER,
   env_vars TEXT,                    -- JSON stringified
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
--- Environment profiles table (Priority 2)
+-- Environment profiles table (Priority 2, workspace-scoped)
 CREATE TABLE env_profiles (
   id TEXT PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
+  workspace_id TEXT NOT NULL,       -- Foreign key to workspaces table
+  name TEXT NOT NULL,
   description TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
 -- Environment variables table (Priority 2)
@@ -232,16 +242,18 @@ CREATE TABLE migrations (
   executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Notes table (Priority 4)
+-- Notes table (Priority 4, workspace-scoped)
 CREATE TABLE notes (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,       -- Foreign key to workspaces table
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   category TEXT,
   tags TEXT,                        -- JSON array
   template TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
 -- Full-text search for notes (Priority 4)
@@ -275,6 +287,18 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
   5. Add indexes for performance
 - Result: Existing snapshots automatically migrated to new structure on startup
 
+**Migration 002: Workspace Scoping**
+- File: `backend/src/db/migrations/002_workspace_scoping.ts`
+- Purpose: Make all resources (services, env profiles, notes) workspace-scoped for complete isolation
+- Changes:
+  1. Ensure default workspace exists
+  2. Add `workspace_id` foreign key to `services` table (with CASCADE DELETE)
+  3. Add `workspace_id` foreign key to `env_profiles` table (with CASCADE DELETE)
+  4. Add `workspace_id` foreign key to `notes` table (with CASCADE DELETE)
+  5. Migrate existing resources to default workspace
+  6. Add indexes for performance
+- Result: All resources now belong to workspaces, complete isolation between projects
+
 **Creating New Migrations:**
 1. Create new file: `backend/src/db/migrations/00X_migration_name.ts`
 2. Export object with:
@@ -305,10 +329,10 @@ GET /api/repos/scan?path=/home/user&depth=3
 - `depth`: how many levels deep to search (0-5)
 - Returns array of Repository objects
 
-**Service Endpoints:**
+**Service Endpoints (workspace-scoped):**
 ```
-GET    /api/services              # List all services
-POST   /api/services              # Create service
+GET    /api/services              # List services in active workspace
+POST   /api/services              # Create service in active workspace
 GET    /api/services/:id          # Get service details
 PUT    /api/services/:id          # Update service
 DELETE /api/services/:id          # Delete service (stops if running)
@@ -316,6 +340,7 @@ POST   /api/services/:id/start    # Start service
 POST   /api/services/:id/stop     # Stop service
 GET    /api/services/:id/logs     # Get logs (query: ?lines=100)
 ```
+**Note:** All service endpoints default to the active workspace. Use `?workspace_id=xxx` to query a specific workspace.
 
 **Docker Endpoints (Priority 1):**
 ```
@@ -333,10 +358,10 @@ GET    /api/docker/meta/info                     # Get Docker daemon info
 GET    /api/docker/meta/version                  # Get Docker version
 ```
 
-**Environment Variables Endpoints (Priority 2):**
+**Environment Variables Endpoints (Priority 2, workspace-scoped):**
 ```
-GET    /api/env/profiles                         # List all profiles
-POST   /api/env/profiles                         # Create profile
+GET    /api/env/profiles                         # List profiles in active workspace
+POST   /api/env/profiles                         # Create profile in active workspace
 GET    /api/env/profiles/:id                     # Get profile details
 PUT    /api/env/profiles/:id                     # Update profile
 DELETE /api/env/profiles/:id                     # Delete profile
@@ -381,32 +406,40 @@ GET    /api/workspaces/snapshots/:snapshotId/export   # Export snapshot config
 
 **Important:** Snapshot routes must come BEFORE `/:workspaceId` routes in Express to avoid routing conflicts.
 
-**Notes/Wiki Endpoints (Priority 4):**
+**Notes/Wiki Endpoints (Priority 4, workspace-scoped):**
 ```
-GET    /api/notes                                # List all notes (filter: ?category=X)
-POST   /api/notes                                # Create note
+GET    /api/notes                                # List notes in active workspace (filter: ?category=X)
+POST   /api/notes                                # Create note in active workspace
 GET    /api/notes/:id                            # Get note details
 PUT    /api/notes/:id                            # Update note
 DELETE /api/notes/:id                            # Delete note
-GET    /api/notes/search/:query                  # Full-text search
-GET    /api/notes/meta/categories                # Get all categories
-GET    /api/notes/meta/tags                      # Get all tags
+GET    /api/notes/search/:query                  # Full-text search in active workspace
+GET    /api/notes/meta/categories                # Get categories in active workspace
+GET    /api/notes/meta/tags                      # Get tags in active workspace
 GET    /api/notes/meta/templates                 # Get note templates
 GET    /api/notes/:id/links                      # Get linked notes
 GET    /api/notes/:id/backlinks                  # Get backlinks
 ```
 
-**Total API Endpoints:** 59 (Workspace system expanded with hierarchical management)
+**Total API Endpoints:** 59 (Workspace system with full resource scoping)
 
 ### Frontend State Management
 
-**Current approach:** React `useState` + useEffect
-**No global state library** (Zustand available in package.json but not used)
+**Current approach:** React Context API + `useState` + useEffect
+**Global State:** WorkspaceContext provides active workspace and workspace management functions
+**No external state library** (Zustand available in package.json but not used)
+
+**WorkspaceContext:**
+- Manages active workspace state globally
+- Provides: `activeWorkspace`, `allWorkspaces`, `switchWorkspace()`, `createWorkspace()`, `refreshWorkspaces()`
+- Used by all workspace-scoped components (Services, Environment, Wiki)
+- Components auto-refresh when active workspace changes
 
 **Auto-refresh logic:**
 - Services list: `setInterval(fetchServices, 3000)`
 - Logs: `setInterval(fetchLogs, 2000)` when service selected
 - Intervals cleaned up in `useEffect` return
+- All refresh when workspace changes via `useEffect` dependency
 
 ### Vite Proxy Configuration
 
@@ -1059,19 +1092,22 @@ This document should give you everything needed to understand and continue devel
 ---
 
 **Last Updated:** 2025-10-26
-**Version:** v1.0 + Enhanced Workspace Management
-**Status:** MVP - All 4 priorities complete ✅ + Hierarchical Workspace System
+**Version:** v1.0 + Full Workspace Scoping
+**Status:** MVP - All 4 priorities complete ✅ + Complete Workspace Isolation
 
 Features:
-- ✅ Repository Dashboard & Service Manager
+- ✅ Repository Dashboard & Service Manager (workspace-scoped)
 - ✅ Priority 1: Docker Management
-- ✅ Priority 2: Environment Variables Manager
-- ✅ Priority 3: Hierarchical Workspace Management (Enhanced)
-  - Database migration system with automatic execution
+- ✅ Priority 2: Environment Variables Manager (workspace-scoped)
+- ✅ Priority 3: Hierarchical Workspace Management with Full Resource Scoping
+  - Database migration system with automatic execution (2 migrations)
   - Workspace → Snapshots hierarchical structure
-  - 3-level navigation UI with breadcrumb
+  - **All resources (services, env profiles, notes) scoped to workspaces**
+  - 3-level navigation UI with breadcrumb & workspace switcher
   - Hybrid workspace creation (auto + manual)
-  - Cascade deletion and active workspace pattern
-- ✅ Priority 4: Wiki/Notes System
+  - Cascade deletion (workspace → snapshots → all resources)
+  - Active workspace pattern with complete isolation
+  - WorkspaceContext for global state management
+- ✅ Priority 4: Wiki/Notes System (workspace-scoped)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
