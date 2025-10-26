@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import repoRoutes from './routes/repos'
 import serviceRoutes from './routes/services'
 import dockerRoutes from './routes/docker'
+import envRoutes from './routes/env'
 import './db' // Initialize database
 
 dotenv.config()
@@ -19,6 +20,7 @@ app.use(express.json())
 app.use('/api/repos', repoRoutes)
 app.use('/api/services', serviceRoutes)
 app.use('/api/docker', dockerRoutes)
+app.use('/api/env', envRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
