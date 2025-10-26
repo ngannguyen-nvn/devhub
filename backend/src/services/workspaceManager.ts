@@ -322,9 +322,9 @@ export class WorkspaceManager {
   }
 
   /**
-   * Capture current workspace state
+   * Capture current workspace state for a specific workspace
    */
-  async captureCurrentState(repoPaths: string[], scannedPath?: string): Promise<{
+  async captureCurrentState(workspaceId: string, repoPaths: string[], scannedPath?: string): Promise<{
     runningServices: Array<{ serviceId: string; serviceName: string }>
     repositories: Array<{ path: string; branch: string; hasChanges: boolean }>
     dockerContainers?: Array<{
@@ -400,11 +400,11 @@ export class WorkspaceManager {
       dockerContainers = []
     }
 
-    // Get environment variables for all services
+    // Get environment variables for all services in this workspace
     const envVariables: Record<string, Record<string, string>> = {}
     try {
-      const allServices = this.serviceManager.getAllServices()
-      const profiles = this.envManager.getAllProfiles()
+      const allServices = this.serviceManager.getAllServices(workspaceId)
+      const profiles = this.envManager.getAllProfiles(workspaceId)
 
       for (const service of allServices) {
         const serviceEnv: Record<string, string> = {}
@@ -438,7 +438,7 @@ export class WorkspaceManager {
       console.error('Error capturing service logs:', error)
     }
 
-    // Get wiki notes
+    // Get wiki notes for this workspace
     let wikiNotes: Array<{
       id: string
       title: string
@@ -446,7 +446,7 @@ export class WorkspaceManager {
       tags?: string[]
     }> = []
     try {
-      const allNotes = this.notesManager.getAllNotes()
+      const allNotes = this.notesManager.getAllNotes(workspaceId)
       wikiNotes = allNotes.map(note => ({
         id: note.id,
         title: note.title,
@@ -522,8 +522,8 @@ export class WorkspaceManager {
       }
     }
 
-    // Capture current state
-    const state = await this.captureCurrentState(repoPaths, scannedPath)
+    // Capture current state for this workspace
+    const state = await this.captureCurrentState(targetWorkspaceId, repoPaths, scannedPath)
 
     const config = {
       description,
@@ -791,7 +791,11 @@ export class WorkspaceManager {
       // or update an existing one with the snapshot's env vars
       try {
         const profileName = `${snapshot.name} - Restored ${new Date().toISOString()}`
-        const profile = this.envManager.createProfile(profileName, `Restored from snapshot: ${snapshot.name}`)
+        const profile = this.envManager.createProfile(
+          snapshot.workspaceId,
+          profileName,
+          `Restored from snapshot: ${snapshot.name}`
+        )
 
         for (const [serviceId, vars] of Object.entries(snapshot.envVariables)) {
           for (const [key, value] of Object.entries(vars)) {
@@ -867,17 +871,23 @@ export class WorkspaceManager {
   }
 
   /**
-   * Quick snapshot (capture current state with auto-generated name)
+   * Quick snapshot (capture current state with auto-generated name for active workspace)
    */
   async quickSnapshot(): Promise<WorkspaceSnapshot> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const name = `Quick Snapshot ${timestamp}`
 
-    // Get all services to find repo paths
-    const allServices = this.serviceManager.getAllServices()
+    // Get active workspace
+    const activeWorkspace = this.getActiveWorkspace()
+    if (!activeWorkspace) {
+      throw new Error('No active workspace found. Please activate a workspace first.')
+    }
+
+    // Get all services in this workspace to find repo paths
+    const allServices = this.serviceManager.getAllServices(activeWorkspace.id)
     const repoPaths = [...new Set(allServices.map(s => s.repoPath))]
 
-    return this.createSnapshot(name, 'Auto-generated snapshot', repoPaths)
+    return this.createSnapshot(name, 'Auto-generated snapshot', repoPaths, undefined, undefined, undefined, activeWorkspace.id)
   }
 
   /**

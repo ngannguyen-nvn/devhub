@@ -3,14 +3,14 @@ import { Note, NoteTemplate } from '@devhub/shared'
 
 export class NotesManager {
   /**
-   * Get all notes
+   * Get all notes for a workspace
    */
-  getAllNotes(category?: string): Note[] {
-    let query = 'SELECT * FROM notes'
-    const params: any[] = []
+  getAllNotes(workspaceId: string, category?: string): Note[] {
+    let query = 'SELECT * FROM notes WHERE workspace_id = ?'
+    const params: any[] = [workspaceId]
 
     if (category) {
-      query += ' WHERE category = ?'
+      query += ' AND category = ?'
       params.push(category)
     }
 
@@ -47,24 +47,34 @@ export class NotesManager {
   }
 
   /**
-   * Create a new note
+   * Create a new note in a workspace
    */
-  createNote(data: {
-    title: string
-    content: string
-    category?: string
-    tags?: string[]
-    template?: string
-  }): Note {
+  createNote(
+    workspaceId: string,
+    data: {
+      title: string
+      content: string
+      category?: string
+      tags?: string[]
+      template?: string
+    }
+  ): Note {
     const id = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+    // Verify workspace exists
+    const workspaceCheck = db.prepare('SELECT id FROM workspaces WHERE id = ?').get(workspaceId)
+    if (!workspaceCheck) {
+      throw new Error(`Workspace ${workspaceId} not found`)
+    }
+
     const stmt = db.prepare(`
-      INSERT INTO notes (id, title, content, category, tags, template)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO notes (id, workspace_id, title, content, category, tags, template)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
 
     stmt.run(
       id,
+      workspaceId,
       data.title,
       data.content,
       data.category || null,
@@ -81,6 +91,7 @@ export class NotesManager {
 
     return {
       id,
+      workspaceId,
       title: data.title,
       content: data.content,
       category: data.category,
@@ -497,6 +508,7 @@ Notes here...
   private rowToNote(row: any): Note {
     return {
       id: row.id,
+      workspaceId: row.workspace_id,
       title: row.title,
       content: row.content,
       category: row.category,

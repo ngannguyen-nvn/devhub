@@ -1,13 +1,10 @@
 import { spawn, ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 import db from '../db'
+import { Service as SharedService } from '@devhub/shared'
 
-export interface Service {
-  id: string
-  name: string
-  repoPath: string
-  command: string
-  port?: number
+// Internal service interface (extends shared with runtime data)
+export interface Service extends Omit<SharedService, 'status' | 'pid'> {
   envVars?: Record<string, string>
 }
 
@@ -38,14 +35,15 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Get all defined services
+   * Get all defined services for a workspace
    */
-  getAllServices(): Service[] {
-    const stmt = db.prepare('SELECT * FROM services')
-    const rows = stmt.all() as any[]
+  getAllServices(workspaceId: string): Service[] {
+    const stmt = db.prepare('SELECT * FROM services WHERE workspace_id = ?')
+    const rows = stmt.all(workspaceId) as any[]
 
     return rows.map(row => ({
       id: row.id,
+      workspaceId: row.workspace_id,
       name: row.name,
       repoPath: row.repo_path,
       command: row.command,
@@ -69,18 +67,25 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Create a new service
+   * Create a new service in a workspace
    */
-  createService(service: Omit<Service, 'id'>): Service {
+  createService(workspaceId: string, service: Omit<Service, 'id' | 'workspaceId'>): Service {
     const id = `service_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+    // Verify workspace exists
+    const workspaceCheck = db.prepare('SELECT id FROM workspaces WHERE id = ?').get(workspaceId)
+    if (!workspaceCheck) {
+      throw new Error(`Workspace ${workspaceId} not found`)
+    }
+
     const stmt = db.prepare(`
-      INSERT INTO services (id, name, repo_path, command, port, env_vars)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO services (id, workspace_id, name, repo_path, command, port, env_vars)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
 
     stmt.run(
       id,
+      workspaceId,
       service.name,
       service.repoPath,
       service.command,
@@ -88,7 +93,7 @@ export class ServiceManager extends EventEmitter {
       service.envVars ? JSON.stringify(service.envVars) : null
     )
 
-    return { id, ...service }
+    return { id, workspaceId, ...service }
   }
 
   /**
@@ -165,6 +170,7 @@ export class ServiceManager extends EventEmitter {
 
     const service: Service = {
       id: row.id,
+      workspaceId: row.workspace_id,
       name: row.name,
       repoPath: row.repo_path,
       command: row.command,

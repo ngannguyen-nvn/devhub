@@ -67,14 +67,15 @@ export class EnvManager {
   // ===== PROFILES =====
 
   /**
-   * Get all environment profiles
+   * Get all environment profiles for a workspace
    */
-  getAllProfiles(): EnvProfile[] {
-    const stmt = db.prepare('SELECT * FROM env_profiles ORDER BY name')
-    const rows = stmt.all() as any[]
+  getAllProfiles(workspaceId: string): EnvProfile[] {
+    const stmt = db.prepare('SELECT * FROM env_profiles WHERE workspace_id = ? ORDER BY name')
+    const rows = stmt.all(workspaceId) as any[]
 
     return rows.map(row => ({
       id: row.id,
+      workspaceId: row.workspace_id,
       name: row.name,
       description: row.description,
       createdAt: row.created_at,
@@ -93,6 +94,7 @@ export class EnvManager {
 
     return {
       id: row.id,
+      workspaceId: row.workspace_id,
       name: row.name,
       description: row.description,
       createdAt: row.created_at,
@@ -101,20 +103,27 @@ export class EnvManager {
   }
 
   /**
-   * Create a new profile
+   * Create a new profile in a workspace
    */
-  createProfile(name: string, description?: string): EnvProfile {
+  createProfile(workspaceId: string, name: string, description?: string): EnvProfile {
     const id = `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+    // Verify workspace exists
+    const workspaceCheck = db.prepare('SELECT id FROM workspaces WHERE id = ?').get(workspaceId)
+    if (!workspaceCheck) {
+      throw new Error(`Workspace ${workspaceId} not found`)
+    }
+
     const stmt = db.prepare(`
-      INSERT INTO env_profiles (id, name, description)
-      VALUES (?, ?, ?)
+      INSERT INTO env_profiles (id, workspace_id, name, description)
+      VALUES (?, ?, ?, ?)
     `)
 
-    stmt.run(id, name, description || null)
+    stmt.run(id, workspaceId, name, description || null)
 
     return {
       id,
+      workspaceId,
       name,
       description,
       createdAt: new Date().toISOString(),

@@ -20,6 +20,7 @@ export interface ScanResponse {
 
 export interface Service {
   id: string
+  workspaceId: string // Foreign key to workspace
   name: string
   repoPath: string
   port?: number
@@ -149,6 +150,7 @@ export interface DockerComposeService {
 // Environment types
 export interface EnvProfile {
   id: string
+  workspaceId: string // Foreign key to workspace
   name: string
   description?: string
   createdAt: string
@@ -175,6 +177,7 @@ export interface EnvFileContent {
 // Notes/Wiki types
 export interface Note {
   id: string
+  workspaceId: string // Foreign key to workspace
   title: string
   content: string
   category?: string
