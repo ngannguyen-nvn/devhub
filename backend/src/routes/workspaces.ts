@@ -1,9 +1,25 @@
 import { Router, Request, Response } from 'express'
 import { WorkspaceManager } from '../services/workspaceManager'
+import { DockerManager } from '../services/dockerManager'
+import { EnvManager } from '../services/envManager'
+import { NotesManager } from '../services/notesManager'
+import { RepoScanner } from '../services/repoScanner'
 import { serviceManager } from './services'
 
 const router = Router()
-const workspaceManager = new WorkspaceManager(serviceManager)
+
+// Initialize all managers
+const dockerManager = new DockerManager()
+const envManager = new EnvManager()
+const notesManager = new NotesManager()
+const repoScanner = new RepoScanner()
+
+const workspaceManager = new WorkspaceManager(
+  serviceManager,
+  dockerManager,
+  envManager,
+  notesManager
+)
 
 /**
  * Get all workspace snapshots
@@ -40,7 +56,7 @@ router.get('/:snapshotId', (req: Request, res: Response) => {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, description, repoPaths, activeEnvProfile, tags } = req.body
+    const { name, description, repoPaths, activeEnvProfile, tags, scannedPath } = req.body
 
     if (!name) {
       return res.status(400).json({ success: false, error: 'Name is required' })
@@ -55,7 +71,8 @@ router.post('/', async (req: Request, res: Response) => {
       description,
       repoPaths,
       activeEnvProfile,
-      tags
+      tags,
+      scannedPath
     )
 
     res.json({ success: true, snapshot })
@@ -127,7 +144,36 @@ router.post('/:snapshotId/restore', async (req: Request, res: Response) => {
     const { snapshotId } = req.params
     const result = await workspaceManager.restoreSnapshot(snapshotId)
 
-    res.json({ success: true, ...result })
+    res.json(result)
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * Restore a workspace snapshot selectively
+ * POST /api/workspaces/:snapshotId/restore-selective
+ */
+router.post('/:snapshotId/restore-selective', async (req: Request, res: Response) => {
+  try {
+    const { snapshotId } = req.params
+    const {
+      restoreBranches = false,
+      restoreServices = false,
+      restoreDocker = false,
+      restoreEnvVars = false,
+      restoreNotes = false,
+    } = req.body
+
+    const result = await workspaceManager.restoreSnapshotSelective(snapshotId, {
+      restoreBranches,
+      restoreServices,
+      restoreDocker,
+      restoreEnvVars,
+      restoreNotes,
+    })
+
+    res.json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -163,6 +209,62 @@ router.post('/import', (req: Request, res: Response) => {
     const snapshot = workspaceManager.importSnapshot(jsonData, name)
     res.json({ success: true, snapshot })
   } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * Scan folder and create workspace
+ * POST /api/workspaces/scan
+ */
+router.post('/scan', async (req: Request, res: Response) => {
+  try {
+    const { path, name, description, depth = 3, activeEnvProfile, tags } = req.body
+
+    if (!path) {
+      return res.status(400).json({ success: false, error: 'path is required' })
+    }
+
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'name is required' })
+    }
+
+    const maxDepth = parseInt(depth as string, 10)
+    if (isNaN(maxDepth) || maxDepth < 0 || maxDepth > 5) {
+      return res.status(400).json({ success: false, error: 'depth must be a number between 0 and 5' })
+    }
+
+    console.log(`Scanning ${path} for repositories (max depth: ${maxDepth})...`)
+
+    // Scan for repositories
+    const repositories = await repoScanner.scanDirectory(path, maxDepth)
+    const repoPaths = repositories.map(r => r.path)
+
+    if (repoPaths.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No git repositories found in the specified path',
+      })
+    }
+
+    // Create snapshot with discovered repositories
+    const snapshot = await workspaceManager.createSnapshot(
+      name,
+      description,
+      repoPaths,
+      activeEnvProfile,
+      tags,
+      path
+    )
+
+    res.json({
+      success: true,
+      snapshot,
+      repositoriesFound: repositories.length,
+      repositories,
+    })
+  } catch (error: any) {
+    console.error('Error scanning folder:', error)
     res.status(500).json({ success: false, error: error.message })
   }
 })
