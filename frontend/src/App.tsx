@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 import Services from './components/Services'
+import Workspaces from './components/Workspaces'
 import Docker from './components/Docker'
 import Environment from './components/Environment'
 import Sidebar from './components/Sidebar'
 
 function App() {
-  const [activeView, setActiveView] = useState<'dashboard' | 'services' | 'docker' | 'env' | 'wiki'>('dashboard')
+  const [activeView, setActiveView] = useState<'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki'>('dashboard')
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -14,6 +15,7 @@ function App() {
       <main className="flex-1 overflow-auto">
         {activeView === 'dashboard' && <Dashboard />}
         {activeView === 'services' && <Services />}
+        {activeView === 'workspaces' && <Workspaces />}
         {activeView === 'docker' && <Docker />}
         {activeView === 'env' && <Environment />}
         {activeView === 'wiki' && <div className="p-8">Wiki (Coming Soon)</div>}
