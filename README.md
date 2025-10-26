@@ -12,10 +12,10 @@ DevHub solves the chaos of managing multiple microservices locally:
 
 - **Repository Dashboard**: See all your git repos, branches, and changes in one place
 - **Service Manager**: Start/stop services with one click and view real-time logs
-- **Docker Integration**: Build images, manage containers, and orchestrate with docker-compose *(coming soon)*
-- **Environment Manager**: Centralized configuration for all your services *(coming soon)*
-- **Wiki/Notes**: Document your architecture and APIs *(coming soon)*
-- **Workspace Snapshots**: Save and restore your entire dev environment *(coming soon)*
+- **Docker Integration**: Build images, manage containers, and generate docker-compose files
+- **Environment Manager**: Secure environment variables with AES-256 encryption and profiles
+- **Wiki/Notes**: Markdown-based documentation with full-text search and bidirectional linking
+- **Workspace Snapshots**: Save and restore your entire dev environment with one click
 
 ---
 
@@ -35,7 +35,7 @@ Make sure you have these installed:
 ```bash
 git clone https://github.com/ngannguyen-nvn/devhub.git
 cd devhub
-git checkout claude/create-private-repo-011CUTzeAJKig5m4aBqXWsUV
+git checkout claude/continue-devhub-mvp-011CUVcBQCRuQu1yoTkCXSzY
 ```
 
 ### Step 2: Install Dependencies
@@ -153,17 +153,268 @@ If you have a Node.js project, try this:
 
 ---
 
+### Feature 3: Docker Management
+
+**What it does:** Build Docker images, manage containers, and generate docker-compose files.
+
+**Prerequisites:** Docker must be installed and running.
+
+**How to test:**
+
+#### 3.1 View Docker Images
+
+1. Click **"Docker"** in the left sidebar
+2. You should see the **Images** tab (default view)
+3. All your local Docker images will be listed with:
+   - Image name and tags
+   - Size
+   - Created date
+   - Number of containers using it
+
+#### 3.2 Build an Image
+
+1. Click **"Build Image"** button
+2. Fill out the form:
+   - **Context Path**: Path to directory with Dockerfile (e.g., `/home/user/my-app`)
+   - **Dockerfile Path**: `Dockerfile` (or custom name)
+   - **Image Name**: `my-app`
+   - **Image Tag**: `latest`
+3. Click **"Build"**
+4. Watch the build progress stream in real-time
+5. New image appears in the list when complete
+
+#### 3.3 Run a Container
+
+1. Find an image in the list
+2. Click **"Run"** button
+3. Fill out the form:
+   - **Container Name**: `my-app-container`
+   - **Ports**: `8080:80` (hostPort:containerPort)
+   - **Environment Variables**: `KEY=value` (one per line)
+4. Click **"Run"**
+5. Container starts and appears in Containers tab
+
+#### 3.4 Manage Containers
+
+1. Switch to **"Containers"** tab
+2. See all containers (running and stopped)
+3. For each container:
+   - **Start**: Green play button (for stopped containers)
+   - **Stop**: Red stop button (for running containers)
+   - **View Logs**: Click "Logs" button to see container output
+   - **Remove**: Trash icon to delete container
+
+#### 3.5 Generate docker-compose.yml
+
+1. Click **"Generate Compose"** button
+2. Select multiple images to include
+3. Configure ports and environment variables
+4. Click **"Generate"**
+5. Copy the generated docker-compose.yml content
+
+---
+
+### Feature 4: Environment Variables Manager
+
+**What it does:** Manage environment variables across services with secure encrypted storage.
+
+**How to test:**
+
+#### 4.1 Create an Environment Profile
+
+1. Click **"Environment"** in the left sidebar
+2. Click **"Create Profile"** button
+3. Fill out:
+   - **Profile Name**: `Development`
+   - **Description**: `Dev environment variables`
+4. Click **"Create"**
+5. Profile appears in the left panel
+
+#### 4.2 Add Variables
+
+1. Select a profile from the left panel
+2. Click **"Add Variable"** in the center panel
+3. Fill out:
+   - **Key**: `DATABASE_URL`
+   - **Value**: `postgresql://localhost:5432/mydb`
+   - **Is Secret**: Check this box to encrypt and mask the value
+   - **Description**: `Primary database connection`
+4. Click **"Add"**
+5. Variable appears in the list
+6. Note: Secrets show as `•••••` in the UI
+
+#### 4.3 Import from .env File
+
+1. Select a profile
+2. Click **"Import .env"** button
+3. Paste your .env file content:
+   ```
+   NODE_ENV=development
+   API_KEY=secret123
+   PORT=3000
+   ```
+4. Click **"Import"**
+5. All variables are added to the profile
+
+#### 4.4 Export to .env
+
+1. Select a profile with variables
+2. Click **"Export"** button
+3. Copy the generated .env format
+4. Save to a file or use in your project
+
+#### 4.5 Apply Profile to Service
+
+1. Select a profile
+2. In the right panel, see "Apply to Service" section
+3. Select a service from dropdown
+4. Click **"Apply"**
+5. Environment variables are now available to that service when it runs
+
+---
+
+### Feature 5: Workspace Snapshots
+
+**What it does:** Save and restore your entire development environment state.
+
+**How to test:**
+
+#### 5.1 Capture Current State
+
+1. Start a few services (from Services page)
+2. Click **"Workspaces"** in the left sidebar
+3. Click **"Capture Current State"** button
+4. The current state modal shows:
+   - Running services
+   - Git branch for each repository
+   - Uncommitted changes status
+5. Click **"Save as Workspace"**
+6. Fill out:
+   - **Workspace Name**: `Feature A Development`
+   - **Description**: `Working on feature A`
+   - **Tags**: `backend,api` (comma-separated)
+7. Click **"Create"**
+
+#### 5.2 View Saved Workspaces
+
+1. All saved workspaces appear in the list
+2. Each workspace shows:
+   - Name and description
+   - Created/updated dates
+   - Number of services
+   - Tags
+
+#### 5.3 Restore a Workspace
+
+1. Click on a workspace card
+2. Review the workspace details in the right panel:
+   - List of services that will be started
+   - Git branches that will be checked out
+3. Click **"Restore Workspace"** button
+4. DevHub will:
+   - Stop any running services not in the snapshot
+   - Start all services from the snapshot
+   - Switch git branches (if repositories exist)
+5. Your environment is now restored to that exact state!
+
+#### 5.4 Manage Workspaces
+
+- **Duplicate**: Create a copy of a workspace
+- **Export**: Download workspace config as JSON
+- **Delete**: Remove a workspace
+- **Update**: Modify workspace details
+
+---
+
+### Feature 6: Wiki/Notes System
+
+**What it does:** Markdown-based documentation with full-text search and bidirectional linking.
+
+**How to test:**
+
+#### 6.1 Create Your First Note
+
+1. Click **"Wiki"** in the left sidebar
+2. Click **"New Note"** button (top-right)
+3. Fill out:
+   - **Title**: `API Documentation`
+   - **Category**: `Architecture`
+   - **Tags**: `api,backend` (comma-separated)
+   - **Content**: Write markdown (see template options)
+4. Click **"Save"**
+
+#### 6.2 Use a Template
+
+1. Click **"New Note"**
+2. Click **"Use Template"** button
+3. Browse 5 built-in templates:
+   - **Architecture**: System architecture docs
+   - **API Documentation**: API endpoint docs
+   - **Runbook**: Operational procedures
+   - **Troubleshooting**: Debug guides
+   - **Meeting Notes**: Meeting minutes
+4. Click on a template to apply it
+5. Template content pre-fills the editor
+6. Customize and save
+
+#### 6.3 Add Bidirectional Links
+
+1. In note content, use double brackets: `[[Note Name]]`
+2. Example:
+   ```markdown
+   # API Gateway
+
+   The gateway routes to [[User Service]] and [[Auth Service]].
+
+   See [[System Architecture]] for details.
+   ```
+3. Save the note
+4. Create the linked notes ("User Service", "Auth Service", etc.)
+5. Links become clickable in preview
+6. View **"Links"** section to see all forward links
+7. View **"Backlinks"** section to see what links to this note
+
+#### 6.4 Search Notes
+
+1. Use the search bar at the top
+2. Type keywords: `authentication`
+3. Full-text search returns matching notes
+4. Results show title and preview snippet
+5. Click a result to open that note
+
+#### 6.5 Filter by Category or Tags
+
+1. Use **Category** dropdown to filter
+2. Select "Architecture" to see only architecture docs
+3. Tags appear as badges on each note
+4. Click a tag to filter by that tag
+
+#### 6.6 Edit and Preview
+
+1. Toggle between **Editor** and **Preview** views
+2. Editor shows raw markdown
+3. Preview renders:
+   - Formatted text
+   - Code blocks with syntax highlighting
+   - Tables
+   - Lists
+   - Clickable [[links]]
+4. GitHub Flavored Markdown supported
+
+---
+
 ## 🎨 Understanding the UI
 
 ### Sidebar Navigation
 
-The left sidebar has 5 sections:
+The left sidebar has 6 sections:
 
 1. **Dashboard** (✅ Working) - Repository scanner
 2. **Services** (✅ Working) - Service manager with logs
-3. **Docker** (🚧 Coming Soon) - Container management
-4. **Environment** (🚧 Coming Soon) - Env vars manager
-5. **Wiki** (🚧 Coming Soon) - Documentation
+3. **Workspaces** (✅ Working) - Save and restore workspace states
+4. **Docker** (✅ Working) - Container and image management
+5. **Environment** (✅ Working) - Environment variables manager
+6. **Wiki** (✅ Working) - Documentation and notes system
 
 ### Dashboard View
 
@@ -338,11 +589,9 @@ npm install
 ## 📊 API Endpoints (for developers)
 
 ### Repository API
-
 - `GET /api/repos/scan?path=/home/user&depth=3` - Scan for repositories
 
 ### Services API
-
 - `GET /api/services` - List all services
 - `POST /api/services` - Create a service
 - `GET /api/services/:id` - Get service details
@@ -352,33 +601,90 @@ npm install
 - `POST /api/services/:id/stop` - Stop service
 - `GET /api/services/:id/logs?lines=100` - Get service logs
 
+### Docker API
+- `GET /api/docker/images` - List all images
+- `POST /api/docker/images/build` - Build image (SSE stream)
+- `DELETE /api/docker/images/:id` - Remove image
+- `POST /api/docker/images/:id/run` - Run container from image
+- `GET /api/docker/containers` - List all containers
+- `POST /api/docker/containers/:id/start` - Start container
+- `POST /api/docker/containers/:id/stop` - Stop container
+- `DELETE /api/docker/containers/:id` - Remove container
+- `GET /api/docker/containers/:id/logs` - Get container logs
+- `POST /api/docker/compose/generate` - Generate docker-compose.yml
+
+### Environment Variables API
+- `GET /api/env/profiles` - List all profiles
+- `POST /api/env/profiles` - Create profile
+- `GET /api/env/profiles/:id` - Get profile details
+- `PUT /api/env/profiles/:id` - Update profile
+- `DELETE /api/env/profiles/:id` - Delete profile
+- `GET /api/env/profiles/:id/variables` - Get variables in profile
+- `POST /api/env/variables` - Create variable
+- `PUT /api/env/variables/:id` - Update variable
+- `DELETE /api/env/variables/:id` - Delete variable
+- `POST /api/env/profiles/:id/import` - Import .env file
+- `GET /api/env/profiles/:id/export` - Export to .env format
+- `POST /api/env/profiles/:id/apply/:serviceId` - Apply profile to service
+
+### Workspaces API
+- `GET /api/workspaces` - List all workspaces
+- `POST /api/workspaces` - Create workspace
+- `GET /api/workspaces/:id` - Get workspace details
+- `PUT /api/workspaces/:id` - Update workspace
+- `DELETE /api/workspaces/:id` - Delete workspace
+- `POST /api/workspaces/:id/restore` - Restore workspace state
+- `POST /api/workspaces/capture` - Capture current state
+- `GET /api/workspaces/current` - Get current workspace state
+
+### Notes/Wiki API
+- `GET /api/notes` - List all notes (filter: ?category=X)
+- `POST /api/notes` - Create note
+- `GET /api/notes/:id` - Get note details
+- `PUT /api/notes/:id` - Update note
+- `DELETE /api/notes/:id` - Delete note
+- `GET /api/notes/search/:query` - Full-text search
+- `GET /api/notes/meta/categories` - Get all categories
+- `GET /api/notes/meta/tags` - Get all tags
+- `GET /api/notes/meta/templates` - Get note templates
+- `GET /api/notes/:id/links` - Get linked notes
+- `GET /api/notes/:id/backlinks` - Get backlinks
+
+**Total: 46 API endpoints**
+
+See feature-specific documentation for detailed API usage:
+- [DOCKER_FEATURE.md](./DOCKER_FEATURE.md)
+- [ENV_FEATURE.md](./ENV_FEATURE.md)
+- [WORKSPACE_FEATURE.md](./WORKSPACE_FEATURE.md)
+- [WIKI_FEATURE.md](./WIKI_FEATURE.md)
+
 ---
 
 ## 🗺 Roadmap
 
 See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
 
-### ✅ Completed (v0.1)
+### ✅ Completed (v1.0) - MVP Complete!
 
-- Repository scanner
+- Repository scanner with git status
 - Service manager with process control
 - Real-time logs viewer
 - SQLite persistence
+- **Docker integration** - Build images, manage containers, generate docker-compose
+- **Environment variables manager** - Secure storage with AES-256 encryption
+- **Wiki/notes system** - Markdown docs with full-text search and [[linking]]
+- **Workspace snapshots** - Save and restore entire dev environment
 
-### 🚧 In Progress
-
-- Docker integration (build images, manage containers)
-- Environment variables manager
-- Wiki/notes system
-- Workspace snapshots
-
-### 📅 Planned
+### 📅 Planned (v2.0)
 
 - Team collaboration features
 - Cloud sync
 - CI/CD integration
 - Monitoring and APM
 - Kubernetes support
+- Service dependencies and startup order
+- Metrics dashboard (CPU/memory usage)
+- Service health checks
 
 ---
 
