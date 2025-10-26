@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import ConfirmDialog from './ConfirmDialog'
 
 interface DockerImage {
   id: string
@@ -61,6 +62,19 @@ export default function Docker() {
     containerName: '',
     ports: '',
     env: '',
+  })
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    type: 'image' | 'container'
+    id: string | null
+    name: string
+  }>({
+    isOpen: false,
+    type: 'image',
+    id: null,
+    name: '',
   })
 
   // Check Docker availability
@@ -195,11 +209,20 @@ export default function Docker() {
   }
 
   // Remove image
-  const handleRemoveImage = async (imageId: string) => {
-    if (!confirm('Are you sure you want to remove this image?')) return
+  const handleRemoveImage = (imageId: string, imageName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'image',
+      id: imageId,
+      name: imageName,
+    })
+  }
+
+  const confirmRemoveImage = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/docker/images/${imageId}?force=true`)
+      await axios.delete(`/api/docker/images/${confirmDialog.id}?force=true`)
       fetchImages()
       toast.success('Image removed successfully')
     } catch (error: any) {
@@ -266,12 +289,21 @@ export default function Docker() {
   }
 
   // Remove container
-  const handleRemoveContainer = async (containerId: string) => {
-    if (!confirm('Are you sure you want to remove this container?')) return
+  const handleRemoveContainer = (containerId: string, containerName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'container',
+      id: containerId,
+      name: containerName,
+    })
+  }
+
+  const confirmRemoveContainer = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/docker/containers/${containerId}?force=true`)
-      if (selectedContainer === containerId) {
+      await axios.delete(`/api/docker/containers/${confirmDialog.id}?force=true`)
+      if (selectedContainer === confirmDialog.id) {
         setSelectedContainer(null)
       }
       fetchContainers()
@@ -456,7 +488,7 @@ export default function Docker() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleRemoveImage(image.id)}
+                      onClick={() => handleRemoveImage(image.id, image.repoTags[0] || 'Unknown')}
                       className="text-red-600 hover:text-red-800"
                       title="Remove Image"
                     >
@@ -617,7 +649,7 @@ export default function Docker() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleRemoveContainer(container.id)
+                            handleRemoveContainer(container.id, container.name)
                           }}
                           className="text-red-600 hover:text-red-800"
                           title="Remove"
@@ -657,6 +689,17 @@ export default function Docker() {
           )}
         </div>
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, type: 'image', id: null, name: '' })}
+        onConfirm={confirmDialog.type === 'image' ? confirmRemoveImage : confirmRemoveContainer}
+        title={`Delete ${confirmDialog.type === 'image' ? 'Image' : 'Container'}`}
+        message={`Are you sure you want to remove ${confirmDialog.type === 'image' ? 'image' : 'container'} "${confirmDialog.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

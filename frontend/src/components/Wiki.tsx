@@ -19,6 +19,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import ConfirmDialog from './ConfirmDialog'
 
 interface Note {
   id: string
@@ -61,6 +62,17 @@ export default function Wiki() {
     content: '',
     category: '',
     tags: '',
+  })
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    id: string | null
+    title: string
+  }>({
+    isOpen: false,
+    id: null,
+    title: '',
   })
 
   // Fetch notes
@@ -194,11 +206,20 @@ export default function Wiki() {
   }
 
   // Delete note
-  const handleDelete = async (noteId: string) => {
-    if (!confirm('Delete this note?')) return
+  const handleDelete = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setConfirmDialog({
+      isOpen: true,
+      id: noteId,
+      title: note?.title || 'Unknown',
+    })
+  }
+
+  const confirmDelete = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/notes/${noteId}`)
+      await axios.delete(`/api/notes/${confirmDialog.id}`)
       setSelectedNote(null)
       fetchNotes()
       fetchMetadata()
@@ -640,6 +661,17 @@ export default function Wiki() {
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, id: null, title: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Note"
+        message={`Are you sure you want to delete note "${confirmDialog.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

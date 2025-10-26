@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import ConfirmDialog from './ConfirmDialog'
 
 interface WorkspaceSnapshot {
   id: string
@@ -55,6 +56,19 @@ export default function Workspaces() {
     tags: '',
   })
   const [importForm, setImportForm] = useState({ jsonData: '' })
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    type: 'restore' | 'delete'
+    id: string | null
+    name: string
+  }>({
+    isOpen: false,
+    type: 'restore',
+    id: null,
+    name: '',
+  })
 
   // Fetch snapshots
   const fetchSnapshots = async () => {
@@ -124,14 +138,21 @@ export default function Workspaces() {
   }
 
   // Restore snapshot
-  const handleRestore = async (snapshotId: string, snapshotName: string) => {
-    if (!confirm(`Restore workspace "${snapshotName}"? This will stop all services and switch branches.`)) {
-      return
-    }
+  const handleRestore = (snapshotId: string, snapshotName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'restore',
+      id: snapshotId,
+      name: snapshotName,
+    })
+  }
+
+  const confirmRestore = async () => {
+    if (!confirmDialog.id) return
 
     setRestoring(true)
     try {
-      const response = await axios.post(`/api/workspaces/${snapshotId}/restore`)
+      const response = await axios.post(`/api/workspaces/${confirmDialog.id}/restore`)
 
       if (response.data.success) {
         toast.success(
@@ -152,18 +173,25 @@ export default function Workspaces() {
   }
 
   // Delete snapshot
-  const handleDelete = async (snapshotId: string, snapshotName: string) => {
-    if (!confirm(`Delete snapshot "${snapshotName}"?`)) {
-      return
-    }
+  const handleDelete = (snapshotId: string, snapshotName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'delete',
+      id: snapshotId,
+      name: snapshotName,
+    })
+  }
+
+  const confirmDelete = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/workspaces/${snapshotId}`)
-      if (selectedSnapshot === snapshotId) {
+      await axios.delete(`/api/workspaces/${confirmDialog.id}`)
+      if (selectedSnapshot === confirmDialog.id) {
         setSelectedSnapshot(null)
       }
       fetchSnapshots()
-      toast.success(`Snapshot "${snapshotName}" deleted`)
+      toast.success(`Snapshot "${confirmDialog.name}" deleted`)
     } catch (error: any) {
       toast.error(`Failed to delete snapshot: ${error.response?.data?.error || error.message}`)
     }
@@ -503,6 +531,21 @@ export default function Workspaces() {
           )}
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, type: 'restore', id: null, name: '' })}
+        onConfirm={confirmDialog.type === 'restore' ? confirmRestore : confirmDelete}
+        title={confirmDialog.type === 'restore' ? 'Restore Workspace' : 'Delete Snapshot'}
+        message={
+          confirmDialog.type === 'restore'
+            ? `Are you sure you want to restore workspace "${confirmDialog.name}"? This will stop all running services and switch git branches.`
+            : `Are you sure you want to delete snapshot "${confirmDialog.name}"? This action cannot be undone.`
+        }
+        confirmText={confirmDialog.type === 'restore' ? 'Restore' : 'Delete'}
+        variant={confirmDialog.type === 'restore' ? 'warning' : 'danger'}
+      />
     </div>
   )
 }

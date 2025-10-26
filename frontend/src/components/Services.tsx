@@ -3,6 +3,7 @@ import { Play, Square, Trash2, Plus, Terminal, RefreshCw } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import Loading, { SkeletonLoader } from './Loading'
+import ConfirmDialog from './ConfirmDialog'
 
 interface Service {
   id: string
@@ -23,6 +24,17 @@ export default function Services() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [logs, setLogs] = useState<string[]>([])
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    serviceId: string | null
+    serviceName: string
+  }>({
+    isOpen: false,
+    serviceId: null,
+    serviceName: '',
+  })
 
   // New service form
   const [newService, setNewService] = useState({
@@ -110,17 +122,25 @@ export default function Services() {
     }
   }
 
-  const handleDeleteService = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this service?')) return
+  const handleDeleteService = (id: string) => {
+    const service = services.find(s => s.id === id)
+    setConfirmDialog({
+      isOpen: true,
+      serviceId: id,
+      serviceName: service?.name || 'Unknown',
+    })
+  }
+
+  const confirmDeleteService = async () => {
+    if (!confirmDialog.serviceId) return
 
     try {
-      const service = services.find(s => s.id === id)
-      await axios.delete(`/api/services/${id}`)
+      await axios.delete(`/api/services/${confirmDialog.serviceId}`)
       fetchServices()
-      if (selectedService === id) {
+      if (selectedService === confirmDialog.serviceId) {
         setSelectedService(null)
       }
-      toast.success(`Service "${service?.name || 'Unknown'}" deleted`)
+      toast.success(`Service "${confirmDialog.serviceName}" deleted`)
     } catch (error) {
       console.error('Error deleting service:', error)
       toast.error('Failed to delete service')
@@ -356,6 +376,17 @@ export default function Services() {
           )}
         </div>
       </div>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, serviceId: null, serviceName: '' })}
+        onConfirm={confirmDeleteService}
+        title="Delete Service"
+        message={`Are you sure you want to delete "${confirmDialog.serviceName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

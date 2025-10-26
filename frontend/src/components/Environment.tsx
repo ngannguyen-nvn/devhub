@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import ConfirmDialog from './ConfirmDialog'
 
 interface EnvProfile {
   id: string
@@ -59,6 +60,19 @@ export default function Environment() {
   })
   const [importForm, setImportForm] = useState({ filePath: '' })
   const [exportForm, setExportForm] = useState({ filePath: '' })
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    type: 'profile' | 'variable'
+    id: string | null
+    name: string
+  }>({
+    isOpen: false,
+    type: 'profile',
+    id: null,
+    name: '',
+  })
 
   // Fetch profiles
   const fetchProfiles = async () => {
@@ -118,12 +132,22 @@ export default function Environment() {
     }
   }
 
-  const handleDeleteProfile = async (profileId: string) => {
-    if (!confirm('Delete this profile and all its variables?')) return
+  const handleDeleteProfile = (profileId: string) => {
+    const profile = profiles.find(p => p.id === profileId)
+    setConfirmDialog({
+      isOpen: true,
+      type: 'profile',
+      id: profileId,
+      name: profile?.name || 'Unknown',
+    })
+  }
+
+  const confirmDeleteProfile = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/env/profiles/${profileId}`)
-      if (selectedProfile === profileId) {
+      await axios.delete(`/api/env/profiles/${confirmDialog.id}`)
+      if (selectedProfile === confirmDialog.id) {
         setSelectedProfile(null)
       }
       fetchProfiles()
@@ -180,11 +204,21 @@ export default function Environment() {
     }
   }
 
-  const handleDeleteVariable = async (variableId: string) => {
-    if (!confirm('Delete this variable?')) return
+  const handleDeleteVariable = (variableId: string) => {
+    const variable = variables.find(v => v.id === variableId)
+    setConfirmDialog({
+      isOpen: true,
+      type: 'variable',
+      id: variableId,
+      name: variable?.key || 'Unknown',
+    })
+  }
+
+  const confirmDeleteVariable = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/env/variables/${variableId}`)
+      await axios.delete(`/api/env/variables/${confirmDialog.id}`)
       if (selectedProfile) {
         fetchVariables(selectedProfile)
       }
@@ -569,6 +603,21 @@ export default function Environment() {
           )}
         </div>
       </div>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, type: 'profile', id: null, name: '' })}
+        onConfirm={confirmDialog.type === 'profile' ? confirmDeleteProfile : confirmDeleteVariable}
+        title={`Delete ${confirmDialog.type === 'profile' ? 'Profile' : 'Variable'}`}
+        message={
+          confirmDialog.type === 'profile'
+            ? `Are you sure you want to delete profile "${confirmDialog.name}" and all its variables? This action cannot be undone.`
+            : `Are you sure you want to delete variable "${confirmDialog.name}"? This action cannot be undone.`
+        }
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }
