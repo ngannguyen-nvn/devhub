@@ -28,10 +28,32 @@ export interface Service {
   pid?: number
 }
 
+// Workspace entity (parent)
+export interface Workspace {
+  id: string
+  name: string
+  description?: string
+  folderPath?: string // Base folder path (can be null for manual workspaces)
+  active: boolean // Is this the currently active workspace
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
+
+  // Computed fields (not stored in DB, populated by backend)
+  snapshotCount?: number
+  latestSnapshot?: {
+    id: string
+    name: string
+    createdAt: string
+  }
+}
+
+// Workspace snapshot (child)
 export interface WorkspaceSnapshot {
   id: string
   name: string
   description?: string
+  workspaceId: string // Foreign key to workspace
   createdAt: string
   updatedAt: string
 
@@ -48,12 +70,37 @@ export interface WorkspaceSnapshot {
     hasChanges: boolean
   }>
 
+  // Docker state
+  dockerContainers?: Array<{
+    id: string
+    name: string
+    image: string
+    state: string
+    ports: Array<{
+      privatePort: number
+      publicPort?: number
+    }>
+  }>
+
   // Environment state
   activeEnvProfile?: string
+  envVariables?: Record<string, Record<string, string>> // serviceId -> { key: value }
+
+  // Service logs
+  serviceLogs?: Record<string, string[]> // serviceId -> logs array
+
+  // Wiki notes
+  wikiNotes?: Array<{
+    id: string
+    title: string
+    content: string
+    tags?: string[]
+  }>
 
   // Metadata
   tags?: string[]
   autoRestore?: boolean
+  scannedPath?: string // The folder path that was scanned (deprecated, use workspace.folderPath)
 }
 
 // Docker types

@@ -1,10 +1,11 @@
 import Database from 'better-sqlite3'
 import path from 'path'
+import { MigrationRunner } from './migrationRunner'
 
 const dbPath = path.join(process.cwd(), 'devhub.db')
 const db: Database.Database = new Database(dbPath)
 
-// Create tables
+// Create initial tables (before migrations)
 db.exec(`
   CREATE TABLE IF NOT EXISTS services (
     id TEXT PRIMARY KEY,
@@ -66,5 +67,9 @@ db.exec(`
 `)
 
 console.log('✅ Database initialized at', dbPath)
+
+// Run migrations
+const migrationRunner = new MigrationRunner(db)
+migrationRunner.runMigrations()
 
 export default db
