@@ -79,3 +79,29 @@ export interface DockerComposeService {
   volumes?: string[]
   depends_on?: string[]
 }
+
+// Environment types
+export interface EnvProfile {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EnvVariable {
+  id: string
+  key: string
+  value: string
+  profileId: string
+  serviceId?: string // Optional: for service-specific variables
+  isSecret: boolean
+  description?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EnvFileContent {
+  variables: Record<string, string>
+  comments: string[]
+}
