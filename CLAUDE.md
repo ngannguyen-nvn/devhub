@@ -10,14 +10,14 @@ This document contains everything needed to understand and continue developing D
 
 **DevHub** is a developer productivity tool for managing microservices ecosystems locally.
 
-**Current Status:** MVP v0.1 - Core features working
+**Current Status:** MVP v1.0 - All 4 priorities complete ✅
 **Tech Stack:** React + Vite (frontend), Express + TypeScript (backend), SQLite (database)
 **Repository:** https://github.com/ngannguyen-nvn/devhub
-**Branch:** `claude/create-private-repo-011CUTzeAJKig5m4aBqXWsUV`
+**Branch:** `claude/continue-devhub-mvp-011CUVcBQCRuQu1yoTkCXSzY`
 
 ---
 
-## 🎯 What's Been Built (v0.1)
+## 🎯 What's Been Built (v1.0)
 
 ### ✅ Working Features:
 
@@ -44,9 +44,42 @@ This document contains everything needed to understand and continue developing D
 
 4. **Frontend UI**
    - React with Tailwind CSS
-   - Sidebar navigation (5 sections)
+   - Sidebar navigation (6 sections)
    - Responsive layout
    - Located: `frontend/src/`
+
+5. **Docker Management** (Priority 1)
+   - Build Docker images from repositories
+   - List and manage Docker images
+   - Run, start, stop, remove containers
+   - View container logs
+   - Generate docker-compose.yml files
+   - Located: `frontend/src/components/Docker.tsx`, `backend/src/services/dockerManager.ts`
+
+6. **Environment Variables Manager** (Priority 2)
+   - Create and manage environment profiles (dev/staging/prod)
+   - Secure storage with AES-256-GCM encryption
+   - Per-service environment variables
+   - Import/export .env files
+   - Secret masking in UI
+   - Located: `frontend/src/components/Environment.tsx`, `backend/src/services/envManager.ts`
+
+7. **Workspace Snapshots** (Priority 3)
+   - Capture current workspace state (running services, git branches)
+   - Save and restore workspace configurations
+   - Tag workspaces for organization
+   - Auto-restore on startup (optional)
+   - Git branch tracking and switching
+   - Located: `frontend/src/components/Workspaces.tsx`, `backend/src/services/workspaceManager.ts`
+
+8. **Wiki/Notes System** (Priority 4)
+   - Markdown-based documentation system
+   - Full-text search with SQLite FTS5
+   - Bidirectional linking with [[note-name]] syntax
+   - 5 built-in templates (Architecture, API, Runbook, Troubleshooting, Meeting)
+   - Category and tag organization
+   - Live markdown preview
+   - Located: `frontend/src/components/Wiki.tsx`, `backend/src/services/notesManager.ts`
 
 ---
 
@@ -62,10 +95,18 @@ devhub/
 │   │   │   └── index.ts           # SQLite database init
 │   │   ├── routes/
 │   │   │   ├── repos.ts           # Repository scanning endpoints
-│   │   │   └── services.ts        # Service management endpoints
+│   │   │   ├── services.ts        # Service management endpoints
+│   │   │   ├── docker.ts          # Docker management endpoints
+│   │   │   ├── env.ts             # Environment variables endpoints
+│   │   │   ├── workspaces.ts      # Workspace snapshots endpoints
+│   │   │   └── notes.ts           # Wiki/Notes endpoints
 │   │   ├── services/
 │   │   │   ├── repoScanner.ts     # Git repo scanner logic
-│   │   │   └── serviceManager.ts  # Process management logic
+│   │   │   ├── serviceManager.ts  # Process management logic
+│   │   │   ├── dockerManager.ts   # Docker operations
+│   │   │   ├── envManager.ts      # Environment variables & encryption
+│   │   │   ├── workspaceManager.ts # Workspace snapshots
+│   │   │   └── notesManager.ts    # Wiki/Notes system
 │   │   └── index.ts               # Express app entry point
 │   ├── package.json
 │   ├── tsconfig.json
@@ -76,6 +117,10 @@ devhub/
 │   │   ├── components/
 │   │   │   ├── Dashboard.tsx      # Repository scanner UI
 │   │   │   ├── Services.tsx       # Service manager UI
+│   │   │   ├── Docker.tsx         # Docker management UI
+│   │   │   ├── Environment.tsx    # Environment variables UI
+│   │   │   ├── Workspaces.tsx     # Workspace snapshots UI
+│   │   │   ├── Wiki.tsx           # Wiki/Notes UI
 │   │   │   └── Sidebar.tsx        # Navigation sidebar
 │   │   ├── App.tsx                # Main app component
 │   │   ├── main.tsx               # React entry point
@@ -91,7 +136,11 @@ devhub/
 ├── package.json          # Root workspace config
 ├── README.md             # User-facing documentation
 ├── DEVHUB_PLAN.md        # Product roadmap
-└── CLAUDE.md             # This file (dev guide)
+├── CLAUDE.md             # This file (dev guide)
+├── DOCKER_FEATURE.md     # Docker management docs
+├── ENV_FEATURE.md        # Environment variables docs
+├── WORKSPACE_FEATURE.md  # Workspace snapshots docs
+└── WIKI_FEATURE.md       # Wiki/Notes system docs
 ```
 
 ---
@@ -117,12 +166,57 @@ CREATE TABLE services (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Workspaces table (not implemented yet)
+-- Environment profiles table (Priority 2)
+CREATE TABLE env_profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Environment variables table (Priority 2)
+CREATE TABLE env_variables (
+  id TEXT PRIMARY KEY,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,              -- Encrypted with AES-256-GCM
+  profile_id TEXT NOT NULL,
+  service_id TEXT,
+  is_secret INTEGER DEFAULT 0,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (profile_id) REFERENCES env_profiles(id) ON DELETE CASCADE
+);
+
+-- Workspaces table (Priority 3)
 CREATE TABLE workspaces (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  config TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  description TEXT,
+  config TEXT NOT NULL,             -- JSON stringified snapshot data
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notes table (Priority 4)
+CREATE TABLE notes (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  category TEXT,
+  tags TEXT,                        -- JSON array
+  template TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Full-text search for notes (Priority 4)
+CREATE VIRTUAL TABLE notes_fts USING fts5(
+  title,
+  content,
+  content='notes',
+  content_rowid='rowid'
 );
 ```
 
@@ -158,6 +252,70 @@ POST   /api/services/:id/start    # Start service
 POST   /api/services/:id/stop     # Stop service
 GET    /api/services/:id/logs     # Get logs (query: ?lines=100)
 ```
+
+**Docker Endpoints (Priority 1):**
+```
+GET    /api/docker/images                        # List all images
+POST   /api/docker/images/build                  # Build image (SSE stream)
+DELETE /api/docker/images/:id                    # Remove image
+POST   /api/docker/images/:id/run                # Run container from image
+GET    /api/docker/containers                    # List all containers
+POST   /api/docker/containers/:id/start          # Start container
+POST   /api/docker/containers/:id/stop           # Stop container
+DELETE /api/docker/containers/:id                # Remove container
+GET    /api/docker/containers/:id/logs           # Get container logs
+POST   /api/docker/compose/generate              # Generate docker-compose.yml
+GET    /api/docker/meta/info                     # Get Docker daemon info
+GET    /api/docker/meta/version                  # Get Docker version
+```
+
+**Environment Variables Endpoints (Priority 2):**
+```
+GET    /api/env/profiles                         # List all profiles
+POST   /api/env/profiles                         # Create profile
+GET    /api/env/profiles/:id                     # Get profile details
+PUT    /api/env/profiles/:id                     # Update profile
+DELETE /api/env/profiles/:id                     # Delete profile
+GET    /api/env/profiles/:id/variables           # Get variables in profile
+POST   /api/env/variables                        # Create variable
+PUT    /api/env/variables/:id                    # Update variable
+DELETE /api/env/variables/:id                    # Delete variable
+POST   /api/env/profiles/:id/import              # Import .env file
+GET    /api/env/profiles/:id/export              # Export to .env format
+GET    /api/env/services/:serviceId/variables    # Get service variables
+POST   /api/env/profiles/:id/apply/:serviceId    # Apply profile to service
+```
+
+**Workspace Endpoints (Priority 3):**
+```
+GET    /api/workspaces                           # List all workspaces
+POST   /api/workspaces                           # Create workspace
+GET    /api/workspaces/:id                       # Get workspace details
+PUT    /api/workspaces/:id                       # Update workspace
+DELETE /api/workspaces/:id                       # Delete workspace
+POST   /api/workspaces/:id/restore               # Restore workspace state
+POST   /api/workspaces/capture                   # Capture current state
+GET    /api/workspaces/current                   # Get current workspace state
+POST   /api/workspaces/:id/duplicate             # Duplicate workspace
+POST   /api/workspaces/:id/export                # Export workspace config
+```
+
+**Notes/Wiki Endpoints (Priority 4):**
+```
+GET    /api/notes                                # List all notes (filter: ?category=X)
+POST   /api/notes                                # Create note
+GET    /api/notes/:id                            # Get note details
+PUT    /api/notes/:id                            # Update note
+DELETE /api/notes/:id                            # Delete note
+GET    /api/notes/search/:query                  # Full-text search
+GET    /api/notes/meta/categories                # Get all categories
+GET    /api/notes/meta/tags                      # Get all tags
+GET    /api/notes/meta/templates                 # Get note templates
+GET    /api/notes/:id/links                      # Get linked notes
+GET    /api/notes/:id/backlinks                  # Get backlinks
+```
+
+**Total API Endpoints:** 46
 
 ### Frontend State Management
 
@@ -790,7 +948,7 @@ backend/devhub.db
 
 **Current branch:**
 ```
-claude/create-private-repo-011CUTzeAJKig5m4aBqXWsUV
+claude/continue-devhub-mvp-011CUVcBQCRuQu1yoTkCXSzY
 ```
 
 **Repository:**
@@ -820,7 +978,14 @@ This document should give you everything needed to understand and continue devel
 ---
 
 **Last Updated:** 2025-10-26
-**Version:** v0.1
-**Status:** MVP - Core features working
+**Version:** v1.0
+**Status:** MVP - All 4 priorities complete ✅
+
+Features:
+- ✅ Repository Dashboard & Service Manager
+- ✅ Priority 1: Docker Management
+- ✅ Priority 2: Environment Variables Manager
+- ✅ Priority 3: Workspace Snapshots
+- ✅ Priority 4: Wiki/Notes System
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
