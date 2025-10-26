@@ -1,14 +1,15 @@
-import { LayoutDashboard, Server, Container, Lock, FileText } from 'lucide-react'
+import { LayoutDashboard, Server, Container, Lock, FileText, Save } from 'lucide-react'
 
 interface SidebarProps {
-  activeView: 'dashboard' | 'services' | 'docker' | 'env' | 'wiki'
-  onViewChange: (view: 'dashboard' | 'services' | 'docker' | 'env' | 'wiki') => void
+  activeView: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki'
+  onViewChange: (view: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki') => void
 }
 
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const navItems = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'services' as const, label: 'Services', icon: Server },
+    { id: 'workspaces' as const, label: 'Workspaces', icon: Save },
     { id: 'docker' as const, label: 'Docker', icon: Container },
     { id: 'env' as const, label: 'Environment', icon: Lock },
     { id: 'wiki' as const, label: 'Wiki', icon: FileText },

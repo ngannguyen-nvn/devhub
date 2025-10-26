@@ -31,8 +31,122 @@ export interface Service {
 export interface WorkspaceSnapshot {
   id: string
   name: string
+  description?: string
   createdAt: string
-  runningServices: string[]
-  branches: Record<string, string>
-  envProfile?: string
+  updatedAt: string
+
+  // Services state
+  runningServices: Array<{
+    serviceId: string
+    serviceName: string
+  }>
+
+  // Repository state
+  repositories: Array<{
+    path: string
+    branch: string
+    hasChanges: boolean
+  }>
+
+  // Environment state
+  activeEnvProfile?: string
+
+  // Metadata
+  tags?: string[]
+  autoRestore?: boolean
+}
+
+// Docker types
+export interface DockerImage {
+  id: string
+  repoTags: string[]
+  size: number
+  created: number
+  containers: number
+}
+
+export interface DockerContainer {
+  id: string
+  name: string
+  image: string
+  state: string
+  status: string
+  ports: Array<{
+    privatePort: number
+    publicPort?: number
+    type: string
+  }>
+  created: number
+}
+
+export interface DockerBuildProgress {
+  stream?: string
+  status?: string
+  progress?: string
+  error?: string
+}
+
+export interface DockerComposeService {
+  serviceName: string
+  image?: string
+  build?: {
+    context: string
+    dockerfile: string
+  }
+  ports?: string[]
+  environment?: Record<string, string>
+  volumes?: string[]
+  depends_on?: string[]
+}
+
+// Environment types
+export interface EnvProfile {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EnvVariable {
+  id: string
+  key: string
+  value: string
+  profileId: string
+  serviceId?: string // Optional: for service-specific variables
+  isSecret: boolean
+  description?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EnvFileContent {
+  variables: Record<string, string>
+  comments: string[]
+}
+
+// Notes/Wiki types
+export interface Note {
+  id: string
+  title: string
+  content: string
+  category?: string
+  tags?: string[]
+  template?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NoteTemplate {
+  id: string
+  name: string
+  description: string
+  content: string
+  category?: string
+}
+
+export interface NoteLink {
+  fromNoteId: string
+  toNoteId: string
+  toNoteTitle: string
 }
