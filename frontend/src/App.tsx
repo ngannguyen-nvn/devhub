@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Toaster } from 'react-hot-toast'
 import Dashboard from './components/Dashboard'
 import Services from './components/Services'
 import Workspaces from './components/Workspaces'
@@ -12,6 +13,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gray-50">
+      <Toaster position="top-right" />
       <Sidebar activeView={activeView} onViewChange={setActiveView} />
       <main className="flex-1 overflow-auto">
         {activeView === 'dashboard' && <Dashboard />}

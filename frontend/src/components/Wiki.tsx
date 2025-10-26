@@ -16,8 +16,11 @@ import {
   FileQuestion,
 } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import ConfirmDialog from './ConfirmDialog'
+import { SkeletonLoader } from './Loading'
 
 interface Note {
   id: string
@@ -53,6 +56,7 @@ export default function Wiki() {
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [links, setLinks] = useState<Array<{ id: string; title: string }>>([])
   const [backlinks, setBacklinks] = useState<Array<{ id: string; title: string }>>([])
+  const [loading, setLoading] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -62,14 +66,28 @@ export default function Wiki() {
     tags: '',
   })
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    id: string | null
+    title: string
+  }>({
+    isOpen: false,
+    id: null,
+    title: '',
+  })
+
   // Fetch notes
   const fetchNotes = async () => {
+    setLoading(true)
     try {
       const response = await axios.get('/api/notes')
       setNotes(response.data.notes || [])
       setFilteredNotes(response.data.notes || [])
     } catch (error) {
       console.error('Error fetching notes:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -139,7 +157,7 @@ export default function Wiki() {
   // Create note
   const handleCreate = async () => {
     if (!formData.title.trim() || !formData.content.trim()) {
-      alert('Title and content are required')
+      toast.error('Title and content are required')
       return
     }
 
@@ -160,8 +178,9 @@ export default function Wiki() {
       setEditing(false)
       fetchNotes()
       fetchMetadata()
+      toast.success(`Note "${formData.title}" created successfully`)
     } catch (error: any) {
-      alert(`Failed to create note: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to create note: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -185,22 +204,33 @@ export default function Wiki() {
       setEditing(false)
       fetchNotes()
       fetchMetadata()
+      toast.success(`Note "${formData.title}" updated successfully`)
     } catch (error: any) {
-      alert(`Failed to update note: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to update note: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Delete note
-  const handleDelete = async (noteId: string) => {
-    if (!confirm('Delete this note?')) return
+  const handleDelete = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setConfirmDialog({
+      isOpen: true,
+      id: noteId,
+      title: note?.title || 'Unknown',
+    })
+  }
+
+  const confirmDelete = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/notes/${noteId}`)
+      await axios.delete(`/api/notes/${confirmDialog.id}`)
       setSelectedNote(null)
       fetchNotes()
       fetchMetadata()
+      toast.success('Note deleted successfully')
     } catch (error: any) {
-      alert(`Failed to delete note: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to delete note: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -358,7 +388,11 @@ export default function Wiki() {
 
         {/* Notes List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredNotes.length === 0 ? (
+          {loading && notes.length === 0 ? (
+            <div className="p-3">
+              <SkeletonLoader count={5} />
+            </div>
+          ) : filteredNotes.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
               <p>No notes found</p>
@@ -636,6 +670,17 @@ export default function Wiki() {
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, id: null, title: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Note"
+        message={`Are you sure you want to delete note "${confirmDialog.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

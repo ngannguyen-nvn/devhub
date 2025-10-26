@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Play, Square, Trash2, Plus, Terminal, RefreshCw } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
+import Loading, { SkeletonLoader } from './Loading'
+import ConfirmDialog from './ConfirmDialog'
 
 interface Service {
   id: string
@@ -21,6 +24,17 @@ export default function Services() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [logs, setLogs] = useState<string[]>([])
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    serviceId: string | null
+    serviceName: string
+  }>({
+    isOpen: false,
+    serviceId: null,
+    serviceName: '',
+  })
 
   // New service form
   const [newService, setNewService] = useState({
@@ -77,9 +91,10 @@ export default function Services() {
       setShowAddForm(false)
       setNewService({ name: '', repoPath: '', command: '', port: '' })
       fetchServices()
+      toast.success(`Service "${newService.name}" created successfully`)
     } catch (error) {
       console.error('Error adding service:', error)
-      alert('Failed to add service')
+      toast.error('Failed to add service')
     }
   }
 
@@ -87,9 +102,11 @@ export default function Services() {
     try {
       await axios.post(`/api/services/${id}/start`)
       fetchServices()
+      const service = services.find(s => s.id === id)
+      toast.success(`Service "${service?.name || 'Unknown'}" started`)
     } catch (error) {
       console.error('Error starting service:', error)
-      alert('Failed to start service')
+      toast.error('Failed to start service')
     }
   }
 
@@ -97,24 +114,36 @@ export default function Services() {
     try {
       await axios.post(`/api/services/${id}/stop`)
       fetchServices()
+      const service = services.find(s => s.id === id)
+      toast.success(`Service "${service?.name || 'Unknown'}" stopped`)
     } catch (error) {
       console.error('Error stopping service:', error)
-      alert('Failed to stop service')
+      toast.error('Failed to stop service')
     }
   }
 
-  const handleDeleteService = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this service?')) return
+  const handleDeleteService = (id: string) => {
+    const service = services.find(s => s.id === id)
+    setConfirmDialog({
+      isOpen: true,
+      serviceId: id,
+      serviceName: service?.name || 'Unknown',
+    })
+  }
+
+  const confirmDeleteService = async () => {
+    if (!confirmDialog.serviceId) return
 
     try {
-      await axios.delete(`/api/services/${id}`)
+      await axios.delete(`/api/services/${confirmDialog.serviceId}`)
       fetchServices()
-      if (selectedService === id) {
+      if (selectedService === confirmDialog.serviceId) {
         setSelectedService(null)
       }
+      toast.success(`Service "${confirmDialog.serviceName}" deleted`)
     } catch (error) {
       console.error('Error deleting service:', error)
-      alert('Failed to delete service')
+      toast.error('Failed to delete service')
     }
   }
 
@@ -222,6 +251,10 @@ export default function Services() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-auto">
         {/* Services List */}
         <div className="space-y-4">
+          {loading && services.length === 0 && (
+            <SkeletonLoader count={3} />
+          )}
+
           {services.length === 0 && !loading && (
             <div className="text-center py-12 text-gray-500">
               <Terminal size={48} className="mx-auto mb-4 text-gray-400" />
@@ -343,6 +376,17 @@ export default function Services() {
           )}
         </div>
       </div>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, serviceId: null, serviceName: '' })}
+        onConfirm={confirmDeleteService}
+        title="Delete Service"
+        message={`Are you sure you want to delete "${confirmDialog.serviceName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

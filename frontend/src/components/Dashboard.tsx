@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { GitBranch, RefreshCw, Folder, AlertCircle } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
+import { SkeletonLoader } from './Loading'
 
 interface Repository {
   name: string
@@ -27,8 +29,12 @@ export default function Dashboard() {
     try {
       const response = await axios.get(`/api/repos/scan?path=${encodeURIComponent(scanPath)}`)
       setRepos(response.data.repositories)
+      const count = response.data.repositories.length
+      toast.success(`Found ${count} ${count === 1 ? 'repository' : 'repositories'}`)
     } catch (err) {
-      setError('Failed to scan repositories')
+      const errorMsg = 'Failed to scan repositories'
+      setError(errorMsg)
+      toast.error(errorMsg)
       console.error(err)
     } finally {
       setLoading(false)
@@ -69,6 +75,10 @@ export default function Dashboard() {
           <AlertCircle size={20} />
           {error}
         </div>
+      )}
+
+      {loading && repos.length === 0 && (
+        <SkeletonLoader count={3} />
       )}
 
       {repos.length === 0 && !loading && (

@@ -11,6 +11,9 @@ import {
   Plus
 } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
+import ConfirmDialog from './ConfirmDialog'
+import { SkeletonLoader } from './Loading'
 
 interface DockerImage {
   id: string
@@ -60,6 +63,19 @@ export default function Docker() {
     containerName: '',
     ports: '',
     env: '',
+  })
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    type: 'image' | 'container'
+    id: string | null
+    name: string
+  }>({
+    isOpen: false,
+    type: 'image',
+    id: null,
+    name: '',
   })
 
   // Check Docker availability
@@ -140,7 +156,7 @@ export default function Docker() {
   // Build image
   const handleBuildImage = async () => {
     if (!buildForm.contextPath || !buildForm.tag) {
-      alert('Context path and tag are required')
+      toast.error('Context path and tag are required')
       return
     }
 
@@ -176,6 +192,7 @@ export default function Docker() {
                   setShowBuildForm(false)
                   setBuildForm({ contextPath: '', dockerfilePath: 'Dockerfile', tag: '' })
                   fetchImages()
+                  toast.success(`Image "${buildForm.tag}" built successfully`)
                 }
               } catch (e) {
                 // Ignore parse errors
@@ -186,28 +203,38 @@ export default function Docker() {
       }
     } catch (error: any) {
       console.error('Build error:', error)
-      alert(`Build failed: ${error.message}`)
+      toast.error(`Build failed: ${error.message}`)
     } finally {
       setBuilding(false)
     }
   }
 
   // Remove image
-  const handleRemoveImage = async (imageId: string) => {
-    if (!confirm('Are you sure you want to remove this image?')) return
+  const handleRemoveImage = (imageId: string, imageName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'image',
+      id: imageId,
+      name: imageName,
+    })
+  }
+
+  const confirmRemoveImage = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/docker/images/${imageId}?force=true`)
+      await axios.delete(`/api/docker/images/${confirmDialog.id}?force=true`)
       fetchImages()
+      toast.success('Image removed successfully')
     } catch (error: any) {
-      alert(`Failed to remove image: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to remove image: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Run container
   const handleRunContainer = async () => {
     if (!runForm.imageName || !runForm.containerName) {
-      alert('Image name and container name are required')
+      toast.error('Image name and container name are required')
       return
     }
 
@@ -234,8 +261,9 @@ export default function Docker() {
       setShowRunForm(false)
       setRunForm({ imageName: '', containerName: '', ports: '', env: '' })
       fetchContainers()
+      toast.success(`Container "${runForm.containerName}" started successfully`)
     } catch (error: any) {
-      alert(`Failed to run container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to run container: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -244,8 +272,9 @@ export default function Docker() {
     try {
       await axios.post(`/api/docker/containers/${containerId}/start`)
       fetchContainers()
+      toast.success('Container started successfully')
     } catch (error: any) {
-      alert(`Failed to start container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to start container: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -254,23 +283,34 @@ export default function Docker() {
     try {
       await axios.post(`/api/docker/containers/${containerId}/stop`)
       fetchContainers()
+      toast.success('Container stopped successfully')
     } catch (error: any) {
-      alert(`Failed to stop container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to stop container: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Remove container
-  const handleRemoveContainer = async (containerId: string) => {
-    if (!confirm('Are you sure you want to remove this container?')) return
+  const handleRemoveContainer = (containerId: string, containerName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'container',
+      id: containerId,
+      name: containerName,
+    })
+  }
+
+  const confirmRemoveContainer = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/docker/containers/${containerId}?force=true`)
-      if (selectedContainer === containerId) {
+      await axios.delete(`/api/docker/containers/${confirmDialog.id}?force=true`)
+      if (selectedContainer === confirmDialog.id) {
         setSelectedContainer(null)
       }
       fetchContainers()
+      toast.success('Container removed successfully')
     } catch (error: any) {
-      alert(`Failed to remove container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to remove container: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -428,7 +468,7 @@ export default function Docker() {
           {/* Images List */}
           <div className="grid gap-4">
             {loading && images.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">Loading images...</div>
+              <SkeletonLoader count={3} />
             ) : images.length === 0 ? (
               <div className="text-center py-8 text-gray-500">No Docker images found</div>
             ) : (
@@ -449,7 +489,7 @@ export default function Docker() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleRemoveImage(image.id)}
+                      onClick={() => handleRemoveImage(image.id, image.repoTags[0] || 'Unknown')}
                       className="text-red-600 hover:text-red-800"
                       title="Remove Image"
                     >
@@ -544,7 +584,7 @@ export default function Docker() {
             {/* Containers List */}
             <div className="space-y-4">
               {loading && containers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">Loading containers...</div>
+                <SkeletonLoader count={3} />
               ) : containers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No containers found</div>
               ) : (
@@ -610,7 +650,7 @@ export default function Docker() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleRemoveContainer(container.id)
+                            handleRemoveContainer(container.id, container.name)
                           }}
                           className="text-red-600 hover:text-red-800"
                           title="Remove"
@@ -650,6 +690,17 @@ export default function Docker() {
           )}
         </div>
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, type: 'image', id: null, name: '' })}
+        onConfirm={confirmDialog.type === 'image' ? confirmRemoveImage : confirmRemoveContainer}
+        title={`Delete ${confirmDialog.type === 'image' ? 'Image' : 'Container'}`}
+        message={`Are you sure you want to remove ${confirmDialog.type === 'image' ? 'image' : 'container'} "${confirmDialog.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

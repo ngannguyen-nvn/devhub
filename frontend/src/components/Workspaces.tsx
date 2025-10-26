@@ -17,6 +17,9 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
+import ConfirmDialog from './ConfirmDialog'
+import { SkeletonLoader } from './Loading'
 
 interface WorkspaceSnapshot {
   id: string
@@ -55,6 +58,19 @@ export default function Workspaces() {
   })
   const [importForm, setImportForm] = useState({ jsonData: '' })
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    type: 'restore' | 'delete'
+    id: string | null
+    name: string
+  }>({
+    isOpen: false,
+    type: 'restore',
+    id: null,
+    name: '',
+  })
+
   // Fetch snapshots
   const fetchSnapshots = async () => {
     setLoading(true)
@@ -77,21 +93,21 @@ export default function Workspaces() {
     try {
       await axios.post('/api/workspaces/quick')
       fetchSnapshots()
-      alert('Quick snapshot created!')
+      toast.success('Quick snapshot created!')
     } catch (error: any) {
-      alert(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Create snapshot
   const handleCreateSnapshot = async () => {
     if (!createForm.name.trim()) {
-      alert('Snapshot name is required')
+      toast.error('Snapshot name is required')
       return
     }
 
     if (!createForm.repoPaths.trim()) {
-      alert('At least one repository path is required')
+      toast.error('At least one repository path is required')
       return
     }
 
@@ -116,57 +132,69 @@ export default function Workspaces() {
       setShowCreateForm(false)
       setCreateForm({ name: '', description: '', repoPaths: '', tags: '' })
       fetchSnapshots()
-      alert('Snapshot created successfully!')
+      toast.success(`Snapshot "${createForm.name}" created successfully!`)
     } catch (error: any) {
-      alert(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Restore snapshot
-  const handleRestore = async (snapshotId: string, snapshotName: string) => {
-    if (!confirm(`Restore workspace "${snapshotName}"? This will stop all services and switch branches.`)) {
-      return
-    }
+  const handleRestore = (snapshotId: string, snapshotName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'restore',
+      id: snapshotId,
+      name: snapshotName,
+    })
+  }
+
+  const confirmRestore = async () => {
+    if (!confirmDialog.id) return
 
     setRestoring(true)
     try {
-      const response = await axios.post(`/api/workspaces/${snapshotId}/restore`)
+      const response = await axios.post(`/api/workspaces/${confirmDialog.id}/restore`)
 
       if (response.data.success) {
-        alert(
-          `Workspace restored successfully!\n\n` +
-          `Services started: ${response.data.servicesStarted}\n` +
-          `Branches switched: ${response.data.branchesSwitched}`
+        toast.success(
+          `Workspace restored! Started ${response.data.servicesStarted} service(s), switched ${response.data.branchesSwitched} branch(es)`,
+          { duration: 5000 }
         )
       } else if (response.data.errors && response.data.errors.length > 0) {
-        alert(
-          `Workspace partially restored with errors:\n\n` +
-          `Services started: ${response.data.servicesStarted}\n` +
-          `Branches switched: ${response.data.branchesSwitched}\n\n` +
-          `Errors:\n${response.data.errors.join('\n')}`
+        toast.error(
+          `Workspace partially restored. Started ${response.data.servicesStarted} service(s), but ${response.data.errors.length} error(s) occurred`,
+          { duration: 5000 }
         )
       }
     } catch (error: any) {
-      alert(`Failed to restore workspace: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to restore workspace: ${error.response?.data?.error || error.message}`)
     } finally {
       setRestoring(false)
     }
   }
 
   // Delete snapshot
-  const handleDelete = async (snapshotId: string, snapshotName: string) => {
-    if (!confirm(`Delete snapshot "${snapshotName}"?`)) {
-      return
-    }
+  const handleDelete = (snapshotId: string, snapshotName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'delete',
+      id: snapshotId,
+      name: snapshotName,
+    })
+  }
+
+  const confirmDelete = async () => {
+    if (!confirmDialog.id) return
 
     try {
-      await axios.delete(`/api/workspaces/${snapshotId}`)
-      if (selectedSnapshot === snapshotId) {
+      await axios.delete(`/api/workspaces/${confirmDialog.id}`)
+      if (selectedSnapshot === confirmDialog.id) {
         setSelectedSnapshot(null)
       }
       fetchSnapshots()
+      toast.success(`Snapshot "${confirmDialog.name}" deleted`)
     } catch (error: any) {
-      alert(`Failed to delete snapshot: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to delete snapshot: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -184,15 +212,16 @@ export default function Workspaces() {
       document.body.appendChild(link)
       link.click()
       link.remove()
+      toast.success(`Workspace "${snapshotName}" exported`)
     } catch (error: any) {
-      alert(`Failed to export snapshot: ${error.message}`)
+      toast.error(`Failed to export snapshot: ${error.message}`)
     }
   }
 
   // Import snapshot
   const handleImport = async () => {
     if (!importForm.jsonData.trim()) {
-      alert('JSON data is required')
+      toast.error('JSON data is required')
       return
     }
 
@@ -204,9 +233,9 @@ export default function Workspaces() {
       setShowImportForm(false)
       setImportForm({ jsonData: '' })
       fetchSnapshots()
-      alert('Workspace imported successfully!')
+      toast.success('Workspace imported successfully!')
     } catch (error: any) {
-      alert(`Failed to import workspace: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to import workspace: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -341,7 +370,7 @@ export default function Workspaces() {
 
           {/* Snapshots List */}
           {loading && snapshots.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">Loading snapshots...</div>
+            <SkeletonLoader count={3} />
           ) : snapshots.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Save className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -503,6 +532,21 @@ export default function Workspaces() {
           )}
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, type: 'restore', id: null, name: '' })}
+        onConfirm={confirmDialog.type === 'restore' ? confirmRestore : confirmDelete}
+        title={confirmDialog.type === 'restore' ? 'Restore Workspace' : 'Delete Snapshot'}
+        message={
+          confirmDialog.type === 'restore'
+            ? `Are you sure you want to restore workspace "${confirmDialog.name}"? This will stop all running services and switch git branches.`
+            : `Are you sure you want to delete snapshot "${confirmDialog.name}"? This action cannot be undone.`
+        }
+        confirmText={confirmDialog.type === 'restore' ? 'Restore' : 'Delete'}
+        variant={confirmDialog.type === 'restore' ? 'warning' : 'danger'}
+      />
     </div>
   )
 }
