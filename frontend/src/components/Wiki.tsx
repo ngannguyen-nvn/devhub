@@ -20,6 +20,7 @@ import toast from 'react-hot-toast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ConfirmDialog from './ConfirmDialog'
+import { SkeletonLoader } from './Loading'
 
 interface Note {
   id: string
@@ -55,6 +56,7 @@ export default function Wiki() {
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [links, setLinks] = useState<Array<{ id: string; title: string }>>([])
   const [backlinks, setBacklinks] = useState<Array<{ id: string; title: string }>>([])
+  const [loading, setLoading] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -77,12 +79,15 @@ export default function Wiki() {
 
   // Fetch notes
   const fetchNotes = async () => {
+    setLoading(true)
     try {
       const response = await axios.get('/api/notes')
       setNotes(response.data.notes || [])
       setFilteredNotes(response.data.notes || [])
     } catch (error) {
       console.error('Error fetching notes:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -383,7 +388,11 @@ export default function Wiki() {
 
         {/* Notes List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredNotes.length === 0 ? (
+          {loading && notes.length === 0 ? (
+            <div className="p-3">
+              <SkeletonLoader count={5} />
+            </div>
+          ) : filteredNotes.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
               <p>No notes found</p>

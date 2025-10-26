@@ -13,6 +13,7 @@ import {
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
+import { SkeletonLoader } from './Loading'
 
 interface DockerImage {
   id: string
@@ -467,7 +468,7 @@ export default function Docker() {
           {/* Images List */}
           <div className="grid gap-4">
             {loading && images.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">Loading images...</div>
+              <SkeletonLoader count={3} />
             ) : images.length === 0 ? (
               <div className="text-center py-8 text-gray-500">No Docker images found</div>
             ) : (
@@ -583,7 +584,7 @@ export default function Docker() {
             {/* Containers List */}
             <div className="space-y-4">
               {loading && containers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">Loading containers...</div>
+                <SkeletonLoader count={3} />
               ) : containers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No containers found</div>
               ) : (

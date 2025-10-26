@@ -19,6 +19,7 @@ import {
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
+import { SkeletonLoader } from './Loading'
 
 interface WorkspaceSnapshot {
   id: string
@@ -369,7 +370,7 @@ export default function Workspaces() {
 
           {/* Snapshots List */}
           {loading && snapshots.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">Loading snapshots...</div>
+            <SkeletonLoader count={3} />
           ) : snapshots.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Save className="w-12 h-12 mx-auto mb-3 text-gray-300" />

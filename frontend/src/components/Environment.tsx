@@ -17,6 +17,7 @@ import {
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
+import { SkeletonLoader } from './Loading'
 
 interface EnvProfile {
   id: string
@@ -536,7 +537,7 @@ export default function Environment() {
 
               {/* Variables List */}
               {loading ? (
-                <div className="text-center py-8 text-gray-500">Loading variables...</div>
+                <SkeletonLoader count={3} />
               ) : variables.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No variables in this profile. Add one to get started.
