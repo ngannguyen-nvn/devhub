@@ -10,10 +10,10 @@ This document contains everything needed to understand and continue developing D
 
 **DevHub** is a developer productivity tool for managing microservices ecosystems locally.
 
-**Current Status:** MVP v1.0 - All 4 priorities complete ✅
+**Current Status:** MVP v1.0 - All 4 priorities complete ✅ + Enhanced Workspace Management
 **Tech Stack:** React + Vite (frontend), Express + TypeScript (backend), SQLite (database)
 **Repository:** https://github.com/ngannguyen-nvn/devhub
-**Branch:** `claude/continue-devhub-mvp-011CUVcBQCRuQu1yoTkCXSzY`
+**Branch:** `feature/enhanced-workspace-management`
 
 ---
 
@@ -64,13 +64,17 @@ This document contains everything needed to understand and continue developing D
    - Secret masking in UI
    - Located: `frontend/src/components/Environment.tsx`, `backend/src/services/envManager.ts`
 
-7. **Workspace Snapshots** (Priority 3)
-   - Capture current workspace state (running services, git branches)
-   - Save and restore workspace configurations
-   - Tag workspaces for organization
-   - Auto-restore on startup (optional)
-   - Git branch tracking and switching
+7. **Hierarchical Workspace Management** (Priority 3)
+   - Workspace → Snapshots hierarchical structure
+   - Database migration system with automatic execution
+   - Hybrid workspace creation (auto from folder scan + manual)
+   - 3-level navigation UI (Workspace List → Workspace Detail → Snapshot Detail)
+   - Breadcrumb navigation
+   - Capture and restore workspace states (running services, git branches)
+   - Cascade deletion (workspace → snapshots)
+   - Active workspace pattern (single active workspace at a time)
    - Located: `frontend/src/components/Workspaces.tsx`, `backend/src/services/workspaceManager.ts`
+   - Migration: `backend/src/db/migrations/001_workspace_hierarchy.ts`
 
 8. **Wiki/Notes System** (Priority 4)
    - Markdown-based documentation system
@@ -92,7 +96,10 @@ devhub/
 ├── backend/              # Express API (port 5000)
 │   ├── src/
 │   │   ├── db/
-│   │   │   └── index.ts           # SQLite database init
+│   │   │   ├── index.ts           # SQLite database init
+│   │   │   ├── migrationRunner.ts # Migration execution framework
+│   │   │   └── migrations/
+│   │   │       └── 001_workspace_hierarchy.ts  # Workspace hierarchy migration
 │   │   ├── routes/
 │   │   │   ├── repos.ts           # Repository scanning endpoints
 │   │   │   ├── services.ts        # Service management endpoints
@@ -189,14 +196,40 @@ CREATE TABLE env_variables (
   FOREIGN KEY (profile_id) REFERENCES env_profiles(id) ON DELETE CASCADE
 );
 
--- Workspaces table (Priority 3)
+-- Workspaces table (Priority 3 - Hierarchical structure, parent entity)
 CREATE TABLE workspaces (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY,              -- Format: workspace_{timestamp}_{random}
   name TEXT NOT NULL,
   description TEXT,
-  config TEXT NOT NULL,             -- JSON stringified snapshot data
+  folder_path TEXT,                 -- Base folder path (can be null for manual workspaces)
+  active INTEGER DEFAULT 0,         -- Is this the currently active workspace (1 or 0)
+  tags TEXT,                        -- JSON array
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Workspace Snapshots table (Priority 3 - Child entity)
+CREATE TABLE workspace_snapshots (
+  id TEXT PRIMARY KEY,              -- Format: snapshot_{timestamp}_{random}
+  name TEXT NOT NULL,
+  description TEXT,
+  workspace_id TEXT NOT NULL,       -- Foreign key to workspaces table
+  config TEXT NOT NULL,             -- JSON stringified snapshot data
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX idx_snapshots_workspace_id ON workspace_snapshots(workspace_id);
+CREATE INDEX idx_workspaces_active ON workspaces(active);
+CREATE INDEX idx_workspaces_folder_path ON workspaces(folder_path);
+
+-- Migrations table
+CREATE TABLE migrations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Notes table (Priority 4)
@@ -219,6 +252,37 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
   content_rowid='rowid'
 );
 ```
+
+### Database Migration System
+
+**Location:** `backend/src/db/migrationRunner.ts`
+
+**How it works:**
+- Migrations automatically execute on backend startup
+- Each migration has a unique name and runs only once
+- Migration execution tracked in `migrations` table
+- Transactions ensure all-or-nothing execution (rollback on error)
+- Migration files located in `backend/src/db/migrations/`
+
+**Migration 001: Workspace Hierarchy**
+- File: `backend/src/db/migrations/001_workspace_hierarchy.ts`
+- Purpose: Transform flat snapshot list into hierarchical workspace → snapshots structure
+- Changes:
+  1. Rename `workspaces` table to `workspace_snapshots`
+  2. Create new `workspaces` table as parent entity
+  3. Add `workspace_id` foreign key to `workspace_snapshots`
+  4. Group existing snapshots by `scannedPath` into workspaces
+  5. Add indexes for performance
+- Result: Existing snapshots automatically migrated to new structure on startup
+
+**Creating New Migrations:**
+1. Create new file: `backend/src/db/migrations/00X_migration_name.ts`
+2. Export object with:
+   - `name`: Unique migration name
+   - `up(db)`: Function that applies the migration
+   - `down(db)`: Function that reverts the migration (optional)
+3. Add migration to array in `migrationRunner.ts`
+4. On next startup, migration runs automatically
 
 ### Process Management
 
@@ -286,19 +350,36 @@ GET    /api/env/services/:serviceId/variables    # Get service variables
 POST   /api/env/profiles/:id/apply/:serviceId    # Apply profile to service
 ```
 
-**Workspace Endpoints (Priority 3):**
+**Workspace Endpoints (Priority 3 - Hierarchical Management):**
+
+*Workspace Endpoints (Parent Entity):*
 ```
 GET    /api/workspaces                           # List all workspaces
 POST   /api/workspaces                           # Create workspace
-GET    /api/workspaces/:id                       # Get workspace details
-PUT    /api/workspaces/:id                       # Update workspace
-DELETE /api/workspaces/:id                       # Delete workspace
-POST   /api/workspaces/:id/restore               # Restore workspace state
-POST   /api/workspaces/capture                   # Capture current state
-GET    /api/workspaces/current                   # Get current workspace state
-POST   /api/workspaces/:id/duplicate             # Duplicate workspace
-POST   /api/workspaces/:id/export                # Export workspace config
+GET    /api/workspaces/active                    # Get active workspace
+GET    /api/workspaces/:workspaceId              # Get workspace details
+PUT    /api/workspaces/:workspaceId              # Update workspace
+DELETE /api/workspaces/:workspaceId              # Delete workspace (cascade deletes snapshots)
+POST   /api/workspaces/:workspaceId/activate     # Activate workspace
+GET    /api/workspaces/:workspaceId/snapshots    # Get snapshots for workspace
+POST   /api/workspaces/:workspaceId/snapshots    # Create snapshot in workspace
+POST   /api/workspaces/:workspaceId/scan         # Scan folder and create snapshot in workspace
 ```
+
+*Snapshot Endpoints (Child Entity):*
+```
+GET    /api/workspaces/snapshots                 # List all snapshots
+POST   /api/workspaces/snapshots                 # Create snapshot (hybrid: auto or manual workspace)
+POST   /api/workspaces/snapshots/quick           # Quick snapshot (capture current state)
+POST   /api/workspaces/snapshots/scan            # Scan folder and create snapshot (auto-creates workspace)
+GET    /api/workspaces/snapshots/:snapshotId     # Get snapshot details
+PUT    /api/workspaces/snapshots/:snapshotId     # Update snapshot
+DELETE /api/workspaces/snapshots/:snapshotId     # Delete snapshot
+POST   /api/workspaces/snapshots/:snapshotId/restore  # Restore snapshot state
+GET    /api/workspaces/snapshots/:snapshotId/export   # Export snapshot config
+```
+
+**Important:** Snapshot routes must come BEFORE `/:workspaceId` routes in Express to avoid routing conflicts.
 
 **Notes/Wiki Endpoints (Priority 4):**
 ```
@@ -315,7 +396,7 @@ GET    /api/notes/:id/links                      # Get linked notes
 GET    /api/notes/:id/backlinks                  # Get backlinks
 ```
 
-**Total API Endpoints:** 46
+**Total API Endpoints:** 59 (Workspace system expanded with hierarchical management)
 
 ### Frontend State Management
 
@@ -978,14 +1059,19 @@ This document should give you everything needed to understand and continue devel
 ---
 
 **Last Updated:** 2025-10-26
-**Version:** v1.0
-**Status:** MVP - All 4 priorities complete ✅
+**Version:** v1.0 + Enhanced Workspace Management
+**Status:** MVP - All 4 priorities complete ✅ + Hierarchical Workspace System
 
 Features:
 - ✅ Repository Dashboard & Service Manager
 - ✅ Priority 1: Docker Management
 - ✅ Priority 2: Environment Variables Manager
-- ✅ Priority 3: Workspace Snapshots
+- ✅ Priority 3: Hierarchical Workspace Management (Enhanced)
+  - Database migration system with automatic execution
+  - Workspace → Snapshots hierarchical structure
+  - 3-level navigation UI with breadcrumb
+  - Hybrid workspace creation (auto + manual)
+  - Cascade deletion and active workspace pattern
 - ✅ Priority 4: Wiki/Notes System
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

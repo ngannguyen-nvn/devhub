@@ -15,7 +15,7 @@ DevHub solves the chaos of managing multiple microservices locally:
 - **Docker Integration**: Build images, manage containers, and generate docker-compose files
 - **Environment Manager**: Secure environment variables with AES-256 encryption and profiles
 - **Wiki/Notes**: Markdown-based documentation with full-text search and bidirectional linking
-- **Workspace Snapshots**: Save and restore your entire dev environment with one click
+- **Hierarchical Workspaces**: Organize and manage development environments with workspace → snapshot hierarchy
 
 ---
 
@@ -273,56 +273,97 @@ If you have a Node.js project, try this:
 
 ---
 
-### Feature 5: Workspace Snapshots
+### Feature 5: Hierarchical Workspaces
 
-**What it does:** Save and restore your entire development environment state.
+**What it does:** Organize your development environments with a hierarchical workspace → snapshots structure. Each workspace can contain multiple snapshots, making it easy to manage different states of the same project.
 
 **How to test:**
 
-#### 5.1 Capture Current State
+#### 5.1 Create a Manual Workspace
 
-1. Start a few services (from Services page)
-2. Click **"Workspaces"** in the left sidebar
-3. Click **"Capture Current State"** button
-4. The current state modal shows:
-   - Running services
-   - Git branch for each repository
-   - Uncommitted changes status
-5. Click **"Save as Workspace"**
-6. Fill out:
+1. Click **"Workspaces"** in the left sidebar
+2. Click **"New Workspace"** button
+3. Fill out:
    - **Workspace Name**: `Feature A Development`
    - **Description**: `Working on feature A`
-   - **Tags**: `backend,api` (comma-separated)
-7. Click **"Create"**
+   - **Folder Path**: `/path/to/project` (optional)
+   - **Tags**: `backend,api` (comma-separated, optional)
+4. Click **"Create"**
+5. New workspace appears in the workspace list
 
-#### 5.2 View Saved Workspaces
+#### 5.2 Navigate Workspaces
 
-1. All saved workspaces appear in the list
-2. Each workspace shows:
+**Level 1: Workspace List**
+1. All workspaces appear as cards showing:
    - Name and description
-   - Created/updated dates
-   - Number of services
+   - Snapshot count
+   - Active status badge
    - Tags
+2. Click on a workspace card to drill down
 
-#### 5.3 Restore a Workspace
+**Level 2: Workspace Detail (Snapshots List)**
+1. See all snapshots under the selected workspace
+2. Breadcrumb navigation: "Workspaces > Workspace Name"
+3. Each snapshot shows:
+   - Name and description
+   - Number of services and repos
+   - Created date
+   - Tags
+4. Click on a snapshot to view details
 
-1. Click on a workspace card
-2. Review the workspace details in the right panel:
-   - List of services that will be started
+**Level 3: Snapshot Detail**
+1. Full snapshot details:
+   - Running services that were captured
+   - Git branches for each repository
+   - Uncommitted changes status
+2. Breadcrumb navigation: "Workspaces > Workspace Name > Snapshot Name"
+3. Actions: Export, Restore, Delete
+
+#### 5.3 Scan Folder to Auto-Create Workspace
+
+1. From workspace list, click **"Scan Folder"**
+2. Enter folder path to scan
+3. DevHub will:
+   - Scan for git repositories
+   - Auto-create a workspace (or use existing one for that folder)
+   - Create a snapshot with all repos
+4. Navigate into the workspace to see the snapshot
+
+#### 5.4 Create Snapshot in a Workspace
+
+1. Navigate to a workspace (Level 2)
+2. Click **"New Snapshot"** to manually create
+   - OR click **"Quick Snapshot"** to capture current state immediately
+3. Fill out snapshot details (name, description, tags)
+4. Snapshot appears in the workspace's snapshot list
+
+#### 5.5 Restore a Snapshot
+
+1. Navigate to snapshot detail (Level 3)
+2. Review the snapshot details:
+   - Services that will be started
    - Git branches that will be checked out
-3. Click **"Restore Workspace"** button
+3. Click **"Restore"** button
 4. DevHub will:
    - Stop any running services not in the snapshot
    - Start all services from the snapshot
    - Switch git branches (if repositories exist)
-5. Your environment is now restored to that exact state!
+5. Your environment is restored to that exact state!
 
-#### 5.4 Manage Workspaces
+#### 5.6 Activate a Workspace
 
-- **Duplicate**: Create a copy of a workspace
-- **Export**: Download workspace config as JSON
-- **Delete**: Remove a workspace
-- **Update**: Modify workspace details
+1. In workspace list (Level 1)
+2. Click **"Activate"** button on any workspace
+3. That workspace becomes the active workspace
+4. New snapshots will be created under the active workspace by default
+
+#### 5.7 Delete Workspace (Cascade)
+
+1. In workspace list (Level 1)
+2. Click **"Delete"** button on a workspace
+3. Confirm the deletion
+4. **Important**: Deleting a workspace will also delete ALL its snapshots
+5. Workspace and all snapshots are removed
 
 ---
 
@@ -411,7 +452,7 @@ The left sidebar has 6 sections:
 
 1. **Dashboard** (✅ Working) - Repository scanner
 2. **Services** (✅ Working) - Service manager with logs
-3. **Workspaces** (✅ Working) - Save and restore workspace states
+3. **Workspaces** (✅ Working) - Hierarchical workspace → snapshots management with 3-level navigation
 4. **Docker** (✅ Working) - Container and image management
 5. **Environment** (✅ Working) - Environment variables manager
 6. **Wiki** (✅ Working) - Documentation and notes system
@@ -628,14 +669,29 @@ npm install
 - `POST /api/env/profiles/:id/apply/:serviceId` - Apply profile to service
 
 ### Workspaces API
+
+**Workspace Endpoints:**
 - `GET /api/workspaces` - List all workspaces
 - `POST /api/workspaces` - Create workspace
-- `GET /api/workspaces/:id` - Get workspace details
-- `PUT /api/workspaces/:id` - Update workspace
-- `DELETE /api/workspaces/:id` - Delete workspace
-- `POST /api/workspaces/:id/restore` - Restore workspace state
-- `POST /api/workspaces/capture` - Capture current state
-- `GET /api/workspaces/current` - Get current workspace state
+- `GET /api/workspaces/active` - Get active workspace
+- `GET /api/workspaces/:workspaceId` - Get workspace details
+- `PUT /api/workspaces/:workspaceId` - Update workspace
+- `DELETE /api/workspaces/:workspaceId` - Delete workspace (cascade deletes all snapshots)
+- `POST /api/workspaces/:workspaceId/activate` - Activate workspace
+- `GET /api/workspaces/:workspaceId/snapshots` - Get snapshots for workspace
+- `POST /api/workspaces/:workspaceId/snapshots` - Create snapshot in workspace
+- `POST /api/workspaces/:workspaceId/scan` - Scan folder and create snapshot in workspace
+
+**Snapshot Endpoints:**
+- `GET /api/workspaces/snapshots` - List all snapshots
+- `POST /api/workspaces/snapshots` - Create snapshot (hybrid: auto or manual workspace)
+- `POST /api/workspaces/snapshots/quick` - Quick snapshot (capture current state)
+- `POST /api/workspaces/snapshots/scan` - Scan folder and create snapshot (auto-creates workspace)
+- `GET /api/workspaces/snapshots/:snapshotId` - Get snapshot details
+- `PUT /api/workspaces/snapshots/:snapshotId` - Update snapshot
+- `DELETE /api/workspaces/snapshots/:snapshotId` - Delete snapshot
+- `POST /api/workspaces/snapshots/:snapshotId/restore` - Restore snapshot state
+- `GET /api/workspaces/snapshots/:snapshotId/export` - Export snapshot config
 
 ### Notes/Wiki API
 - `GET /api/notes` - List all notes (filter: ?category=X)
@@ -650,7 +706,7 @@ npm install
 - `GET /api/notes/:id/links` - Get linked notes
 - `GET /api/notes/:id/backlinks` - Get backlinks
 
-**Total: 46 API endpoints**
+**Total: 59 API endpoints** (Workspace system expanded with hierarchical management)
 
 See feature-specific documentation for detailed API usage:
 - [DOCKER_FEATURE.md](./DOCKER_FEATURE.md)
@@ -673,7 +729,12 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
 - **Docker integration** - Build images, manage containers, generate docker-compose
 - **Environment variables manager** - Secure storage with AES-256 encryption
 - **Wiki/notes system** - Markdown docs with full-text search and [[linking]]
-- **Workspace snapshots** - Save and restore entire dev environment
+- **Hierarchical workspace management** - Organize environments with workspace → snapshots structure
+  - Database migration system with automatic execution
+  - Hybrid workspace creation (auto from folder scan + manual)
+  - 3-level navigation UI with breadcrumb
+  - Cascade deletion (workspace → snapshots)
+  - Active workspace pattern
 
 ### 📅 Planned (v2.0)
 
