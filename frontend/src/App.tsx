@@ -4,6 +4,7 @@ import Services from './components/Services'
 import Workspaces from './components/Workspaces'
 import Docker from './components/Docker'
 import Environment from './components/Environment'
+import Wiki from './components/Wiki'
 import Sidebar from './components/Sidebar'
 
 function App() {
@@ -18,7 +19,7 @@ function App() {
         {activeView === 'workspaces' && <Workspaces />}
         {activeView === 'docker' && <Docker />}
         {activeView === 'env' && <Environment />}
-        {activeView === 'wiki' && <div className="p-8">Wiki (Coming Soon)</div>}
+        {activeView === 'wiki' && <Wiki />}
       </main>
     </div>
   )
