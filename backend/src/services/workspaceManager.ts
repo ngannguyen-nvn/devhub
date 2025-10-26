@@ -1,5 +1,5 @@
 import db from '../db'
-import { WorkspaceSnapshot } from '@devhub/shared'
+import { WorkspaceSnapshot, Workspace } from '@devhub/shared'
 import { ServiceManager } from './serviceManager'
 import { DockerManager } from './dockerManager'
 import { EnvManager } from './envManager'
@@ -25,18 +25,280 @@ export class WorkspaceManager {
     this.notesManager = notesManager
   }
 
+  // ==================== WORKSPACE CRUD METHODS ====================
+
+  /**
+   * Get all workspaces with snapshot counts and latest snapshot info
+   */
+  getAllWorkspaces(): Workspace[] {
+    const stmt = db.prepare(`
+      SELECT
+        w.*,
+        COUNT(ws.id) as snapshot_count,
+        MAX(ws.updated_at) as latest_snapshot_date
+      FROM workspaces w
+      LEFT JOIN workspace_snapshots ws ON w.id = ws.workspace_id
+      GROUP BY w.id
+      ORDER BY w.active DESC, w.updated_at DESC
+    `)
+    const rows = stmt.all() as any[]
+
+    return rows.map(row => {
+      // Get latest snapshot for this workspace
+      const latestSnapshotStmt = db.prepare(`
+        SELECT id, name, created_at
+        FROM workspace_snapshots
+        WHERE workspace_id = ?
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `)
+      const latestSnapshot = latestSnapshotStmt.get(row.id) as any
+
+      return {
+        id: row.id,
+        name: row.name,
+        description: row.description || undefined,
+        folderPath: row.folder_path || undefined,
+        active: Boolean(row.active),
+        tags: row.tags ? JSON.parse(row.tags) : undefined,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        snapshotCount: row.snapshot_count || 0,
+        latestSnapshot: latestSnapshot ? {
+          id: latestSnapshot.id,
+          name: latestSnapshot.name,
+          createdAt: latestSnapshot.created_at,
+        } : undefined,
+      }
+    })
+  }
+
+  /**
+   * Get a specific workspace by ID
+   */
+  getWorkspace(workspaceId: string): Workspace | null {
+    const stmt = db.prepare('SELECT * FROM workspaces WHERE id = ?')
+    const row = stmt.get(workspaceId) as any
+
+    if (!row) return null
+
+    // Get snapshot count
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM workspace_snapshots WHERE workspace_id = ?')
+    const countRow = countStmt.get(workspaceId) as any
+
+    // Get latest snapshot
+    const latestStmt = db.prepare(`
+      SELECT id, name, created_at
+      FROM workspace_snapshots
+      WHERE workspace_id = ?
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `)
+    const latestSnapshot = latestStmt.get(workspaceId) as any
+
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description || undefined,
+      folderPath: row.folder_path || undefined,
+      active: Boolean(row.active),
+      tags: row.tags ? JSON.parse(row.tags) : undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      snapshotCount: countRow?.count || 0,
+      latestSnapshot: latestSnapshot ? {
+        id: latestSnapshot.id,
+        name: latestSnapshot.name,
+        createdAt: latestSnapshot.created_at,
+      } : undefined,
+    }
+  }
+
+  /**
+   * Get workspace by folder path
+   */
+  getWorkspaceByFolderPath(folderPath: string): Workspace | null {
+    const stmt = db.prepare('SELECT * FROM workspaces WHERE folder_path = ? LIMIT 1')
+    const row = stmt.get(folderPath) as any
+
+    if (!row) return null
+
+    return this.getWorkspace(row.id)
+  }
+
+  /**
+   * Get the currently active workspace
+   */
+  getActiveWorkspace(): Workspace | null {
+    const stmt = db.prepare('SELECT * FROM workspaces WHERE active = 1 LIMIT 1')
+    const row = stmt.get() as any
+
+    if (!row) return null
+
+    return this.getWorkspace(row.id)
+  }
+
+  /**
+   * Create a new workspace
+   */
+  createWorkspace(data: {
+    name: string
+    description?: string
+    folderPath?: string
+    tags?: string[]
+    setAsActive?: boolean
+  }): Workspace {
+    const workspaceId = `workspace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const now = new Date().toISOString()
+
+    // If setAsActive is true, deactivate all other workspaces
+    if (data.setAsActive) {
+      db.prepare('UPDATE workspaces SET active = 0').run()
+    }
+
+    const stmt = db.prepare(`
+      INSERT INTO workspaces (id, name, description, folder_path, active, tags, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+
+    stmt.run(
+      workspaceId,
+      data.name,
+      data.description || null,
+      data.folderPath || null,
+      data.setAsActive ? 1 : 0,
+      data.tags ? JSON.stringify(data.tags) : null,
+      now,
+      now
+    )
+
+    return this.getWorkspace(workspaceId)!
+  }
+
+  /**
+   * Update a workspace
+   */
+  updateWorkspace(workspaceId: string, data: {
+    name?: string
+    description?: string
+    folderPath?: string
+    tags?: string[]
+  }): Workspace | null {
+    const existing = this.getWorkspace(workspaceId)
+    if (!existing) return null
+
+    const updates: string[] = []
+    const values: any[] = []
+
+    if (data.name !== undefined) {
+      updates.push('name = ?')
+      values.push(data.name)
+    }
+
+    if (data.description !== undefined) {
+      updates.push('description = ?')
+      values.push(data.description || null)
+    }
+
+    if (data.folderPath !== undefined) {
+      updates.push('folder_path = ?')
+      values.push(data.folderPath || null)
+    }
+
+    if (data.tags !== undefined) {
+      updates.push('tags = ?')
+      values.push(data.tags ? JSON.stringify(data.tags) : null)
+    }
+
+    if (updates.length === 0) return existing
+
+    updates.push('updated_at = ?')
+    values.push(new Date().toISOString())
+
+    values.push(workspaceId)
+
+    const stmt = db.prepare(`UPDATE workspaces SET ${updates.join(', ')} WHERE id = ?`)
+    stmt.run(...values)
+
+    return this.getWorkspace(workspaceId)
+  }
+
+  /**
+   * Set a workspace as active (deactivates all others)
+   */
+  setActiveWorkspace(workspaceId: string): Workspace | null {
+    const workspace = this.getWorkspace(workspaceId)
+    if (!workspace) return null
+
+    // Deactivate all workspaces
+    db.prepare('UPDATE workspaces SET active = 0').run()
+
+    // Activate the specified workspace
+    db.prepare('UPDATE workspaces SET active = 1, updated_at = ? WHERE id = ?')
+      .run(new Date().toISOString(), workspaceId)
+
+    return this.getWorkspace(workspaceId)
+  }
+
+  /**
+   * Delete a workspace (cascade deletes all snapshots)
+   */
+  deleteWorkspace(workspaceId: string): boolean {
+    const workspace = this.getWorkspace(workspaceId)
+    if (!workspace) return false
+
+    // Delete workspace (snapshots will be cascade deleted due to FK constraint)
+    const stmt = db.prepare('DELETE FROM workspaces WHERE id = ?')
+    const result = stmt.run(workspaceId)
+
+    // If this was the active workspace, set another as active
+    if (workspace.active) {
+      const remaining = this.getAllWorkspaces()
+      if (remaining.length > 0) {
+        this.setActiveWorkspace(remaining[0].id)
+      }
+    }
+
+    return result.changes > 0
+  }
+
+  /**
+   * Get all snapshots for a specific workspace
+   */
+  getWorkspaceSnapshots(workspaceId: string): WorkspaceSnapshot[] {
+    const stmt = db.prepare(`
+      SELECT * FROM workspace_snapshots
+      WHERE workspace_id = ?
+      ORDER BY updated_at DESC
+    `)
+    const rows = stmt.all(workspaceId) as any[]
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      workspaceId: row.workspace_id,
+      ...JSON.parse(row.config),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }))
+  }
+
+  // ==================== SNAPSHOT METHODS ====================
+
   /**
    * Get all workspace snapshots
    */
   getAllSnapshots(): WorkspaceSnapshot[] {
-    const stmt = db.prepare('SELECT * FROM workspaces ORDER BY created_at DESC')
+    const stmt = db.prepare('SELECT * FROM workspace_snapshots ORDER BY updated_at DESC')
     const rows = stmt.all() as any[]
 
     return rows.map(row => ({
       id: row.id,
       name: row.name,
+      workspaceId: row.workspace_id,
       ...JSON.parse(row.config),
       createdAt: row.created_at,
+      updatedAt: row.updated_at,
     }))
   }
 
@@ -44,7 +306,7 @@ export class WorkspaceManager {
    * Get a specific snapshot
    */
   getSnapshot(snapshotId: string): WorkspaceSnapshot | null {
-    const stmt = db.prepare('SELECT * FROM workspaces WHERE id = ?')
+    const stmt = db.prepare('SELECT * FROM workspace_snapshots WHERE id = ?')
     const row = stmt.get(snapshotId) as any
 
     if (!row) return null
@@ -52,8 +314,10 @@ export class WorkspaceManager {
     return {
       id: row.id,
       name: row.name,
+      workspaceId: row.workspace_id,
       ...JSON.parse(row.config),
       createdAt: row.created_at,
+      updatedAt: row.updated_at,
     }
   }
 
@@ -207,6 +471,7 @@ export class WorkspaceManager {
 
   /**
    * Create a new workspace snapshot
+   * If workspaceId is not provided but scannedPath is, auto-creates/finds workspace (hybrid approach)
    */
   async createSnapshot(
     name: string,
@@ -214,9 +479,48 @@ export class WorkspaceManager {
     repoPaths: string[],
     activeEnvProfile?: string,
     tags?: string[],
-    scannedPath?: string
+    scannedPath?: string,
+    workspaceId?: string
   ): Promise<WorkspaceSnapshot> {
-    const id = `workspace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const id = `snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const now = new Date().toISOString()
+
+    // Determine workspace ID (hybrid approach)
+    let targetWorkspaceId = workspaceId
+
+    if (!targetWorkspaceId && scannedPath) {
+      // Auto-create/find workspace by folder path
+      const existing = this.getWorkspaceByFolderPath(scannedPath)
+      if (existing) {
+        targetWorkspaceId = existing.id
+      } else {
+        // Create new workspace for this folder
+        const folderName = scannedPath.split('/').filter(Boolean).pop() || 'Unnamed Workspace'
+        const newWorkspace = this.createWorkspace({
+          name: folderName,
+          description: `Auto-created from folder scan`,
+          folderPath: scannedPath,
+          tags,
+        })
+        targetWorkspaceId = newWorkspace.id
+      }
+    }
+
+    // If still no workspace ID, use/create default workspace
+    if (!targetWorkspaceId) {
+      const activeWorkspace = this.getActiveWorkspace()
+      if (activeWorkspace) {
+        targetWorkspaceId = activeWorkspace.id
+      } else {
+        // Create default workspace
+        const defaultWorkspace = this.createWorkspace({
+          name: 'Default Workspace',
+          description: 'Default workspace for snapshots',
+          setAsActive: true,
+        })
+        targetWorkspaceId = defaultWorkspace.id
+      }
+    }
 
     // Capture current state
     const state = await this.captureCurrentState(repoPaths, scannedPath)
@@ -233,21 +537,25 @@ export class WorkspaceManager {
       tags,
       autoRestore: false,
       scannedPath,
-      updatedAt: new Date().toISOString(),
     }
 
     const stmt = db.prepare(`
-      INSERT INTO workspaces (id, name, config)
-      VALUES (?, ?, ?)
+      INSERT INTO workspace_snapshots (id, name, workspace_id, config, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
     `)
 
-    stmt.run(id, name, JSON.stringify(config))
+    stmt.run(id, name, targetWorkspaceId, JSON.stringify(config), now, now)
+
+    // Update workspace's updated_at
+    db.prepare('UPDATE workspaces SET updated_at = ? WHERE id = ?').run(now, targetWorkspaceId)
 
     return {
       id,
       name,
+      workspaceId: targetWorkspaceId,
       ...config,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     }
   }
 
@@ -273,17 +581,28 @@ export class WorkspaceManager {
       description: updates.description !== undefined ? updates.description : current.description,
       runningServices: current.runningServices,
       repositories: current.repositories,
+      dockerContainers: current.dockerContainers,
+      envVariables: current.envVariables,
+      serviceLogs: current.serviceLogs,
+      wikiNotes: current.wikiNotes,
       activeEnvProfile: current.activeEnvProfile,
       tags: updates.tags !== undefined ? updates.tags : current.tags,
       autoRestore: updates.autoRestore !== undefined ? updates.autoRestore : current.autoRestore,
-      updatedAt: new Date().toISOString(),
+      scannedPath: current.scannedPath,
     }
 
+    const now = new Date().toISOString()
     const stmt = db.prepare(`
-      UPDATE workspaces SET name = ?, config = ? WHERE id = ?
+      UPDATE workspace_snapshots SET name = ?, config = ?, updated_at = ? WHERE id = ?
     `)
 
-    const result = stmt.run(newName, JSON.stringify(newConfig), snapshotId)
+    const result = stmt.run(newName, JSON.stringify(newConfig), now, snapshotId)
+
+    // Update workspace's updated_at
+    if (result.changes > 0) {
+      db.prepare('UPDATE workspaces SET updated_at = ? WHERE id = ?').run(now, current.workspaceId)
+    }
+
     return result.changes > 0
   }
 
@@ -291,8 +610,18 @@ export class WorkspaceManager {
    * Delete a workspace snapshot
    */
   deleteSnapshot(snapshotId: string): boolean {
-    const stmt = db.prepare('DELETE FROM workspaces WHERE id = ?')
+    const snapshot = this.getSnapshot(snapshotId)
+    if (!snapshot) return false
+
+    const stmt = db.prepare('DELETE FROM workspace_snapshots WHERE id = ?')
     const result = stmt.run(snapshotId)
+
+    // Update workspace's updated_at
+    if (result.changes > 0) {
+      db.prepare('UPDATE workspaces SET updated_at = ? WHERE id = ?')
+        .run(new Date().toISOString(), snapshot.workspaceId)
+    }
+
     return result.changes > 0
   }
 

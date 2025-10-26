@@ -5,83 +5,56 @@ import {
   Trash2,
   Plus,
   Download,
-  Upload,
-  Copy,
   Zap,
   GitBranch,
   Server,
-  Clock,
-  Tag,
   RefreshCw,
   CheckCircle,
   AlertCircle,
   Folder,
-  Container,
-  FileText,
-  Database,
+  ChevronRight,
+  Home,
+  Layers,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
 import { SkeletonLoader } from './Loading'
+import type { Workspace, WorkspaceSnapshot } from '@devhub/shared'
 
-interface WorkspaceSnapshot {
-  id: string
-  name: string
-  description?: string
-  createdAt: string
-  updatedAt: string
-  runningServices: Array<{
-    serviceId: string
-    serviceName: string
-  }>
-  repositories: Array<{
-    path: string
-    branch: string
-    hasChanges: boolean
-  }>
-  dockerContainers?: Array<{
-    id: string
-    name: string
-    image: string
-    state: string
-    ports: Array<{
-      privatePort: number
-      publicPort?: number
-    }>
-  }>
-  envVariables?: Record<string, Record<string, string>>
-  serviceLogs?: Record<string, string[]>
-  wikiNotes?: Array<{
-    id: string
-    title: string
-    content: string
-    tags?: string[]
-  }>
-  activeEnvProfile?: string
-  tags?: string[]
-  autoRestore?: boolean
-  scannedPath?: string
-}
+type ViewLevel = 'workspace-list' | 'workspace-detail' | 'snapshot-detail'
 
 export default function Workspaces() {
+  // Navigation state
+  const [viewLevel, setViewLevel] = useState<ViewLevel>('workspace-list')
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null)
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null)
+
+  // Data state
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [snapshots, setSnapshots] = useState<WorkspaceSnapshot[]>([])
-  const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null)
+  const [selectedSnapshot, setSelectedSnapshot] = useState<WorkspaceSnapshot | null>(null)
+
+  // UI state
   const [loading, setLoading] = useState(false)
   const [restoring, setRestoring] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [showImportForm, setShowImportForm] = useState(false)
+  const [showCreateWorkspaceForm, setShowCreateWorkspaceForm] = useState(false)
+  const [showCreateSnapshotForm, setShowCreateSnapshotForm] = useState(false)
   const [showScanForm, setShowScanForm] = useState(false)
-  const [showSelectiveRestore, setShowSelectiveRestore] = useState(false)
 
   // Forms
-  const [createForm, setCreateForm] = useState({
+  const [createWorkspaceForm, setCreateWorkspaceForm] = useState({
+    name: '',
+    description: '',
+    folderPath: '',
+    tags: '',
+  })
+  const [createSnapshotForm, setCreateSnapshotForm] = useState({
     name: '',
     description: '',
     repoPaths: '',
     tags: '',
   })
-  const [importForm, setImportForm] = useState({ jsonData: '' })
   const [scanForm, setScanForm] = useState({
     path: '',
     name: '',
@@ -89,17 +62,11 @@ export default function Workspaces() {
     depth: '3',
     tags: '',
   })
-  const [selectiveRestoreOptions, setSelectiveRestoreOptions] = useState({
-    restoreBranches: true,
-    restoreServices: true,
-    restoreDocker: false,
-    restoreEnvVars: false,
-  })
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
-    type: 'restore' | 'delete'
+    type: 'restore' | 'delete-workspace' | 'delete-snapshot'
     id: string | null
     name: string
   }>({
@@ -109,28 +76,154 @@ export default function Workspaces() {
     name: '',
   })
 
-  // Fetch snapshots
-  const fetchSnapshots = async () => {
+  // Fetch workspaces
+  const fetchWorkspaces = async () => {
     setLoading(true)
     try {
       const response = await axios.get('/api/workspaces')
-      setSnapshots(response.data.snapshots || [])
+      setWorkspaces(response.data.workspaces || [])
     } catch (error) {
-      console.error('Error fetching snapshots:', error)
+      console.error('Error fetching workspaces:', error)
+      toast.error('Failed to fetch workspaces')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchSnapshots()
-  }, [])
+  // Fetch snapshots for a specific workspace
+  const fetchSnapshots = async (workspaceId: string) => {
+    setLoading(true)
+    try {
+      const response = await axios.get(`/api/workspaces/${workspaceId}/snapshots`)
+      setSnapshots(response.data.snapshots || [])
+    } catch (error) {
+      console.error('Error fetching snapshots:', error)
+      toast.error('Failed to fetch snapshots')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  // Quick snapshot
+  // Fetch snapshot details
+  const fetchSnapshotDetails = async (snapshotId: string) => {
+    setLoading(true)
+    try {
+      const response = await axios.get(`/api/workspaces/snapshots/${snapshotId}`)
+      setSelectedSnapshot(response.data.snapshot)
+    } catch (error) {
+      console.error('Error fetching snapshot details:', error)
+      toast.error('Failed to fetch snapshot details')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Initial load - fetch workspaces
+  useEffect(() => {
+    if (viewLevel === 'workspace-list') {
+      fetchWorkspaces()
+    } else if (viewLevel === 'workspace-detail' && selectedWorkspaceId) {
+      fetchSnapshots(selectedWorkspaceId)
+    } else if (viewLevel === 'snapshot-detail' && selectedSnapshotId) {
+      fetchSnapshotDetails(selectedSnapshotId)
+    }
+  }, [viewLevel, selectedWorkspaceId, selectedSnapshotId])
+
+  // Navigation handlers
+  const handleWorkspaceClick = (workspaceId: string) => {
+    setSelectedWorkspaceId(workspaceId)
+    setViewLevel('workspace-detail')
+  }
+
+  const handleSnapshotClick = (snapshotId: string) => {
+    setSelectedSnapshotId(snapshotId)
+    setViewLevel('snapshot-detail')
+  }
+
+  const handleBackToWorkspaces = () => {
+    setSelectedWorkspaceId(null)
+    setSnapshots([])
+    setViewLevel('workspace-list')
+  }
+
+  const handleBackToSnapshots = () => {
+    setSelectedSnapshotId(null)
+    setSelectedSnapshot(null)
+    setViewLevel('workspace-detail')
+  }
+
+  // Create workspace
+  const handleCreateWorkspace = async () => {
+    if (!createWorkspaceForm.name.trim()) {
+      toast.error('Workspace name is required')
+      return
+    }
+
+    try {
+      const tags = createWorkspaceForm.tags
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t)
+
+      await axios.post('/api/workspaces', {
+        name: createWorkspaceForm.name,
+        description: createWorkspaceForm.description || undefined,
+        folderPath: createWorkspaceForm.folderPath || undefined,
+        tags: tags.length > 0 ? tags : undefined,
+      })
+
+      setShowCreateWorkspaceForm(false)
+      setCreateWorkspaceForm({ name: '', description: '', folderPath: '', tags: '' })
+      fetchWorkspaces()
+      toast.success(`Workspace "${createWorkspaceForm.name}" created successfully!`)
+    } catch (error: any) {
+      toast.error(`Failed to create workspace: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
+  // Activate workspace
+  const handleActivateWorkspace = async (workspaceId: string) => {
+    try {
+      await axios.post(`/api/workspaces/${workspaceId}/activate`)
+      fetchWorkspaces()
+      toast.success('Workspace activated!')
+    } catch (error: any) {
+      toast.error(`Failed to activate workspace: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
+  // Delete workspace
+  const handleDeleteWorkspace = (workspaceId: string, workspaceName: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'delete-workspace',
+      id: workspaceId,
+      name: workspaceName,
+    })
+  }
+
+  const confirmDeleteWorkspace = async () => {
+    if (!confirmDialog.id) return
+
+    try {
+      await axios.delete(`/api/workspaces/${confirmDialog.id}`)
+      if (selectedWorkspaceId === confirmDialog.id) {
+        handleBackToWorkspaces()
+      }
+      fetchWorkspaces()
+      toast.success(`Workspace "${confirmDialog.name}" deleted`)
+    } catch (error: any) {
+      toast.error(`Failed to delete workspace: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
+  // Quick snapshot (creates in active workspace)
   const handleQuickSnapshot = async () => {
     try {
-      await axios.post('/api/workspaces/quick')
-      fetchSnapshots()
+      await axios.post('/api/workspaces/snapshots/quick')
+      if (selectedWorkspaceId) {
+        fetchSnapshots(selectedWorkspaceId)
+      }
       toast.success('Quick snapshot created!')
     } catch (error: any) {
       toast.error(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
@@ -139,38 +232,43 @@ export default function Workspaces() {
 
   // Create snapshot
   const handleCreateSnapshot = async () => {
-    if (!createForm.name.trim()) {
+    if (!selectedWorkspaceId) {
+      toast.error('No workspace selected')
+      return
+    }
+
+    if (!createSnapshotForm.name.trim()) {
       toast.error('Snapshot name is required')
       return
     }
 
-    if (!createForm.repoPaths.trim()) {
+    if (!createSnapshotForm.repoPaths.trim()) {
       toast.error('At least one repository path is required')
       return
     }
 
     try {
-      const repoPaths = createForm.repoPaths
+      const repoPaths = createSnapshotForm.repoPaths
         .split(',')
         .map(p => p.trim())
         .filter(p => p)
 
-      const tags = createForm.tags
+      const tags = createSnapshotForm.tags
         .split(',')
         .map(t => t.trim())
         .filter(t => t)
 
-      await axios.post('/api/workspaces', {
-        name: createForm.name,
-        description: createForm.description || undefined,
+      await axios.post(`/api/workspaces/${selectedWorkspaceId}/snapshots`, {
+        name: createSnapshotForm.name,
+        description: createSnapshotForm.description || undefined,
         repoPaths,
         tags: tags.length > 0 ? tags : undefined,
       })
 
-      setShowCreateForm(false)
-      setCreateForm({ name: '', description: '', repoPaths: '', tags: '' })
-      fetchSnapshots()
-      toast.success(`Snapshot "${createForm.name}" created successfully!`)
+      setShowCreateSnapshotForm(false)
+      setCreateSnapshotForm({ name: '', description: '', repoPaths: '', tags: '' })
+      fetchSnapshots(selectedWorkspaceId)
+      toast.success(`Snapshot "${createSnapshotForm.name}" created successfully!`)
     } catch (error: any) {
       toast.error(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
     }
@@ -191,7 +289,7 @@ export default function Workspaces() {
 
     setRestoring(true)
     try {
-      const response = await axios.post(`/api/workspaces/${confirmDialog.id}/restore`)
+      const response = await axios.post(`/api/workspaces/snapshots/${confirmDialog.id}/restore`)
 
       if (response.data.success) {
         toast.success(
@@ -212,24 +310,24 @@ export default function Workspaces() {
   }
 
   // Delete snapshot
-  const handleDelete = (snapshotId: string, snapshotName: string) => {
+  const handleDeleteSnapshot = (snapshotId: string, snapshotName: string) => {
     setConfirmDialog({
       isOpen: true,
-      type: 'delete',
+      type: 'delete-snapshot',
       id: snapshotId,
       name: snapshotName,
     })
   }
 
-  const confirmDelete = async () => {
-    if (!confirmDialog.id) return
+  const confirmDeleteSnapshot = async () => {
+    if (!confirmDialog.id || !selectedWorkspaceId) return
 
     try {
-      await axios.delete(`/api/workspaces/${confirmDialog.id}`)
-      if (selectedSnapshot === confirmDialog.id) {
-        setSelectedSnapshot(null)
+      await axios.delete(`/api/workspaces/snapshots/${confirmDialog.id}`)
+      if (selectedSnapshotId === confirmDialog.id) {
+        handleBackToSnapshots()
       }
-      fetchSnapshots()
+      fetchSnapshots(selectedWorkspaceId)
       toast.success(`Snapshot "${confirmDialog.name}" deleted`)
     } catch (error: any) {
       toast.error(`Failed to delete snapshot: ${error.response?.data?.error || error.message}`)
@@ -239,45 +337,24 @@ export default function Workspaces() {
   // Export snapshot
   const handleExport = async (snapshotId: string, snapshotName: string) => {
     try {
-      const response = await axios.get(`/api/workspaces/${snapshotId}/export`, {
+      const response = await axios.get(`/api/workspaces/snapshots/${snapshotId}/export`, {
         responseType: 'blob',
       })
 
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', `workspace-${snapshotName}.json`)
+      link.setAttribute('download', `snapshot-${snapshotName}.json`)
       document.body.appendChild(link)
       link.click()
       link.remove()
-      toast.success(`Workspace "${snapshotName}" exported`)
+      toast.success(`Snapshot "${snapshotName}" exported`)
     } catch (error: any) {
       toast.error(`Failed to export snapshot: ${error.message}`)
     }
   }
 
-  // Import snapshot
-  const handleImport = async () => {
-    if (!importForm.jsonData.trim()) {
-      toast.error('JSON data is required')
-      return
-    }
-
-    try {
-      await axios.post('/api/workspaces/import', {
-        jsonData: importForm.jsonData,
-      })
-
-      setShowImportForm(false)
-      setImportForm({ jsonData: '' })
-      fetchSnapshots()
-      toast.success('Workspace imported successfully!')
-    } catch (error: any) {
-      toast.error(`Failed to import workspace: ${error.response?.data?.error || error.message}`)
-    }
-  }
-
-  // Scan folder and create workspace
+  // Scan folder and create snapshot in workspace
   const handleScanFolder = async () => {
     if (!scanForm.path.trim()) {
       toast.error('Folder path is required')
@@ -285,7 +362,7 @@ export default function Workspaces() {
     }
 
     if (!scanForm.name.trim()) {
-      toast.error('Workspace name is required')
+      toast.error('Snapshot name is required')
       return
     }
 
@@ -295,7 +372,7 @@ export default function Workspaces() {
         .map(t => t.trim())
         .filter(t => t)
 
-      const response = await axios.post('/api/workspaces/scan', {
+      const response = await axios.post('/api/workspaces/snapshots/scan', {
         path: scanForm.path,
         name: scanForm.name,
         description: scanForm.description || undefined,
@@ -305,9 +382,12 @@ export default function Workspaces() {
 
       setShowScanForm(false)
       setScanForm({ path: '', name: '', description: '', depth: '3', tags: '' })
-      fetchSnapshots()
+
+      // Refresh workspaces to show the new/updated workspace
+      fetchWorkspaces()
+
       toast.success(
-        `Workspace "${scanForm.name}" created! Found ${response.data.repositoriesFound} repositories.`,
+        `Snapshot "${scanForm.name}" created! Found ${response.data.scanResult?.count || 0} repositories.`,
         { duration: 5000 }
       )
     } catch (error: any) {
@@ -315,131 +395,272 @@ export default function Workspaces() {
     }
   }
 
-  // Selective restore
-  const handleSelectiveRestore = () => {
-    if (!selectedSnapshot) return
-    setShowSelectiveRestore(true)
-  }
-
-  const confirmSelectiveRestore = async () => {
-    if (!selectedSnapshot) return
-
-    setRestoring(true)
-    setShowSelectiveRestore(false)
-    try {
-      const response = await axios.post(`/api/workspaces/${selectedSnapshot}/restore-selective`, selectiveRestoreOptions)
-
-      const parts = []
-      if (response.data.branchesSwitched > 0) parts.push(`switched ${response.data.branchesSwitched} branch(es)`)
-      if (response.data.servicesStarted > 0) parts.push(`started ${response.data.servicesStarted} service(s)`)
-      if (response.data.containersStarted > 0) parts.push(`started ${response.data.containersStarted} container(s)`)
-      if (response.data.envVarsApplied > 0) parts.push(`applied ${response.data.envVarsApplied} env var(s)`)
-
-      if (parts.length > 0) {
-        toast.success(`Workspace restored! ${parts.join(', ')}`, { duration: 5000 })
-      } else {
-        toast.success('Workspace restored (no changes)')
-      }
-
-      if (response.data.errors && response.data.errors.length > 0) {
-        console.error('Restore errors:', response.data.errors)
-        toast.error(`${response.data.errors.length} error(s) occurred during restoration`, { duration: 3000 })
-      }
-    } catch (error: any) {
-      toast.error(`Failed to restore workspace: ${error.response?.data?.error || error.message}`)
-    } finally {
-      setRestoring(false)
-    }
-  }
-
-  const selectedSnapshotData = snapshots.find(s => s.id === selectedSnapshot)
+  // Get data for current view
+  const selectedWorkspace = workspaces.find(w => w.id === selectedWorkspaceId)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString()
   }
 
+  // Breadcrumb navigation
+  const renderBreadcrumb = () => (
+    <div className="flex items-center gap-2 text-sm mb-4">
+      <button
+        onClick={handleBackToWorkspaces}
+        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+      >
+        <Home className="w-4 h-4" />
+        Workspaces
+      </button>
+      {selectedWorkspace && (
+        <>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+          {viewLevel === 'workspace-detail' ? (
+            <span className="text-gray-900">{selectedWorkspace.name}</span>
+          ) : (
+            <button
+              onClick={handleBackToSnapshots}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              {selectedWorkspace.name}
+            </button>
+          )}
+        </>
+      )}
+      {selectedSnapshot && viewLevel === 'snapshot-detail' && (
+        <>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <span className="text-gray-900">{selectedSnapshot.name}</span>
+        </>
+      )}
+    </div>
+  )
+
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Workspace Snapshots</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={fetchSnapshots}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
-          <button
-            onClick={handleQuickSnapshot}
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-          >
-            <Zap className="w-4 h-4" />
-            Quick Snapshot
-          </button>
-          <button
-            onClick={() => setShowScanForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-          >
-            <Folder className="w-4 h-4" />
-            Scan Folder
-          </button>
-        </div>
-      </div>
+      {/* Breadcrumb */}
+      {viewLevel !== 'workspace-list' && renderBreadcrumb()}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Snapshots List */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Saved Snapshots</h2>
+      {/* View Level 1: Workspace List */}
+      {viewLevel === 'workspace-list' && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">Workspaces</h1>
             <div className="flex gap-2">
               <button
-                onClick={() => setShowImportForm(true)}
-                className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
-                title="Import"
+                onClick={fetchWorkspaces}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
               >
-                <Upload className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4" />
+                Refresh
               </button>
               <button
-                onClick={() => setShowCreateForm(true)}
-                className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                title="Create Snapshot"
+                onClick={() => setShowScanForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                <Folder className="w-4 h-4" />
+                Scan Folder
+              </button>
+              <button
+                onClick={() => setShowCreateWorkspaceForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 <Plus className="w-4 h-4" />
+                New Workspace
               </button>
             </div>
           </div>
 
-          {/* Create Form */}
-          {showCreateForm && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
-              <h3 className="font-semibold mb-2">Create Snapshot</h3>
-              <div className="space-y-2">
+          {/* Create Workspace Form */}
+          {showCreateWorkspaceForm && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
+              <h3 className="font-semibold mb-3">Create New Workspace</h3>
+              <div className="space-y-3">
                 <input
                   type="text"
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  placeholder="Snapshot name"
+                  value={createWorkspaceForm.name}
+                  onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, name: e.target.value })}
+                  placeholder="Workspace name *"
                   className="w-full px-3 py-2 border rounded"
                 />
                 <input
                   type="text"
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                  value={createWorkspaceForm.description}
+                  onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, description: e.target.value })}
                   placeholder="Description (optional)"
                   className="w-full px-3 py-2 border rounded"
                 />
                 <input
                   type="text"
-                  value={createForm.repoPaths}
-                  onChange={(e) => setCreateForm({ ...createForm, repoPaths: e.target.value })}
-                  placeholder="Repository paths (comma-separated)"
+                  value={createWorkspaceForm.folderPath}
+                  onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, folderPath: e.target.value })}
+                  placeholder="Folder path (optional)"
                   className="w-full px-3 py-2 border rounded"
                 />
                 <input
                   type="text"
-                  value={createForm.tags}
-                  onChange={(e) => setCreateForm({ ...createForm, tags: e.target.value })}
+                  value={createWorkspaceForm.tags}
+                  onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, tags: e.target.value })}
+                  placeholder="Tags (comma-separated, optional)"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={handleCreateWorkspace}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Create
+                </button>
+                <button
+                  onClick={() => setShowCreateWorkspaceForm(false)}
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Workspaces Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {loading && workspaces.length === 0 ? (
+              <SkeletonLoader count={3} />
+            ) : workspaces.length === 0 ? (
+              <div className="col-span-full text-center py-16 text-gray-500">
+                <Layers className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">No workspaces yet</p>
+                <p className="text-sm mt-2">Create your first workspace to get started</p>
+              </div>
+            ) : (
+              workspaces.map((workspace) => (
+                <div
+                  key={workspace.id}
+                  className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 p-4 cursor-pointer transition-colors"
+                  onClick={() => handleWorkspaceClick(workspace.id)}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-lg">{workspace.name}</h3>
+                    {workspace.active && (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded">Active</span>
+                    )}
+                  </div>
+                  {workspace.description && (
+                    <p className="text-sm text-gray-600 mb-3">{workspace.description}</p>
+                  )}
+                  <div className="flex gap-4 text-xs text-gray-500 mb-3">
+                    <span className="flex items-center gap-1">
+                      <Save className="w-3 h-3" />
+                      {workspace.snapshotCount || 0} snapshots
+                    </span>
+                    {workspace.folderPath && (
+                      <span className="flex items-center gap-1">
+                        <Folder className="w-3 h-3" />
+                        {workspace.folderPath.split('/').pop()}
+                      </span>
+                    )}
+                  </div>
+                  {workspace.tags && workspace.tags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mb-3">
+                      {workspace.tags.map((tag, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 mt-3 pt-3 border-t">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleActivateWorkspace(workspace.id)
+                      }}
+                      className="flex-1 px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      Activate
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteWorkspace(workspace.id, workspace.name)
+                      }}
+                      className="px-3 py-1 text-xs text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {/* View Level 2: Workspace Detail (Snapshots List) */}
+      {viewLevel === 'workspace-detail' && selectedWorkspace && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold">{selectedWorkspace.name}</h1>
+              {selectedWorkspace.description && (
+                <p className="text-gray-600 mt-1">{selectedWorkspace.description}</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fetchSnapshots(selectedWorkspaceId!)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+              <button
+                onClick={handleQuickSnapshot}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              >
+                <Zap className="w-4 h-4" />
+                Quick Snapshot
+              </button>
+              <button
+                onClick={() => setShowCreateSnapshotForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                New Snapshot
+              </button>
+            </div>
+          </div>
+
+          {/* Create Snapshot Form */}
+          {showCreateSnapshotForm && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
+              <h3 className="font-semibold mb-3">Create Snapshot</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={createSnapshotForm.name}
+                  onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, name: e.target.value })}
+                  placeholder="Snapshot name *"
+                  className="w-full px-3 py-2 border rounded"
+                />
+                <textarea
+                  value={createSnapshotForm.description}
+                  onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, description: e.target.value })}
+                  placeholder="Description (optional)"
+                  className="w-full px-3 py-2 border rounded"
+                  rows={2}
+                />
+                <textarea
+                  value={createSnapshotForm.repoPaths}
+                  onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, repoPaths: e.target.value })}
+                  placeholder="Repository paths (comma-separated) *"
+                  className="w-full px-3 py-2 border rounded font-mono text-sm"
+                  rows={3}
+                />
+                <input
+                  type="text"
+                  value={createSnapshotForm.tags}
+                  onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, tags: e.target.value })}
                   placeholder="Tags (comma-separated, optional)"
                   className="w-full px-3 py-2 border rounded"
                 />
@@ -452,99 +673,7 @@ export default function Workspaces() {
                   Create
                 </button>
                 <button
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Import Form */}
-          {showImportForm && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
-              <h3 className="font-semibold mb-2">Import Workspace</h3>
-              <textarea
-                value={importForm.jsonData}
-                onChange={(e) => setImportForm({ jsonData: e.target.value })}
-                placeholder="Paste JSON data here..."
-                className="w-full px-3 py-2 border rounded font-mono text-sm h-32"
-              />
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={handleImport}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  Import
-                </button>
-                <button
-                  onClick={() => setShowImportForm(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Scan Folder Form */}
-          {showScanForm && (
-            <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded">
-              <h3 className="font-semibold mb-2">Scan Folder & Create Workspace</h3>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={scanForm.path}
-                  onChange={(e) => setScanForm({ ...scanForm, path: e.target.value })}
-                  placeholder="Folder path to scan (e.g., /home/user/projects)"
-                  className="w-full px-3 py-2 border rounded"
-                />
-                <input
-                  type="text"
-                  value={scanForm.name}
-                  onChange={(e) => setScanForm({ ...scanForm, name: e.target.value })}
-                  placeholder="Workspace name"
-                  className="w-full px-3 py-2 border rounded"
-                />
-                <input
-                  type="text"
-                  value={scanForm.description}
-                  onChange={(e) => setScanForm({ ...scanForm, description: e.target.value })}
-                  placeholder="Description (optional)"
-                  className="w-full px-3 py-2 border rounded"
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={scanForm.depth}
-                    onChange={(e) => setScanForm({ ...scanForm, depth: e.target.value })}
-                    placeholder="Scan depth"
-                    min="0"
-                    max="5"
-                    className="w-24 px-3 py-2 border rounded"
-                  />
-                  <input
-                    type="text"
-                    value={scanForm.tags}
-                    onChange={(e) => setScanForm({ ...scanForm, tags: e.target.value })}
-                    placeholder="Tags (comma-separated, optional)"
-                    className="flex-1 px-3 py-2 border rounded"
-                  />
-                </div>
-                <p className="text-xs text-gray-600">
-                  This will scan the folder for git repositories and capture all running services, Docker containers, environment variables, and notes.
-                </p>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={handleScanFolder}
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-                >
-                  Scan & Create
-                </button>
-                <button
-                  onClick={() => setShowScanForm(false)}
+                  onClick={() => setShowCreateSnapshotForm(false)}
                   className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
                 >
                   Cancel
@@ -554,397 +683,242 @@ export default function Workspaces() {
           )}
 
           {/* Snapshots List */}
-          {loading && snapshots.length === 0 ? (
-            <SkeletonLoader count={3} />
-          ) : snapshots.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Save className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>No snapshots saved yet.</p>
-              <p className="text-sm mt-1">Create your first snapshot to save your workspace state.</p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {snapshots.map(snapshot => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {loading && snapshots.length === 0 ? (
+              <SkeletonLoader count={3} />
+            ) : snapshots.length === 0 ? (
+              <div className="col-span-full text-center py-16 text-gray-500">
+                <Save className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">No snapshots yet</p>
+                <p className="text-sm mt-2">Create your first snapshot to save your workspace state</p>
+              </div>
+            ) : (
+              snapshots.map((snapshot) => (
                 <div
                   key={snapshot.id}
-                  onClick={() => setSelectedSnapshot(snapshot.id)}
-                  className={`p-3 rounded border cursor-pointer ${
-                    selectedSnapshot === snapshot.id
-                      ? 'bg-blue-50 border-blue-500'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                  }`}
+                  className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 p-4 cursor-pointer transition-colors"
+                  onClick={() => handleSnapshotClick(snapshot.id)}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{snapshot.name}</h3>
-                      {snapshot.description && (
-                        <p className="text-sm text-gray-600">{snapshot.description}</p>
-                      )}
-                      <div className="flex gap-3 mt-2 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Server className="w-3 h-3" />
-                          {snapshot.runningServices.length} services
+                  <h3 className="font-bold text-lg mb-2">{snapshot.name}</h3>
+                  {snapshot.description && (
+                    <p className="text-sm text-gray-600 mb-3">{snapshot.description}</p>
+                  )}
+                  <div className="flex gap-3 text-xs text-gray-500 mb-2">
+                    <span className="flex items-center gap-1">
+                      <Server className="w-3 h-3" />
+                      {snapshot.runningServices.length} services
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <GitBranch className="w-3 h-3" />
+                      {snapshot.repositories.length} repos
+                    </span>
+                  </div>
+                  {snapshot.tags && snapshot.tags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mb-2">
+                      {snapshot.tags.map((tag, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
+                          {tag}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <GitBranch className="w-3 h-3" />
-                          {snapshot.repositories.length} repos
+                      ))}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-400 mt-2">
+                    {formatDate(snapshot.createdAt)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {/* View Level 3: Snapshot Detail */}
+      {viewLevel === 'snapshot-detail' && selectedSnapshot && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">{selectedSnapshot.name}</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleExport(selectedSnapshot.id, selectedSnapshot.name)}
+                className="p-2 text-blue-600 hover:text-blue-800"
+                title="Export"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => handleRestore(selectedSnapshot.id, selectedSnapshot.name)}
+                disabled={restoring}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              >
+                <RotateCcw className="w-4 h-4" />
+                {restoring ? 'Restoring...' : 'Restore'}
+              </button>
+              <button
+                onClick={() => handleDeleteSnapshot(selectedSnapshot.id, selectedSnapshot.name)}
+                className="p-2 text-red-600 hover:text-red-800"
+                title="Delete"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {selectedSnapshot.description && (
+            <p className="text-gray-600 mb-6">{selectedSnapshot.description}</p>
+          )}
+
+          {/* Running Services */}
+          <div className="mb-6">
+            <h3 className="font-semibold flex items-center gap-2 mb-3">
+              <Server className="w-5 h-5" />
+              Running Services ({selectedSnapshot.runningServices.length})
+            </h3>
+            {selectedSnapshot.runningServices.length === 0 ? (
+              <p className="text-sm text-gray-500 ml-7">No services were running</p>
+            ) : (
+              <div className="space-y-2 ml-7">
+                {selectedSnapshot.runningServices.map((service, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span>{service.serviceName}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Repository Branches */}
+          <div className="mb-6">
+            <h3 className="font-semibold flex items-center gap-2 mb-3">
+              <GitBranch className="w-5 h-5" />
+              Repository Branches ({selectedSnapshot.repositories.length})
+            </h3>
+            {selectedSnapshot.repositories.length === 0 ? (
+              <p className="text-sm text-gray-500 ml-7">No repositories tracked</p>
+            ) : (
+              <div className="space-y-3 ml-7">
+                {selectedSnapshot.repositories.map((repo, i) => (
+                  <div key={i}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm text-blue-600">{repo.branch}</span>
+                      {repo.hasChanges && (
+                        <span title="Had uncommitted changes">
+                          <AlertCircle className="w-4 h-4 text-yellow-600" />
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatDate(snapshot.createdAt)}
-                        </span>
-                      </div>
-                      {snapshot.tags && snapshot.tags.length > 0 && (
-                        <div className="flex gap-1 mt-2">
-                          {snapshot.tags.map((tag, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
                       )}
                     </div>
+                    <div className="text-xs text-gray-500">{repo.path}</div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Metadata */}
+          <div className="mt-6 pt-6 border-t text-sm text-gray-500">
+            <div>Created: {formatDate(selectedSnapshot.createdAt)}</div>
+            <div>Updated: {formatDate(selectedSnapshot.updatedAt)}</div>
+          </div>
         </div>
+      )}
 
-        {/* Snapshot Details */}
-        <div className="bg-white rounded-lg shadow p-4">
-          {selectedSnapshotData ? (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">{selectedSnapshotData.name}</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleExport(selectedSnapshotData.id, selectedSnapshotData.name)}
-                    className="p-2 text-blue-600 hover:text-blue-800"
-                    title="Export"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleRestore(selectedSnapshotData.id, selectedSnapshotData.name)}
-                    disabled={restoring}
-                    className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    {restoring ? 'Restoring...' : 'Restore All'}
-                  </button>
-                  <button
-                    onClick={handleSelectiveRestore}
-                    disabled={restoring}
-                    className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Selective Restore
-                  </button>
-                  <button
-                    onClick={() => handleDelete(selectedSnapshotData.id, selectedSnapshotData.name)}
-                    className="p-2 text-red-600 hover:text-red-800"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {selectedSnapshotData.description && (
-                <p className="text-gray-600 mb-4">{selectedSnapshotData.description}</p>
-              )}
-
-              {/* Running Services */}
-              <div className="mb-4">
-                <h3 className="font-semibold flex items-center gap-2 mb-2">
-                  <Server className="w-4 h-4" />
-                  Running Services ({selectedSnapshotData.runningServices.length})
-                </h3>
-                {selectedSnapshotData.runningServices.length === 0 ? (
-                  <p className="text-sm text-gray-500 ml-6">No services were running</p>
-                ) : (
-                  <div className="space-y-1 ml-6">
-                    {selectedSnapshotData.runningServices.map((service, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="w-3 h-3 text-green-600" />
-                        <span>{service.serviceName}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Repository Branches */}
-              <div className="mb-4">
-                <h3 className="font-semibold flex items-center gap-2 mb-2">
-                  <GitBranch className="w-4 h-4" />
-                  Repository Branches ({selectedSnapshotData.repositories.length})
-                </h3>
-                {selectedSnapshotData.repositories.length === 0 ? (
-                  <p className="text-sm text-gray-500 ml-6">No repositories tracked</p>
-                ) : (
-                  <div className="space-y-2 ml-6">
-                    {selectedSnapshotData.repositories.map((repo, i) => (
-                      <div key={i} className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-blue-600">{repo.branch}</span>
-                          {repo.hasChanges && (
-                            <AlertCircle className="w-3 h-3 text-yellow-600" title="Had uncommitted changes" />
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500">{repo.path}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Docker Containers */}
-              {selectedSnapshotData.dockerContainers && selectedSnapshotData.dockerContainers.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold flex items-center gap-2 mb-2">
-                    <Container className="w-4 h-4" />
-                    Docker Containers ({selectedSnapshotData.dockerContainers.length})
-                  </h3>
-                  <div className="space-y-2 ml-6">
-                    {selectedSnapshotData.dockerContainers.map((container, i) => (
-                      <div key={i} className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{container.name}</span>
-                          <span className={`px-2 py-0.5 text-xs rounded ${
-                            container.state === 'running' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {container.state}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500">{container.image}</div>
-                        {container.ports.length > 0 && (
-                          <div className="text-xs text-gray-400">
-                            Ports: {container.ports.map(p => p.publicPort ? `${p.publicPort}:${p.privatePort}` : p.privatePort).join(', ')}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Environment Variables */}
-              {selectedSnapshotData.envVariables && Object.keys(selectedSnapshotData.envVariables).length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold flex items-center gap-2 mb-2">
-                    <Database className="w-4 h-4" />
-                    Environment Variables ({Object.values(selectedSnapshotData.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} total)
-                  </h3>
-                  <div className="space-y-2 ml-6 text-sm">
-                    {Object.entries(selectedSnapshotData.envVariables).map(([serviceId, vars]) => (
-                      <div key={serviceId}>
-                        <div className="font-medium text-gray-700">Service: {serviceId.slice(0, 12)}</div>
-                        <div className="text-xs text-gray-500 ml-2">{Object.keys(vars).length} variables</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Service Logs */}
-              {selectedSnapshotData.serviceLogs && Object.keys(selectedSnapshotData.serviceLogs).length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4" />
-                    Service Logs ({Object.keys(selectedSnapshotData.serviceLogs).length} services)
-                  </h3>
-                  <div className="space-y-1 ml-6 text-sm">
-                    {Object.entries(selectedSnapshotData.serviceLogs).map(([serviceId, logs]) => (
-                      <div key={serviceId} className="text-gray-600">
-                        {serviceId.slice(0, 12)}: {logs.length} log lines
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Wiki Notes */}
-              {selectedSnapshotData.wikiNotes && selectedSnapshotData.wikiNotes.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4" />
-                    Wiki Notes ({selectedSnapshotData.wikiNotes.length})
-                  </h3>
-                  <div className="space-y-1 ml-6 text-sm">
-                    {selectedSnapshotData.wikiNotes.map((note, i) => (
-                      <div key={i} className="text-gray-700">
-                        {note.title}
-                        {note.tags && note.tags.length > 0 && (
-                          <span className="ml-2 text-xs text-gray-500">
-                            [{note.tags.join(', ')}]
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Scanned Path */}
-              {selectedSnapshotData.scannedPath && (
-                <div className="mb-4">
-                  <h3 className="font-semibold flex items-center gap-2 mb-2">
-                    <Folder className="w-4 h-4" />
-                    Scanned Path
-                  </h3>
-                  <p className="text-sm ml-6 font-mono text-gray-600">{selectedSnapshotData.scannedPath}</p>
-                </div>
-              )}
-
-              {/* Environment Profile */}
-              {selectedSnapshotData.activeEnvProfile && (
-                <div className="mb-4">
-                  <h3 className="font-semibold flex items-center gap-2 mb-2">
-                    <Tag className="w-4 h-4" />
-                    Environment Profile
-                  </h3>
-                  <p className="text-sm ml-6">{selectedSnapshotData.activeEnvProfile}</p>
-                </div>
-              )}
-
-              {/* Metadata */}
-              <div className="mt-4 pt-4 border-t text-xs text-gray-500">
-                <div>Created: {formatDate(selectedSnapshotData.createdAt)}</div>
-                <div>Updated: {formatDate(selectedSnapshotData.updatedAt)}</div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-16 text-gray-500">
-              <Save className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p>Select a snapshot to view details</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        onClose={() => setConfirmDialog({ isOpen: false, type: 'restore', id: null, name: '' })}
-        onConfirm={confirmDialog.type === 'restore' ? confirmRestore : confirmDelete}
-        title={confirmDialog.type === 'restore' ? 'Restore Workspace' : 'Delete Snapshot'}
-        message={
-          confirmDialog.type === 'restore'
-            ? `Are you sure you want to restore workspace "${confirmDialog.name}"? This will stop all running services and switch git branches.`
-            : `Are you sure you want to delete snapshot "${confirmDialog.name}"? This action cannot be undone.`
-        }
-        confirmText={confirmDialog.type === 'restore' ? 'Restore' : 'Delete'}
-        variant={confirmDialog.type === 'restore' ? 'warning' : 'danger'}
-      />
-
-      {/* Selective Restore Dialog */}
-      {showSelectiveRestore && (
+      {/* Scan Folder Form (shown at workspace list level) */}
+      {showScanForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-xl font-bold mb-4">Selective Restore</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Choose which components to restore from the snapshot:
-            </p>
-
-            <div className="space-y-3 mb-6">
-              <label className="flex items-center gap-3 cursor-pointer">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 p-6">
+            <h3 className="text-xl font-bold mb-4">Scan Folder & Create Snapshot</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={scanForm.path}
+                onChange={(e) => setScanForm({ ...scanForm, path: e.target.value })}
+                placeholder="Folder path to scan *"
+                className="w-full px-3 py-2 border rounded"
+              />
+              <input
+                type="text"
+                value={scanForm.name}
+                onChange={(e) => setScanForm({ ...scanForm, name: e.target.value })}
+                placeholder="Snapshot name *"
+                className="w-full px-3 py-2 border rounded"
+              />
+              <textarea
+                value={scanForm.description}
+                onChange={(e) => setScanForm({ ...scanForm, description: e.target.value })}
+                placeholder="Description (optional)"
+                className="w-full px-3 py-2 border rounded"
+                rows={2}
+              />
+              <div className="flex gap-2">
                 <input
-                  type="checkbox"
-                  checked={selectiveRestoreOptions.restoreBranches}
-                  onChange={(e) =>
-                    setSelectiveRestoreOptions({
-                      ...selectiveRestoreOptions,
-                      restoreBranches: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
+                  type="number"
+                  value={scanForm.depth}
+                  onChange={(e) => setScanForm({ ...scanForm, depth: e.target.value })}
+                  placeholder="Scan depth"
+                  min="0"
+                  max="5"
+                  className="w-24 px-3 py-2 border rounded"
                 />
-                <div className="flex-1">
-                  <div className="font-medium">Git Branches</div>
-                  <div className="text-xs text-gray-500">Switch all repositories to their saved branches</div>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
                 <input
-                  type="checkbox"
-                  checked={selectiveRestoreOptions.restoreServices}
-                  onChange={(e) =>
-                    setSelectiveRestoreOptions({
-                      ...selectiveRestoreOptions,
-                      restoreServices: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
+                  type="text"
+                  value={scanForm.tags}
+                  onChange={(e) => setScanForm({ ...scanForm, tags: e.target.value })}
+                  placeholder="Tags (comma-separated, optional)"
+                  className="flex-1 px-3 py-2 border rounded"
                 />
-                <div className="flex-1">
-                  <div className="font-medium">Services</div>
-                  <div className="text-xs text-gray-500">Stop all current services and start saved ones</div>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectiveRestoreOptions.restoreDocker}
-                  onChange={(e) =>
-                    setSelectiveRestoreOptions({
-                      ...selectiveRestoreOptions,
-                      restoreDocker: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">Docker Containers</div>
-                  <div className="text-xs text-gray-500">Start saved Docker containers</div>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectiveRestoreOptions.restoreEnvVars}
-                  onChange={(e) =>
-                    setSelectiveRestoreOptions({
-                      ...selectiveRestoreOptions,
-                      restoreEnvVars: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">Environment Variables</div>
-                  <div className="text-xs text-gray-500">Create a new profile with saved variables</div>
-                </div>
-              </label>
+              </div>
+              <p className="text-xs text-gray-600">
+                This will scan the folder for git repositories and create a workspace + snapshot.
+              </p>
             </div>
-
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-2 mt-4 justify-end">
               <button
-                onClick={() => setShowSelectiveRestore(false)}
+                onClick={() => setShowScanForm(false)}
                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmSelectiveRestore}
-                disabled={
-                  !selectiveRestoreOptions.restoreBranches &&
-                  !selectiveRestoreOptions.restoreServices &&
-                  !selectiveRestoreOptions.restoreDocker &&
-                  !selectiveRestoreOptions.restoreEnvVars
-                }
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleScanFolder}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
               >
-                Restore Selected
+                Scan & Create
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, type: 'restore', id: null, name: '' })}
+        onConfirm={
+          confirmDialog.type === 'restore' 
+            ? confirmRestore 
+            : confirmDialog.type === 'delete-workspace'
+            ? confirmDeleteWorkspace
+            : confirmDeleteSnapshot
+        }
+        title={
+          confirmDialog.type === 'restore' 
+            ? 'Restore Snapshot' 
+            : confirmDialog.type === 'delete-workspace'
+            ? 'Delete Workspace'
+            : 'Delete Snapshot'
+        }
+        message={
+          confirmDialog.type === 'restore'
+            ? `Are you sure you want to restore snapshot "${confirmDialog.name}"? This will stop all running services and switch git branches.`
+            : confirmDialog.type === 'delete-workspace'
+            ? `Are you sure you want to delete workspace "${confirmDialog.name}"? This will also delete all its snapshots. This action cannot be undone.`
+            : `Are you sure you want to delete snapshot "${confirmDialog.name}"? This action cannot be undone.`
+        }
+        confirmText={
+          confirmDialog.type === 'restore' ? 'Restore' : 'Delete'
+        }
+        variant={confirmDialog.type === 'restore' ? 'warning' : 'danger'}
+      />
     </div>
   )
 }
