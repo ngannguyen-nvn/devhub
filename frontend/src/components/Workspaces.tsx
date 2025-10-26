@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 interface WorkspaceSnapshot {
   id: string
@@ -77,21 +78,21 @@ export default function Workspaces() {
     try {
       await axios.post('/api/workspaces/quick')
       fetchSnapshots()
-      alert('Quick snapshot created!')
+      toast.success('Quick snapshot created!')
     } catch (error: any) {
-      alert(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Create snapshot
   const handleCreateSnapshot = async () => {
     if (!createForm.name.trim()) {
-      alert('Snapshot name is required')
+      toast.error('Snapshot name is required')
       return
     }
 
     if (!createForm.repoPaths.trim()) {
-      alert('At least one repository path is required')
+      toast.error('At least one repository path is required')
       return
     }
 
@@ -116,9 +117,9 @@ export default function Workspaces() {
       setShowCreateForm(false)
       setCreateForm({ name: '', description: '', repoPaths: '', tags: '' })
       fetchSnapshots()
-      alert('Snapshot created successfully!')
+      toast.success(`Snapshot "${createForm.name}" created successfully!`)
     } catch (error: any) {
-      alert(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -133,21 +134,18 @@ export default function Workspaces() {
       const response = await axios.post(`/api/workspaces/${snapshotId}/restore`)
 
       if (response.data.success) {
-        alert(
-          `Workspace restored successfully!\n\n` +
-          `Services started: ${response.data.servicesStarted}\n` +
-          `Branches switched: ${response.data.branchesSwitched}`
+        toast.success(
+          `Workspace restored! Started ${response.data.servicesStarted} service(s), switched ${response.data.branchesSwitched} branch(es)`,
+          { duration: 5000 }
         )
       } else if (response.data.errors && response.data.errors.length > 0) {
-        alert(
-          `Workspace partially restored with errors:\n\n` +
-          `Services started: ${response.data.servicesStarted}\n` +
-          `Branches switched: ${response.data.branchesSwitched}\n\n` +
-          `Errors:\n${response.data.errors.join('\n')}`
+        toast.error(
+          `Workspace partially restored. Started ${response.data.servicesStarted} service(s), but ${response.data.errors.length} error(s) occurred`,
+          { duration: 5000 }
         )
       }
     } catch (error: any) {
-      alert(`Failed to restore workspace: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to restore workspace: ${error.response?.data?.error || error.message}`)
     } finally {
       setRestoring(false)
     }
@@ -165,8 +163,9 @@ export default function Workspaces() {
         setSelectedSnapshot(null)
       }
       fetchSnapshots()
+      toast.success(`Snapshot "${snapshotName}" deleted`)
     } catch (error: any) {
-      alert(`Failed to delete snapshot: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to delete snapshot: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -184,15 +183,16 @@ export default function Workspaces() {
       document.body.appendChild(link)
       link.click()
       link.remove()
+      toast.success(`Workspace "${snapshotName}" exported`)
     } catch (error: any) {
-      alert(`Failed to export snapshot: ${error.message}`)
+      toast.error(`Failed to export snapshot: ${error.message}`)
     }
   }
 
   // Import snapshot
   const handleImport = async () => {
     if (!importForm.jsonData.trim()) {
-      alert('JSON data is required')
+      toast.error('JSON data is required')
       return
     }
 
@@ -204,9 +204,9 @@ export default function Workspaces() {
       setShowImportForm(false)
       setImportForm({ jsonData: '' })
       fetchSnapshots()
-      alert('Workspace imported successfully!')
+      toast.success('Workspace imported successfully!')
     } catch (error: any) {
-      alert(`Failed to import workspace: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to import workspace: ${error.response?.data?.error || error.message}`)
     }
   }
 

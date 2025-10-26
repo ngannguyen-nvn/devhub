@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 interface EnvProfile {
   id: string
@@ -102,7 +103,7 @@ export default function Environment() {
   // Profile operations
   const handleAddProfile = async () => {
     if (!profileForm.name.trim()) {
-      alert('Profile name is required')
+      toast.error('Profile name is required')
       return
     }
 
@@ -111,8 +112,9 @@ export default function Environment() {
       setShowAddProfileForm(false)
       setProfileForm({ name: '', description: '' })
       fetchProfiles()
+      toast.success(`Profile "${profileForm.name}" created successfully`)
     } catch (error: any) {
-      alert(`Failed to create profile: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to create profile: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -125,8 +127,9 @@ export default function Environment() {
         setSelectedProfile(null)
       }
       fetchProfiles()
+      toast.success('Profile deleted successfully')
     } catch (error: any) {
-      alert(`Failed to delete profile: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to delete profile: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -136,17 +139,17 @@ export default function Environment() {
 
     try {
       const response = await axios.post(`/api/env/profiles/${profileId}/copy`, { name })
-      alert(`Profile copied! ${response.data.copiedVariables} variables copied.`)
+      toast.success(`Profile copied! ${response.data.copiedVariables} variables copied.`)
       fetchProfiles()
     } catch (error: any) {
-      alert(`Failed to copy profile: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to copy profile: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Variable operations
   const handleAddVariable = async () => {
     if (!variableForm.key.trim() || !selectedProfile) {
-      alert('Key and profile are required')
+      toast.error('Key and profile are required')
       return
     }
 
@@ -158,8 +161,9 @@ export default function Environment() {
       setShowAddVariableForm(false)
       setVariableForm({ key: '', value: '', isSecret: false, description: '' })
       fetchVariables(selectedProfile)
+      toast.success(`Variable "${variableForm.key}" added successfully`)
     } catch (error: any) {
-      alert(`Failed to add variable: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to add variable: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -170,8 +174,9 @@ export default function Environment() {
       if (selectedProfile) {
         fetchVariables(selectedProfile)
       }
+      toast.success('Variable updated successfully')
     } catch (error: any) {
-      alert(`Failed to update variable: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to update variable: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -183,15 +188,16 @@ export default function Environment() {
       if (selectedProfile) {
         fetchVariables(selectedProfile)
       }
+      toast.success('Variable deleted successfully')
     } catch (error: any) {
-      alert(`Failed to delete variable: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to delete variable: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // File operations
   const handleImport = async () => {
     if (!importForm.filePath.trim() || !selectedProfile) {
-      alert('File path and profile are required')
+      toast.error('File path and profile are required')
       return
     }
 
@@ -199,18 +205,18 @@ export default function Environment() {
       const response = await axios.post(`/api/env/profiles/${selectedProfile}/import`, {
         filePath: importForm.filePath,
       })
-      alert(`Imported ${response.data.imported} variables`)
+      toast.success(`Imported ${response.data.imported} variables`)
       setShowImportForm(false)
       setImportForm({ filePath: '' })
       fetchVariables(selectedProfile)
     } catch (error: any) {
-      alert(`Failed to import: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to import: ${error.response?.data?.error || error.message}`)
     }
   }
 
   const handleExport = async () => {
     if (!exportForm.filePath.trim() || !selectedProfile) {
-      alert('File path and profile are required')
+      toast.error('File path and profile are required')
       return
     }
 
@@ -218,11 +224,11 @@ export default function Environment() {
       const response = await axios.post(`/api/env/profiles/${selectedProfile}/export`, {
         filePath: exportForm.filePath,
       })
-      alert(`Exported ${response.data.exported} variables`)
+      toast.success(`Exported ${response.data.exported} variables`)
       setShowExportForm(false)
       setExportForm({ filePath: '' })
     } catch (error: any) {
-      alert(`Failed to export: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to export: ${error.response?.data?.error || error.message}`)
     }
   }
 

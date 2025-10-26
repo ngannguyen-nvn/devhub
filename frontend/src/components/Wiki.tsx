@@ -16,6 +16,7 @@ import {
   FileQuestion,
 } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -139,7 +140,7 @@ export default function Wiki() {
   // Create note
   const handleCreate = async () => {
     if (!formData.title.trim() || !formData.content.trim()) {
-      alert('Title and content are required')
+      toast.error('Title and content are required')
       return
     }
 
@@ -160,8 +161,9 @@ export default function Wiki() {
       setEditing(false)
       fetchNotes()
       fetchMetadata()
+      toast.success(`Note "${formData.title}" created successfully`)
     } catch (error: any) {
-      alert(`Failed to create note: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to create note: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -185,8 +187,9 @@ export default function Wiki() {
       setEditing(false)
       fetchNotes()
       fetchMetadata()
+      toast.success(`Note "${formData.title}" updated successfully`)
     } catch (error: any) {
-      alert(`Failed to update note: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to update note: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -199,8 +202,9 @@ export default function Wiki() {
       setSelectedNote(null)
       fetchNotes()
       fetchMetadata()
+      toast.success('Note deleted successfully')
     } catch (error: any) {
-      alert(`Failed to delete note: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to delete note: ${error.response?.data?.error || error.message}`)
     }
   }
 

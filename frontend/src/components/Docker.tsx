@@ -11,6 +11,7 @@ import {
   Plus
 } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 interface DockerImage {
   id: string
@@ -140,7 +141,7 @@ export default function Docker() {
   // Build image
   const handleBuildImage = async () => {
     if (!buildForm.contextPath || !buildForm.tag) {
-      alert('Context path and tag are required')
+      toast.error('Context path and tag are required')
       return
     }
 
@@ -176,6 +177,7 @@ export default function Docker() {
                   setShowBuildForm(false)
                   setBuildForm({ contextPath: '', dockerfilePath: 'Dockerfile', tag: '' })
                   fetchImages()
+                  toast.success(`Image "${buildForm.tag}" built successfully`)
                 }
               } catch (e) {
                 // Ignore parse errors
@@ -186,7 +188,7 @@ export default function Docker() {
       }
     } catch (error: any) {
       console.error('Build error:', error)
-      alert(`Build failed: ${error.message}`)
+      toast.error(`Build failed: ${error.message}`)
     } finally {
       setBuilding(false)
     }
@@ -199,15 +201,16 @@ export default function Docker() {
     try {
       await axios.delete(`/api/docker/images/${imageId}?force=true`)
       fetchImages()
+      toast.success('Image removed successfully')
     } catch (error: any) {
-      alert(`Failed to remove image: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to remove image: ${error.response?.data?.error || error.message}`)
     }
   }
 
   // Run container
   const handleRunContainer = async () => {
     if (!runForm.imageName || !runForm.containerName) {
-      alert('Image name and container name are required')
+      toast.error('Image name and container name are required')
       return
     }
 
@@ -234,8 +237,9 @@ export default function Docker() {
       setShowRunForm(false)
       setRunForm({ imageName: '', containerName: '', ports: '', env: '' })
       fetchContainers()
+      toast.success(`Container "${runForm.containerName}" started successfully`)
     } catch (error: any) {
-      alert(`Failed to run container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to run container: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -244,8 +248,9 @@ export default function Docker() {
     try {
       await axios.post(`/api/docker/containers/${containerId}/start`)
       fetchContainers()
+      toast.success('Container started successfully')
     } catch (error: any) {
-      alert(`Failed to start container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to start container: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -254,8 +259,9 @@ export default function Docker() {
     try {
       await axios.post(`/api/docker/containers/${containerId}/stop`)
       fetchContainers()
+      toast.success('Container stopped successfully')
     } catch (error: any) {
-      alert(`Failed to stop container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to stop container: ${error.response?.data?.error || error.message}`)
     }
   }
 
@@ -269,8 +275,9 @@ export default function Docker() {
         setSelectedContainer(null)
       }
       fetchContainers()
+      toast.success('Container removed successfully')
     } catch (error: any) {
-      alert(`Failed to remove container: ${error.response?.data?.error || error.message}`)
+      toast.error(`Failed to remove container: ${error.response?.data?.error || error.message}`)
     }
   }
 

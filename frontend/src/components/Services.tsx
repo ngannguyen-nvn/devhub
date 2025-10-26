@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Play, Square, Trash2, Plus, Terminal, RefreshCw } from 'lucide-react'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 import Loading, { SkeletonLoader } from './Loading'
 
 interface Service {
@@ -78,9 +79,10 @@ export default function Services() {
       setShowAddForm(false)
       setNewService({ name: '', repoPath: '', command: '', port: '' })
       fetchServices()
+      toast.success(`Service "${newService.name}" created successfully`)
     } catch (error) {
       console.error('Error adding service:', error)
-      alert('Failed to add service')
+      toast.error('Failed to add service')
     }
   }
 
@@ -88,9 +90,11 @@ export default function Services() {
     try {
       await axios.post(`/api/services/${id}/start`)
       fetchServices()
+      const service = services.find(s => s.id === id)
+      toast.success(`Service "${service?.name || 'Unknown'}" started`)
     } catch (error) {
       console.error('Error starting service:', error)
-      alert('Failed to start service')
+      toast.error('Failed to start service')
     }
   }
 
@@ -98,9 +102,11 @@ export default function Services() {
     try {
       await axios.post(`/api/services/${id}/stop`)
       fetchServices()
+      const service = services.find(s => s.id === id)
+      toast.success(`Service "${service?.name || 'Unknown'}" stopped`)
     } catch (error) {
       console.error('Error stopping service:', error)
-      alert('Failed to stop service')
+      toast.error('Failed to stop service')
     }
   }
 
@@ -108,14 +114,16 @@ export default function Services() {
     if (!confirm('Are you sure you want to delete this service?')) return
 
     try {
+      const service = services.find(s => s.id === id)
       await axios.delete(`/api/services/${id}`)
       fetchServices()
       if (selectedService === id) {
         setSelectedService(null)
       }
+      toast.success(`Service "${service?.name || 'Unknown'}" deleted`)
     } catch (error) {
       console.error('Error deleting service:', error)
-      alert('Failed to delete service')
+      toast.error('Failed to delete service')
     }
   }
 
