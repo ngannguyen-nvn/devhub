@@ -375,7 +375,6 @@ export class WorkspaceManager {
       restoreServices?: boolean
       restoreDocker?: boolean
       restoreEnvVars?: boolean
-      restoreNotes?: boolean
     }
   ): Promise<{
     success: boolean
@@ -383,7 +382,6 @@ export class WorkspaceManager {
     branchesSwitched: number
     containersStarted: number
     envVarsApplied: number
-    notesImported: number
     errors: string[]
   }> {
     const snapshot = this.getSnapshot(snapshotId)
@@ -396,7 +394,6 @@ export class WorkspaceManager {
     let branchesSwitched = 0
     let containersStarted = 0
     let envVarsApplied = 0
-    let notesImported = 0
 
     // 1. Restore branches
     if (options.restoreBranches && snapshot.repositories) {
@@ -484,41 +481,12 @@ export class WorkspaceManager {
       }
     }
 
-    // 5. Restore wiki notes
-    if (options.restoreNotes && snapshot.wikiNotes) {
-      for (const note of snapshot.wikiNotes) {
-        try {
-          // Check if note already exists by title
-          const existing = this.notesManager.getNoteByTitle(note.title)
-
-          if (!existing) {
-            this.notesManager.createNote({
-              title: note.title,
-              content: note.content,
-              tags: note.tags,
-            })
-            notesImported++
-          } else {
-            // Update existing note
-            this.notesManager.updateNote(existing.id, {
-              content: note.content,
-              tags: note.tags,
-            })
-            notesImported++
-          }
-        } catch (error: any) {
-          errors.push(`Failed to restore note ${note.title}: ${error.message}`)
-        }
-      }
-    }
-
     return {
       success: errors.length === 0,
       servicesStarted,
       branchesSwitched,
       containersStarted,
       envVarsApplied,
-      notesImported,
       errors,
     }
   }

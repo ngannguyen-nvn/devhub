@@ -94,7 +94,6 @@ export default function Workspaces() {
     restoreServices: true,
     restoreDocker: false,
     restoreEnvVars: false,
-    restoreNotes: false,
   })
 
   // Confirm dialog state
@@ -335,7 +334,6 @@ export default function Workspaces() {
       if (response.data.servicesStarted > 0) parts.push(`started ${response.data.servicesStarted} service(s)`)
       if (response.data.containersStarted > 0) parts.push(`started ${response.data.containersStarted} container(s)`)
       if (response.data.envVarsApplied > 0) parts.push(`applied ${response.data.envVarsApplied} env var(s)`)
-      if (response.data.notesImported > 0) parts.push(`imported ${response.data.notesImported} note(s)`)
 
       if (parts.length > 0) {
         toast.success(`Workspace restored! ${parts.join(', ')}`, { duration: 5000 })
@@ -922,24 +920,6 @@ export default function Workspaces() {
                   <div className="text-xs text-gray-500">Create a new profile with saved variables</div>
                 </div>
               </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectiveRestoreOptions.restoreNotes}
-                  onChange={(e) =>
-                    setSelectiveRestoreOptions({
-                      ...selectiveRestoreOptions,
-                      restoreNotes: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">Wiki Notes</div>
-                  <div className="text-xs text-gray-500">Import or update saved notes</div>
-                </div>
-              </label>
             </div>
 
             <div className="flex gap-3 justify-end">
@@ -955,8 +935,7 @@ export default function Workspaces() {
                   !selectiveRestoreOptions.restoreBranches &&
                   !selectiveRestoreOptions.restoreServices &&
                   !selectiveRestoreOptions.restoreDocker &&
-                  !selectiveRestoreOptions.restoreEnvVars &&
-                  !selectiveRestoreOptions.restoreNotes
+                  !selectiveRestoreOptions.restoreEnvVars
                 }
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >

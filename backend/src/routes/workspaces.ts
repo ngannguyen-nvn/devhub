@@ -162,7 +162,6 @@ router.post('/:snapshotId/restore-selective', async (req: Request, res: Response
       restoreServices = false,
       restoreDocker = false,
       restoreEnvVars = false,
-      restoreNotes = false,
     } = req.body
 
     const result = await workspaceManager.restoreSnapshotSelective(snapshotId, {
@@ -170,7 +169,6 @@ router.post('/:snapshotId/restore-selective', async (req: Request, res: Response
       restoreServices,
       restoreDocker,
       restoreEnvVars,
-      restoreNotes,
     })
 
     res.json(result)
