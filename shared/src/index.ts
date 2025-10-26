@@ -31,10 +31,29 @@ export interface Service {
 export interface WorkspaceSnapshot {
   id: string
   name: string
+  description?: string
   createdAt: string
-  runningServices: string[]
-  branches: Record<string, string>
-  envProfile?: string
+  updatedAt: string
+
+  // Services state
+  runningServices: Array<{
+    serviceId: string
+    serviceName: string
+  }>
+
+  // Repository state
+  repositories: Array<{
+    path: string
+    branch: string
+    hasChanges: boolean
+  }>
+
+  // Environment state
+  activeEnvProfile?: string
+
+  // Metadata
+  tags?: string[]
+  autoRestore?: boolean
 }
 
 // Docker types
