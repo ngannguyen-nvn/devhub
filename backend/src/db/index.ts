@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import path from 'path'
 
 const dbPath = path.join(process.cwd(), 'devhub.db')
-const db = new Database(dbPath)
+const db: Database.Database = new Database(dbPath)
 
 // Create tables
 db.exec(`
