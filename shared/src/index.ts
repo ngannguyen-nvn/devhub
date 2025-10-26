@@ -124,3 +124,29 @@ export interface EnvFileContent {
   variables: Record<string, string>
   comments: string[]
 }
+
+// Notes/Wiki types
+export interface Note {
+  id: string
+  title: string
+  content: string
+  category?: string
+  tags?: string[]
+  template?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NoteTemplate {
+  id: string
+  name: string
+  description: string
+  content: string
+  category?: string
+}
+
+export interface NoteLink {
+  fromNoteId: string
+  toNoteId: string
+  toNoteTitle: string
+}
