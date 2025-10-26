@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import repoRoutes from './routes/repos'
 import serviceRoutes from './routes/services'
+import dockerRoutes from './routes/docker'
 import './db' // Initialize database
 
 dotenv.config()
@@ -17,6 +18,7 @@ app.use(express.json())
 // Routes
 app.use('/api/repos', repoRoutes)
 app.use('/api/services', serviceRoutes)
+app.use('/api/docker', dockerRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
