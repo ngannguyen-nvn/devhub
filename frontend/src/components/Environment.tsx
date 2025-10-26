@@ -13,11 +13,13 @@ import {
   Edit2,
   Check,
   X,
+  AlertCircle,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
 import { SkeletonLoader } from './Loading'
+import { useWorkspace } from '../contexts/WorkspaceContext'
 
 interface EnvProfile {
   id: string
@@ -40,6 +42,7 @@ interface EnvVariable {
 }
 
 export default function Environment() {
+  const { activeWorkspace } = useWorkspace()
   const [profiles, setProfiles] = useState<EnvProfile[]>([])
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null)
   const [variables, setVariables] = useState<EnvVariable[]>([])
@@ -77,6 +80,11 @@ export default function Environment() {
 
   // Fetch profiles
   const fetchProfiles = async () => {
+    if (!activeWorkspace) {
+      setProfiles([])
+      return
+    }
+
     try {
       const response = await axios.get('/api/env/profiles')
       setProfiles(response.data.profiles || [])
@@ -85,8 +93,12 @@ export default function Environment() {
       if (!selectedProfile && response.data.profiles?.length > 0) {
         setSelectedProfile(response.data.profiles[0].id)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching profiles:', error)
+      const errorMessage = error.response?.data?.error || error.message
+      if (errorMessage.includes('No active workspace')) {
+        toast.error('Please activate a workspace first')
+      }
     }
   }
 
@@ -105,7 +117,7 @@ export default function Environment() {
 
   useEffect(() => {
     fetchProfiles()
-  }, [])
+  }, [activeWorkspace]) // Refresh when workspace changes
 
   useEffect(() => {
     if (selectedProfile) {
@@ -282,9 +294,30 @@ export default function Environment() {
   }
 
   return (
-    <div className="p-8">
+    <div>
+      {/* No Workspace Warning */}
+      {!activeWorkspace && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
+            <div>
+              <p className="text-sm text-yellow-700">
+                <strong className="font-medium">No active workspace.</strong> Please create or activate a workspace to manage environment variables.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Environment Variables</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Environment Variables</h1>
+          {activeWorkspace && (
+            <p className="text-gray-600 mt-1">
+              Managing environment variables in <span className="text-blue-600 font-medium">{activeWorkspace.name}</span>
+            </p>
+          )}
+        </div>
         <button
           onClick={fetchProfiles}
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"

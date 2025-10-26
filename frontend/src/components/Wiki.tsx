@@ -14,6 +14,7 @@ import {
   RefreshCw,
   ChevronRight,
   FileQuestion,
+  AlertCircle,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -21,6 +22,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ConfirmDialog from './ConfirmDialog'
 import { SkeletonLoader } from './Loading'
+import { useWorkspace } from '../contexts/WorkspaceContext'
 
 interface Note {
   id: string
@@ -42,6 +44,7 @@ interface NoteTemplate {
 }
 
 export default function Wiki() {
+  const { activeWorkspace } = useWorkspace()
   const [notes, setNotes] = useState<Note[]>([])
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([])
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
@@ -79,13 +82,23 @@ export default function Wiki() {
 
   // Fetch notes
   const fetchNotes = async () => {
+    if (!activeWorkspace) {
+      setNotes([])
+      setFilteredNotes([])
+      return
+    }
+
     setLoading(true)
     try {
       const response = await axios.get('/api/notes')
       setNotes(response.data.notes || [])
       setFilteredNotes(response.data.notes || [])
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching notes:', error)
+      const errorMessage = error.response?.data?.error || error.message
+      if (errorMessage.includes('No active workspace')) {
+        toast.error('Please activate a workspace first')
+      }
     } finally {
       setLoading(false)
     }
@@ -124,7 +137,7 @@ export default function Wiki() {
   useEffect(() => {
     fetchNotes()
     fetchMetadata()
-  }, [])
+  }, [activeWorkspace]) // Refresh when workspace changes
 
   useEffect(() => {
     if (selectedNote) {
@@ -323,16 +336,37 @@ export default function Wiki() {
   }
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar - Notes List */}
-      <div className="w-80 bg-white border-r flex flex-col">
-        <div className="p-4 border-b">
-          <div className="flex gap-2 mb-3">
-            <button
-              onClick={handleNewNote}
-              className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex-1"
-            >
-              <Plus className="w-4 h-4" />
+    <div className="flex h-screen flex-col">
+      {/* No Workspace Warning */}
+      {!activeWorkspace && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
+            <div>
+              <p className="text-sm text-yellow-700">
+                <strong className="font-medium">No active workspace.</strong> Please create or activate a workspace to manage notes.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex h-full">
+        {/* Sidebar - Notes List */}
+        <div className="w-80 bg-white border-r flex flex-col">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">
+                Wiki & Notes
+                {activeWorkspace && <span className="text-xs text-blue-600 ml-2">({activeWorkspace.name})</span>}
+              </h2>
+            </div>
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={handleNewNote}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex-1"
+              >
+                <Plus className="w-4 h-4" />
               New Note
             </button>
             <button
@@ -681,6 +715,7 @@ export default function Wiki() {
         confirmText="Delete"
         variant="danger"
       />
+      </div>
     </div>
   )
 }
