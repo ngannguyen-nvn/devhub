@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 import Services from './components/Services'
 import Docker from './components/Docker'
+import Environment from './components/Environment'
 import Sidebar from './components/Sidebar'
 
 function App() {
@@ -14,7 +15,7 @@ function App() {
         {activeView === 'dashboard' && <Dashboard />}
         {activeView === 'services' && <Services />}
         {activeView === 'docker' && <Docker />}
-        {activeView === 'env' && <div className="p-8">Environment (Coming Soon)</div>}
+        {activeView === 'env' && <Environment />}
         {activeView === 'wiki' && <div className="p-8">Wiki (Coming Soon)</div>}
       </main>
     </div>
