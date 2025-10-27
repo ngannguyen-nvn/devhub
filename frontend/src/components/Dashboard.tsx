@@ -88,7 +88,11 @@ export default function Dashboard() {
     }
   }
 
-  const importEnvFilesToWorkspace = async (workspaceId: string, repoPaths: string[]) => {
+  const importEnvFilesToWorkspace = async (
+    workspaceId: string,
+    repoPaths: string[],
+    snapshotName: string
+  ) => {
     try {
       // Filter repos that have .env files
       const reposWithEnv = repos.filter(r => repoPaths.includes(r.path) && r.hasEnvFile)
@@ -97,42 +101,30 @@ export default function Dashboard() {
         return
       }
 
-      // Get or create "Default" profile for this workspace
-      let defaultProfileId: string | null = null
-
-      // Check if "Default" profile exists
-      const profilesResponse = await axios.get('/api/env/profiles', {
-        params: { workspace_id: workspaceId }
-      })
-
-      const defaultProfile = profilesResponse.data.profiles?.find(
-        (p: any) => p.name === 'Default'
-      )
-
-      if (defaultProfile) {
-        defaultProfileId = defaultProfile.id
-      } else {
-        // Create "Default" profile
-        const createProfileResponse = await axios.post('/api/env/profiles', {
-          name: 'Default',
-          description: 'Auto-imported environment variables',
-          workspace_id: workspaceId,
-        })
-        defaultProfileId = createProfileResponse.data.profile.id
-      }
-
-      // Import each .env file
+      // Create one profile per repository
       let successCount = 0
       let failCount = 0
 
       for (const repo of reposWithEnv) {
         try {
-          const envFilePath = `${repo.path}/.env`
+          // Create profile with format: "{SnapshotName} - {RepoName}"
+          const profileName = `${snapshotName} - ${repo.name}`
 
-          await axios.post(`/api/env/profiles/${defaultProfileId}/import`, {
+          const createProfileResponse = await axios.post('/api/env/profiles', {
+            name: profileName,
+            description: `Auto-imported from ${repo.path}`,
+            workspace_id: workspaceId,
+          })
+
+          const profileId = createProfileResponse.data.profile.id
+
+          // Import .env file to this profile
+          const envFilePath = `${repo.path}/.env`
+          await axios.post(`/api/env/profiles/${profileId}/import`, {
             filePath: envFilePath,
             serviceId: null, // Not tied to a specific service
           })
+
           successCount++
         } catch (error) {
           console.error(`Failed to import .env from ${repo.path}:`, error)
@@ -141,7 +133,7 @@ export default function Dashboard() {
       }
 
       if (successCount > 0) {
-        toast.success(`Imported ${successCount} .env file${successCount > 1 ? 's' : ''} to Default profile`)
+        toast.success(`Created ${successCount} environment profile${successCount > 1 ? 's' : ''} from .env files`)
       }
       if (failCount > 0) {
         toast.error(`Failed to import ${failCount} .env file${failCount > 1 ? 's' : ''}`)
@@ -190,8 +182,9 @@ export default function Dashboard() {
 
       // Create snapshot with selected repos
       const repoPaths = Array.from(selectedRepos)
+      const finalSnapshotName = snapshotName || `Scan - ${new Date().toLocaleString()}`
       const response = await axios.post(`/api/workspaces/${workspaceId}/snapshots`, {
-        name: snapshotName || `Scan - ${new Date().toLocaleString()}`,
+        name: finalSnapshotName,
         description: snapshotDescription || `Scanned ${selectedRepos.size} repositories from ${scanPath}`,
         repoPaths,
         scannedPath: scanPath,
@@ -202,7 +195,7 @@ export default function Dashboard() {
 
         // Import .env files if checkbox is enabled
         if (importEnvFiles) {
-          await importEnvFilesToWorkspace(workspaceId, Array.from(selectedRepos))
+          await importEnvFilesToWorkspace(workspaceId, Array.from(selectedRepos), finalSnapshotName)
         }
 
         setShowSaveModal(false)
@@ -486,10 +479,13 @@ export default function Dashboard() {
                       />
                       <div className="flex-1">
                         <span className="text-sm font-medium text-gray-900">
-                          Import .env files to "Default" environment profile
+                          Import .env files to environment profiles
                         </span>
                         <p className="text-xs text-gray-600 mt-1">
-                          {envFileCount} .env file{envFileCount > 1 ? 's' : ''} detected
+                          {envFileCount} .env file{envFileCount > 1 ? 's' : ''} detected • Will create {envFileCount} profile{envFileCount > 1 ? 's' : ''}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Profile format: "{snapshotName || 'Scan - ...'} - {'{RepoName}'}"
                         </p>
                         <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                           <AlertCircle size={12} />
