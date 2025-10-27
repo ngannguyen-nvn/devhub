@@ -1,0 +1,26 @@
+{
+  "name": "devhub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Developer Mission Control - Manage your microservices ecosystem",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
+    "start": "npm run start -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
