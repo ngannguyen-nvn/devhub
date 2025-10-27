@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { GitBranch, RefreshCw, Folder, AlertCircle, Save, CheckSquare, Square } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -23,8 +23,12 @@ export default function Dashboard() {
   const [repos, setRepos] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [scanPath, setScanPath] = useState('/home/user')
+  const [scanPath, setScanPath] = useState(() => {
+    // Load last scanned path from sessionStorage, default to /home/user
+    return sessionStorage.getItem('lastScanPath') || '/home/user'
+  })
   const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
+  const scanPathInputRef = useRef<HTMLInputElement>(null)
 
   // Save to workspace modal state
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -46,6 +50,9 @@ export default function Dashboard() {
       // Select all repos by default
       const allPaths = new Set(repositories.map((repo: Repository) => repo.path))
       setSelectedRepos(allPaths)
+
+      // Save last scanned path to sessionStorage
+      sessionStorage.setItem('lastScanPath', scanPath)
 
       const count = repositories.length
       toast.success(`Found ${count} ${count === 1 ? 'repository' : 'repositories'}`)
@@ -137,6 +144,13 @@ export default function Dashboard() {
     }
   }
 
+  // Auto-select the scan path input on mount
+  useEffect(() => {
+    if (scanPathInputRef.current) {
+      scanPathInputRef.current.select()
+    }
+  }, [])
+
   useEffect(() => {
     scanRepositories()
   }, [])
@@ -150,6 +164,7 @@ export default function Dashboard() {
 
       <div className="mb-6 flex gap-4">
         <input
+          ref={scanPathInputRef}
           type="text"
           value={scanPath}
           onChange={(e) => setScanPath(e.target.value)}
