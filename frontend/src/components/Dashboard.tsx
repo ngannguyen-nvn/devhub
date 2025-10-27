@@ -151,6 +151,17 @@ export default function Dashboard() {
     }
   }, [])
 
+  // Auto-populate workspace name when modal opens in "Create New" mode
+  useEffect(() => {
+    if (showSaveModal && workspaceMode === 'new') {
+      // Extract folder name from path (e.g., /home/user/devhub -> devhub)
+      const folderName = scanPath.split('/').filter(Boolean).pop() || 'workspace'
+      // Capitalize first letter for nicer workspace name
+      const workspaceName = folderName.charAt(0).toUpperCase() + folderName.slice(1)
+      setNewWorkspaceName(workspaceName)
+    }
+  }, [showSaveModal, workspaceMode, scanPath])
+
   useEffect(() => {
     scanRepositories()
   }, [])
