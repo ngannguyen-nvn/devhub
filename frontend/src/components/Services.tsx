@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle } from 'lucide-react'
+import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import Loading, { SkeletonLoader } from './Loading'
@@ -46,6 +46,12 @@ export default function Services() {
     port: '',
   })
 
+  // Import from workspace state
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [workspaceRepos, setWorkspaceRepos] = useState<Array<{ path: string; name: string }>>([])
+  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
+  const [importing, setImporting] = useState(false)
+
   const fetchServices = async () => {
     if (!activeWorkspace) {
       setServices([])
@@ -78,15 +84,15 @@ export default function Services() {
 
   useEffect(() => {
     fetchServices()
-    // Auto-refresh every 3 seconds
-    const interval = setInterval(fetchServices, 3000)
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(fetchServices, 10000)
     return () => clearInterval(interval)
   }, [activeWorkspace]) // Refresh when workspace changes
 
   useEffect(() => {
     if (selectedService) {
       fetchLogs(selectedService)
-      const interval = setInterval(() => fetchLogs(selectedService), 2000)
+      const interval = setInterval(() => fetchLogs(selectedService), 5000)
       return () => clearInterval(interval)
     }
   }, [selectedService])
@@ -107,6 +113,108 @@ export default function Services() {
       console.error('Error adding service:', error)
       toast.error('Failed to add service')
     }
+  }
+
+  const fetchWorkspaceRepos = async () => {
+    if (!activeWorkspace) return
+
+    try {
+      // Get all snapshots from active workspace
+      const response = await axios.get(`/api/workspaces/${activeWorkspace.id}/snapshots`)
+      const snapshots = response.data.snapshots || []
+
+      // Extract unique repository paths from all snapshots
+      const repoPathsSet = new Set<string>()
+      snapshots.forEach((snapshot: any) => {
+        if (snapshot.repositories) {
+          snapshot.repositories.forEach((repo: any) => {
+            if (repo.path) {
+              repoPathsSet.add(repo.path)
+            }
+          })
+        }
+      })
+
+      // Convert to array with name
+      const repos = Array.from(repoPathsSet).map(path => ({
+        path,
+        name: path.split('/').pop() || path,
+      }))
+
+      setWorkspaceRepos(repos)
+      setSelectedRepos(new Set(repos.map(r => r.path))) // Select all by default
+    } catch (error) {
+      console.error('Error fetching workspace repos:', error)
+      toast.error('Failed to load workspace repositories')
+    }
+  }
+
+  const toggleRepo = (path: string) => {
+    const newSelected = new Set(selectedRepos)
+    if (newSelected.has(path)) {
+      newSelected.delete(path)
+    } else {
+      newSelected.add(path)
+    }
+    setSelectedRepos(newSelected)
+  }
+
+  const handleImportFromWorkspace = async () => {
+    if (selectedRepos.size === 0) {
+      toast.error('Please select at least one repository')
+      return
+    }
+
+    setImporting(true)
+    let successCount = 0
+    let failCount = 0
+
+    try {
+      const repoPaths = Array.from(selectedRepos)
+
+      for (const repoPath of repoPaths) {
+        try {
+          // Analyze the repository to get name, command, and port
+          const analysisResponse = await axios.post('/api/repos/analyze', { repoPath })
+          const analysis = analysisResponse.data.analysis
+
+          // Create service with analyzed data
+          await axios.post('/api/services', {
+            name: analysis.name,
+            repoPath: repoPath,
+            command: analysis.command || 'npm start', // Fallback to npm start
+            port: analysis.port || undefined,
+          })
+
+          successCount++
+        } catch (error) {
+          console.error(`Error importing ${repoPath}:`, error)
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully imported ${successCount} service${successCount > 1 ? 's' : ''}`)
+        fetchServices()
+      }
+
+      if (failCount > 0) {
+        toast.error(`Failed to import ${failCount} service${failCount > 1 ? 's' : ''}`)
+      }
+
+      setShowImportModal(false)
+      setSelectedRepos(new Set())
+    } catch (error) {
+      console.error('Error importing services:', error)
+      toast.error('Failed to import services')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const openImportModal = () => {
+    fetchWorkspaceRepos()
+    setShowImportModal(true)
   }
 
   const handleStartService = async (id: string) => {
@@ -192,6 +300,14 @@ export default function Services() {
             Refresh
           </button>
           <button
+            onClick={openImportModal}
+            disabled={!activeWorkspace}
+            className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FolderInput size={18} />
+            Import from Workspace
+          </button>
+          <button
             onClick={() => setShowAddForm(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
@@ -269,6 +385,114 @@ export default function Services() {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Service
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import from Workspace Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Import Services from Workspace</h2>
+            <p className="text-gray-600 mb-6">
+              Select repositories from <span className="font-medium text-blue-600">{activeWorkspace?.name}</span> to import as services.
+              Service details will be auto-detected from package.json and .env files.
+            </p>
+
+            {workspaceRepos.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FolderInput size={48} className="mx-auto mb-4 text-gray-400" />
+                <p>No repositories found in this workspace.</p>
+                <p className="text-sm mt-2">Add repositories by creating a snapshot from the Dashboard.</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <button
+                    onClick={() => {
+                      if (selectedRepos.size === workspaceRepos.length) {
+                        setSelectedRepos(new Set())
+                      } else {
+                        setSelectedRepos(new Set(workspaceRepos.map(r => r.path)))
+                      }
+                    }}
+                    className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2"
+                  >
+                    {selectedRepos.size === workspaceRepos.length ? (
+                      <>
+                        <CheckSquare size={18} />
+                        Deselect All
+                      </>
+                    ) : (
+                      <>
+                        <SquareIcon size={18} />
+                        Select All
+                      </>
+                    )}
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {selectedRepos.size} of {workspaceRepos.length} selected
+                  </span>
+                </div>
+
+                <div className="space-y-2 mb-6 max-h-96 overflow-y-auto">
+                  {workspaceRepos.map((repo) => {
+                    const isSelected = selectedRepos.has(repo.path)
+                    return (
+                      <div
+                        key={repo.path}
+                        onClick={() => toggleRepo(repo.path)}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                          isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isSelected ? (
+                            <CheckSquare size={20} className="text-blue-600 flex-shrink-0" />
+                          ) : (
+                            <SquareIcon size={20} className="text-gray-400 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900">{repo.name}</p>
+                            <p className="text-sm text-gray-500 truncate">{repo.path}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  setSelectedRepos(new Set())
+                }}
+                disabled={importing}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImportFromWorkspace}
+                disabled={importing || selectedRepos.size === 0}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {importing ? (
+                  <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <FolderInput size={18} />
+                    Import {selectedRepos.size} Service{selectedRepos.size !== 1 ? 's' : ''}
+                  </>
+                )}
               </button>
             </div>
           </div>
