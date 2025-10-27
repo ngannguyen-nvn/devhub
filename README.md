@@ -35,7 +35,7 @@ Make sure you have these installed:
 ```bash
 git clone https://github.com/ngannguyen-nvn/devhub.git
 cd devhub
-git checkout claude/continue-devhub-mvp-011CUVcBQCRuQu1yoTkCXSzY
+git checkout claude/review-workspace-implementation-011CUWCRV4ibC76y9ZFg3Hef
 ```
 
 ### Step 2: Install Dependencies
@@ -90,6 +90,37 @@ Each repository will display:
 **Try this:**
 - Scan different directories
 - Navigate to one of your repos and make a change, then rescan to see the "Uncommitted changes" badge
+
+#### 1.1 Save Repositories to Workspace
+
+**What it does:** After scanning, you can save selected repositories to a workspace with optional .env file import.
+
+**How to test:**
+
+1. **Scan a folder** with repositories
+2. **Select repositories** - All repos are selected by default, or click checkboxes to select specific ones
+3. Click **"Save to Workspace"** button
+4. **Choose workspace mode:**
+   - **Create New**: Enter workspace name (auto-populated from folder name)
+   - **Use Existing**: Select from existing workspaces
+5. **Optional: Import .env files**
+   - If any selected repos have .env files, you'll see a checkbox
+   - Check to import .env files to environment profiles
+   - Format: `"{SnapshotName} - {RepoName}"` (one profile per repo)
+   - Example: "Scan - 1/27/2025 - Backend API"
+6. Click **"Save"**
+
+**What happens:**
+- Creates/uses workspace
+- Creates snapshot with selected repos
+- (Optional) Creates environment profiles from .env files
+- Automatically activates new workspaces
+
+**Benefits:**
+- One-click setup for entire project
+- .env files automatically imported (opt-in)
+- No variable conflicts between repos
+- Clear organization with snapshot-prefixed profiles
 
 ---
 
@@ -150,6 +181,33 @@ If you have a Node.js project, try this:
 - Switch between services by clicking on their cards
 - Each service has its own log viewer
 - Try stopping and restarting services
+
+#### 2.7 Import Services from Workspace
+
+**What it does:** Automatically import services from repositories in the active workspace with auto-detected configuration.
+
+**How to test:**
+
+1. Make sure you have an **active workspace** with repositories
+2. Click **"Import from Workspace"** button
+3. **Select repositories** to import as services
+4. Review auto-detected configuration:
+   - **Service name**: From folder name
+   - **Start command**: Detected from package.json (`npm start`, `npm run dev`, etc.)
+   - **Port**: Detected from .env file (if `PORT=` exists)
+5. Click **"Import Selected"**
+
+**What happens:**
+- Creates one service per selected repository
+- Auto-detection saves time (no manual configuration)
+- Skips repositories that are already imported (shows "Already added" badge)
+- Shows toast notifications for success/skipped/failed imports
+
+**Benefits:**
+- Batch import multiple services at once
+- No manual entry for common configurations
+- Duplicate detection prevents re-adding services
+- Quick setup for entire project
 
 ---
 
@@ -271,11 +329,80 @@ If you have a Node.js project, try this:
 4. Click **"Apply"**
 5. Environment variables are now available to that service when it runs
 
+#### 4.6 Auto-Import from Dashboard (Recommended)
+
+**What it does:** When saving repositories to a workspace from Dashboard, you can automatically import .env files with per-repository isolation.
+
+**How it works:**
+
+1. **Scan folder** in Dashboard
+2. Select repos with .env files
+3. Click **"Save to Workspace"**
+4. **Check "Import .env files"** option
+5. DevHub creates **one profile per repository**:
+   - Profile name format: `"{SnapshotName} - {RepoName}"`
+   - Example: "Scan - 1/27/2025 - Backend API"
+   - Example: "Scan - 1/27/2025 - Frontend Web"
+
+**Benefits of per-repo profiles:**
+
+✅ **No variable conflicts** - Each repo gets its own profile (PORT=3000 vs PORT=4000)
+✅ **Clear organization** - Easy to identify which profile belongs to which repo
+✅ **Snapshot isolation** - Each snapshot creates its own set of profiles
+✅ **History preserved** - Profiles persist at workspace level, never deleted
+✅ **Easy management** - Filter/search by snapshot name or repo name
+
+**Example:**
+
+Snapshot 1: "Initial Setup" (Jan 27)
+- Creates: "Initial Setup - Backend API" (PORT=3000, DB_HOST=localhost)
+- Creates: "Initial Setup - Frontend Web" (PORT=4000, API_URL=...)
+
+Snapshot 2: "Feature Branch" (Feb 5)
+- Creates: "Feature Branch - Backend API" (PORT=3000, DB_HOST=staging)
+- Creates: "Feature Branch - Payment Service" (PORT=5000, STRIPE_KEY=...)
+
+When you restore Snapshot 1, all profiles are still visible, but you can clearly see which ones belong to "Initial Setup".
+
 ---
 
 ### Feature 5: Hierarchical Workspaces
 
 **What it does:** Organize your development environments with a hierarchical workspace → snapshots structure. Each workspace can contain multiple snapshots, making it easy to manage different states of the same project.
+
+**⚡ Key Concept: Workspace Scoping**
+
+All resources in DevHub are **workspace-scoped** for complete isolation:
+
+- **Services** belong to workspaces (not global)
+- **Environment profiles** belong to workspaces
+- **Notes/Wiki** belong to workspaces
+- **Snapshots** belong to workspaces (child entities)
+
+**Benefits:**
+- ✅ **Complete isolation** - Switching workspaces shows only that workspace's resources
+- ✅ **No naming conflicts** - Different projects can have services with same name
+- ✅ **Organized by project** - Each workspace is self-contained
+- ✅ **Cascade deletion** - Deleting workspace removes all its resources (services, profiles, notes, snapshots)
+- ✅ **Active workspace** - One workspace is active at a time (services, env profiles, notes are filtered by active workspace)
+
+**Example:**
+
+```
+Workspace: "E-commerce Backend"
+├── Services: auth-api, payment-api, user-service
+├── Env Profiles: "Initial Setup - Backend API", "Feature Branch - Payment Service"
+├── Notes: API docs, architecture notes, troubleshooting guides
+└── Snapshots: Initial Setup, Feature Branch, Production Ready
+
+Workspace: "Mobile App"
+├── Services: react-native, ios-simulator, android-emulator
+├── Env Profiles: "Dev Build - Mobile App", "Staging Build - Mobile App"
+├── Notes: Mobile API docs, deployment guide
+└── Snapshots: Dev Build, Staging Build
+```
+
+When you switch from "E-commerce Backend" to "Mobile App", you see completely different services, profiles, and notes.
 
 **How to test:**
 
@@ -723,17 +850,35 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
 ### ✅ Completed (v1.0) - MVP Complete!
 
 - Repository scanner with git status
+- **Dashboard enhancements:**
+  - Checkbox selection for repositories
+  - "Save to Workspace" with selected repos
+  - Auto-populate workspace names from folder paths
+  - SessionStorage for last scan path
+  - Optional .env import when saving to workspace
+  - Auto-activate newly created workspaces
 - Service manager with process control
+  - **"Import from Workspace"** - Batch import services with auto-detection
+  - Auto-detect service name, start command, and port from package.json/.env
+  - Duplicate service detection with "Already added" badges
+  - Increased auto-refresh intervals (10s services, 5s logs)
 - Real-time logs viewer
 - SQLite persistence
 - **Docker integration** - Build images, manage containers, generate docker-compose
 - **Environment variables manager** - Secure storage with AES-256 encryption
+  - **Per-repository profiles** - One profile per repo for complete isolation
+  - Profile naming: `"{SnapshotName} - {RepoName}"`
+  - Auto-import .env files from Dashboard (opt-in)
+  - No variable conflicts between repos
+  - Snapshot-prefixed profiles for clear organization
 - **Wiki/notes system** - Markdown docs with full-text search and [[linking]]
 - **Hierarchical workspace management** - Organize environments with workspace → snapshots structure
-  - Database migration system with automatic execution
+  - Database migration system with automatic execution (2 migrations)
   - Hybrid workspace creation (auto from folder scan + manual)
-  - 3-level navigation UI with breadcrumb
-  - Cascade deletion (workspace → snapshots)
+  - **Full workspace scoping** - All resources (services, env profiles, notes) belong to workspaces
+  - Complete isolation between workspaces
+  - 3-level navigation UI with breadcrumb & workspace switcher
+  - Cascade deletion (workspace → snapshots → all resources)
   - Active workspace pattern
 
 ### 📅 Planned (v2.0)
@@ -754,8 +899,8 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
 ### Tip 1: Auto-Refresh
 
 The dashboard and services auto-refresh:
-- **Services**: Every 3 seconds
-- **Logs**: Every 2 seconds
+- **Services**: Every 10 seconds
+- **Logs**: Every 5 seconds
 
 No need to manually refresh!
 
