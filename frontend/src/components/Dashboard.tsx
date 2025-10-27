@@ -114,7 +114,12 @@ export default function Dashboard() {
           scanPath
         )
         workspaceId = workspace.id
-        toast.success(`Created workspace: ${newWorkspaceName}`)
+
+        // Activate the newly created workspace
+        await axios.post(`/api/workspaces/${workspaceId}/activate`)
+        await refreshWorkspaces() // Refresh to update active status
+
+        toast.success(`Created and activated workspace: ${newWorkspaceName}`)
       }
 
       // Create snapshot with selected repos
