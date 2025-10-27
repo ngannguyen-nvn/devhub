@@ -168,12 +168,21 @@ export default function Services() {
     setImporting(true)
     let successCount = 0
     let failCount = 0
+    let skippedCount = 0
 
     try {
       const repoPaths = Array.from(selectedRepos)
 
       for (const repoPath of repoPaths) {
         try {
+          // Check if service with this repoPath already exists
+          const existingService = services.find(s => s.repoPath === repoPath)
+          if (existingService) {
+            console.log(`Skipping ${repoPath}: Service "${existingService.name}" already exists`)
+            skippedCount++
+            continue
+          }
+
           // Analyze the repository to get name, command, and port
           const analysisResponse = await axios.post('/api/repos/analyze', { repoPath })
           const analysis = analysisResponse.data.analysis
@@ -198,8 +207,16 @@ export default function Services() {
         fetchServices()
       }
 
+      if (skippedCount > 0) {
+        toast.info(`Skipped ${skippedCount} service${skippedCount > 1 ? 's' : ''} (already exists)`)
+      }
+
       if (failCount > 0) {
         toast.error(`Failed to import ${failCount} service${failCount > 1 ? 's' : ''}`)
+      }
+
+      if (successCount === 0 && skippedCount === 0 && failCount === 0) {
+        toast.info('No services to import')
       }
 
       setShowImportModal(false)
@@ -440,6 +457,7 @@ export default function Services() {
                 <div className="space-y-2 mb-6 max-h-96 overflow-y-auto">
                   {workspaceRepos.map((repo) => {
                     const isSelected = selectedRepos.has(repo.path)
+                    const alreadyExists = services.find(s => s.repoPath === repo.path)
                     return (
                       <div
                         key={repo.path}
@@ -455,7 +473,14 @@ export default function Services() {
                             <SquareIcon size={20} className="text-gray-400 flex-shrink-0" />
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900">{repo.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-gray-900">{repo.name}</p>
+                              {alreadyExists && (
+                                <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                                  Already added
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-500 truncate">{repo.path}</p>
                           </div>
                         </div>
