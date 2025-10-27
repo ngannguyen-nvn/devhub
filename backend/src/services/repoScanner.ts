@@ -13,6 +13,7 @@ export interface Repository {
     author: string
   } | null
   hasDockerfile: boolean
+  hasEnvFile: boolean
 }
 
 export class RepoScanner {
@@ -103,6 +104,9 @@ export class RepoScanner {
       // Check for Dockerfile
       const hasDockerfile = await this.checkFileExists(repoPath, 'Dockerfile')
 
+      // Check for .env file
+      const hasEnvFile = await this.checkFileExists(repoPath, '.env')
+
       return {
         name: path.basename(repoPath),
         path: repoPath,
@@ -110,6 +114,7 @@ export class RepoScanner {
         hasChanges,
         lastCommit,
         hasDockerfile,
+        hasEnvFile,
       }
     } catch (error) {
       console.error(`Error getting repo info for ${repoPath}:`, error)

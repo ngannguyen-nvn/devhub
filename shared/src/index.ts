@@ -9,6 +9,7 @@ export interface Repository {
     author: string
   } | null
   hasDockerfile: boolean
+  hasEnvFile: boolean
 }
 
 export interface ScanResponse {

@@ -16,6 +16,7 @@ interface Repository {
     author: string
   }
   hasDockerfile: boolean
+  hasEnvFile: boolean
 }
 
 export default function Dashboard() {
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const [snapshotName, setSnapshotName] = useState('')
   const [snapshotDescription, setSnapshotDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [importEnvFiles, setImportEnvFiles] = useState(false)
 
   const scanRepositories = async () => {
     setLoading(true)
@@ -83,6 +85,70 @@ export default function Dashboard() {
     } else {
       // Select all
       setSelectedRepos(new Set(repos.map(r => r.path)))
+    }
+  }
+
+  const importEnvFilesToWorkspace = async (workspaceId: string, repoPaths: string[]) => {
+    try {
+      // Filter repos that have .env files
+      const reposWithEnv = repos.filter(r => repoPaths.includes(r.path) && r.hasEnvFile)
+
+      if (reposWithEnv.length === 0) {
+        return
+      }
+
+      // Get or create "Default" profile for this workspace
+      let defaultProfileId: string | null = null
+
+      // Check if "Default" profile exists
+      const profilesResponse = await axios.get('/api/env/profiles', {
+        params: { workspace_id: workspaceId }
+      })
+
+      const defaultProfile = profilesResponse.data.profiles?.find(
+        (p: any) => p.name === 'Default'
+      )
+
+      if (defaultProfile) {
+        defaultProfileId = defaultProfile.id
+      } else {
+        // Create "Default" profile
+        const createProfileResponse = await axios.post('/api/env/profiles', {
+          name: 'Default',
+          description: 'Auto-imported environment variables',
+          workspace_id: workspaceId,
+        })
+        defaultProfileId = createProfileResponse.data.profile.id
+      }
+
+      // Import each .env file
+      let successCount = 0
+      let failCount = 0
+
+      for (const repo of reposWithEnv) {
+        try {
+          const envFilePath = `${repo.path}/.env`
+
+          await axios.post(`/api/env/profiles/${defaultProfileId}/import`, {
+            filePath: envFilePath,
+            serviceId: null, // Not tied to a specific service
+          })
+          successCount++
+        } catch (error) {
+          console.error(`Failed to import .env from ${repo.path}:`, error)
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Imported ${successCount} .env file${successCount > 1 ? 's' : ''} to Default profile`)
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to import ${failCount} .env file${failCount > 1 ? 's' : ''}`)
+      }
+    } catch (error) {
+      console.error('Error importing env files:', error)
+      toast.error('Failed to import environment files')
     }
   }
 
@@ -133,11 +199,18 @@ export default function Dashboard() {
 
       if (response.data.success) {
         toast.success(`Saved ${selectedRepos.size} repositories to workspace`)
+
+        // Import .env files if checkbox is enabled
+        if (importEnvFiles) {
+          await importEnvFilesToWorkspace(workspaceId, Array.from(selectedRepos))
+        }
+
         setShowSaveModal(false)
         // Reset form
         setNewWorkspaceName('')
         setSnapshotName('')
         setSnapshotDescription('')
+        setImportEnvFiles(false)
         await refreshWorkspaces()
       }
     } catch (err: any) {
@@ -397,6 +470,38 @@ export default function Dashboard() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {/* Environment Variables Import */}
+            {(() => {
+              const envFileCount = repos.filter(r => selectedRepos.has(r.path) && r.hasEnvFile).length
+              if (envFileCount > 0) {
+                return (
+                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={importEnvFiles}
+                        onChange={(e) => setImportEnvFiles(e.target.checked)}
+                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900">
+                          Import .env files to "Default" environment profile
+                        </span>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {envFileCount} .env file{envFileCount > 1 ? 's' : ''} detected
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                          <AlertCircle size={12} />
+                          Env vars will be encrypted and stored securely
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )
+              }
+              return null
+            })()}
 
             {/* Actions */}
             <div className="flex justify-end gap-3">
