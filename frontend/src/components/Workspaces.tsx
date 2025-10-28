@@ -649,15 +649,17 @@ export default function Workspaces() {
         return
       }
 
-      // Create one profile per repository
+      // Create one profile per repository + auto-create services
       let successCount = 0
       let failCount = 0
+      let servicesCreated = 0
 
       for (const repo of reposWithEnv) {
         try {
           // Use repo name as profile name (e.g., "admin-api")
           const profileName = repo.name
 
+          // 1. Create environment profile
           const createProfileResponse = await axios.post('/api/env/profiles', {
             name: profileName,
             description: `Auto-imported from ${repo.path} (${snapshotName})`,
@@ -666,12 +668,37 @@ export default function Workspaces() {
 
           const profileId = createProfileResponse.data.profile.id
 
-          // Import .env file to this profile
+          // 2. Import .env file to this profile
           const envFilePath = `${repo.path}/.env`
           await axios.post(`/api/env/profiles/${profileId}/import`, {
             filePath: envFilePath,
             serviceId: null, // Not tied to a specific service
           })
+
+          // 3. Auto-create service if it doesn't exist
+          try {
+            // Check if service with this repo path already exists
+            const servicesResponse = await axios.get('/api/services')
+            const existingService = servicesResponse.data.services.find((s: any) => s.repoPath === repo.path)
+
+            if (!existingService) {
+              // Analyze the repository to get name, command, and port
+              const analysisResponse = await axios.post('/api/repos/analyze', { repoPath: repo.path })
+              const analysis = analysisResponse.data.analysis
+
+              // Create service with analyzed data
+              await axios.post('/api/services', {
+                name: analysis.name,
+                repoPath: repo.path,
+                command: analysis.command || 'npm start',
+                port: analysis.port || undefined,
+              })
+              servicesCreated++
+            }
+          } catch (serviceError) {
+            console.error(`Failed to auto-create service for ${repo.path}:`, serviceError)
+            // Don't fail the whole import if service creation fails
+          }
 
           successCount++
         } catch (error) {
@@ -682,6 +709,9 @@ export default function Workspaces() {
 
       if (successCount > 0) {
         toast.success(`Created ${successCount} environment profile${successCount > 1 ? 's' : ''} from .env files`)
+      }
+      if (servicesCreated > 0) {
+        toast.success(`Auto-created ${servicesCreated} service${servicesCreated > 1 ? 's' : ''}`)
       }
       if (failCount > 0) {
         toast.error(`Failed to import ${failCount} .env file${failCount > 1 ? 's' : ''}`)
