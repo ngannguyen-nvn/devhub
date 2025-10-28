@@ -291,6 +291,16 @@ export default function Environment() {
     return '•'.repeat(Math.min(value.length, 20))
   }
 
+  const handleCopyVariable = async (variable: EnvVariable) => {
+    try {
+      const copyText = `${variable.key}=${variable.value}`
+      await navigator.clipboard.writeText(copyText)
+      toast.success(`Copied: ${variable.key}=...`)
+    } catch (error) {
+      toast.error('Failed to copy to clipboard')
+    }
+  }
+
   // Filter profiles based on search term
   const filteredProfiles = profiles.filter(profile => {
     if (!profileSearchTerm.trim()) return true
@@ -722,14 +732,24 @@ export default function Environment() {
                             <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
                           )}
                         </div>
-                        <button
-                          data-testid={`env-delete-variable-button-${variable.id}`}
-                          onClick={() => handleDeleteVariable(variable.id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            data-testid={`env-copy-variable-button-${variable.id}`}
+                            onClick={() => handleCopyVariable(variable)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Copy KEY=VALUE"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button
+                            data-testid={`env-delete-variable-button-${variable.id}`}
+                            onClick={() => handleDeleteVariable(variable.id)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
