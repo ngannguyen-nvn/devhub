@@ -1308,12 +1308,20 @@ export default function Workspaces() {
                 Environment Variables ({Object.values(selectedSnapshot.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} total)
               </h3>
               <div className="space-y-3 ml-7">
-                {Object.entries(selectedSnapshot.envVariables).map(([serviceId, vars]) => {
-                  const service = selectedSnapshot.runningServices.find(s => s.serviceId === serviceId)
-                  const serviceName = service?.serviceName || serviceId
+                {Object.entries(selectedSnapshot.envVariables).map(([id, vars]) => {
+                  // Check if this is a service ID or profile ID
+                  const isProfile = id.startsWith('profile_')
+                  const service = selectedSnapshot.runningServices.find(s => s.serviceId === id)
+                  const displayName = isProfile
+                    ? id.replace('profile_', 'Profile: ')  // Profile-level vars
+                    : (service?.serviceName || id)         // Service-specific vars
+
                   return (
-                    <div key={serviceId} className="border-l-2 border-blue-300 pl-3">
-                      <div className="font-medium text-sm mb-1">{serviceName}</div>
+                    <div key={id} className="border-l-2 border-blue-300 pl-3">
+                      <div className="font-medium text-sm mb-1">
+                        {displayName}
+                        {isProfile && <span className="ml-2 text-xs text-gray-500">(Profile)</span>}
+                      </div>
                       <div className="text-xs text-gray-600">
                         {Object.keys(vars).length} variable{Object.keys(vars).length !== 1 ? 's' : ''}: {Object.keys(vars).join(', ')}
                       </div>

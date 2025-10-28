@@ -431,12 +431,13 @@ export class WorkspaceManager {
       dockerContainers = []
     }
 
-    // Get environment variables for all services in this workspace
+    // Get environment variables for all profiles and services in this workspace
     const envVariables: Record<string, Record<string, string>> = {}
     try {
       const allServices = this.serviceManager.getAllServices(workspaceId)
       const profiles = this.envManager.getAllProfiles(workspaceId)
 
+      // Capture service-specific variables
       for (const service of allServices) {
         const serviceEnv: Record<string, string> = {}
 
@@ -450,6 +451,21 @@ export class WorkspaceManager {
 
         if (Object.keys(serviceEnv).length > 0) {
           envVariables[service.id] = serviceEnv
+        }
+      }
+
+      // Also capture profile-level variables (not tied to specific services)
+      for (const profile of profiles) {
+        const profileVars = this.envManager.getVariables(profile.id) // No serviceId = get global vars
+        if (profileVars.length > 0) {
+          const profileEnv: Record<string, string> = {}
+          for (const variable of profileVars) {
+            profileEnv[variable.key] = variable.value
+          }
+          // Store under profile ID to keep them separate
+          if (Object.keys(profileEnv).length > 0) {
+            envVariables[profile.id] = profileEnv
+          }
         }
       }
     } catch (error) {
