@@ -83,7 +83,6 @@ export default function Workspaces() {
     tags: '',
     importEnvFiles: false,
   })
-  const [scannedRepositories, setScannedRepositories] = useState<any[]>([])
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -452,8 +451,15 @@ export default function Workspaces() {
       const response = await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
 
       if (response.data.success) {
+        const parts = [
+          `Started ${response.data.servicesStarted} service(s)`,
+          `switched ${response.data.branchesSwitched} branch(es)`,
+        ]
+        if (response.data.envVarsRestored > 0) {
+          parts.push(`restored ${response.data.envVarsRestored} env variable(s)`)
+        }
         toast.success(
-          `Workspace restored! Started ${response.data.servicesStarted} service(s), switched ${response.data.branchesSwitched} branch(es)`,
+          `Workspace restored! ${parts.join(', ')}`,
           { duration: 5000 }
         )
 
@@ -468,8 +474,12 @@ export default function Workspaces() {
           )
         }
       } else if (response.data.errors && response.data.errors.length > 0) {
+        const parts = [`Started ${response.data.servicesStarted} service(s)`]
+        if (response.data.envVarsRestored > 0) {
+          parts.push(`restored ${response.data.envVarsRestored} env variable(s)`)
+        }
         toast.error(
-          `Workspace partially restored. Started ${response.data.servicesStarted} service(s), but ${response.data.errors.length} error(s) occurred`,
+          `Workspace partially restored. ${parts.join(', ')}, but ${response.data.errors.length} error(s) occurred`,
           { duration: 5000 }
         )
 
@@ -715,7 +725,6 @@ export default function Workspaces() {
 
       setShowScanForm(false)
       setScanForm({ path: '', name: '', description: '', depth: '3', tags: '', importEnvFiles: false })
-      setScannedRepositories([])
 
       // Refresh workspaces to show the new/updated workspace
       fetchWorkspaces()
@@ -1136,6 +1145,14 @@ export default function Workspaces() {
                       <GitBranch className="w-3 h-3" />
                       {snapshot.repositories.length} repos
                     </span>
+                    {snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0 && (
+                      <span className="flex items-center gap-1" title="Environment variables">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        {Object.values(snapshot.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} env vars
+                      </span>
+                    )}
                   </div>
                   {snapshot.tags && snapshot.tags.length > 0 && (
                     <div className="flex gap-1 flex-wrap mb-2">
@@ -1249,6 +1266,35 @@ export default function Workspaces() {
               </div>
             )}
           </div>
+
+          {/* Environment Variables */}
+          {selectedSnapshot.envVariables && Object.keys(selectedSnapshot.envVariables).length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Environment Variables ({Object.values(selectedSnapshot.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} total)
+              </h3>
+              <div className="space-y-3 ml-7">
+                {Object.entries(selectedSnapshot.envVariables).map(([serviceId, vars]) => {
+                  const service = selectedSnapshot.runningServices.find(s => s.serviceId === serviceId)
+                  const serviceName = service?.serviceName || serviceId
+                  return (
+                    <div key={serviceId} className="border-l-2 border-blue-300 pl-3">
+                      <div className="font-medium text-sm mb-1">{serviceName}</div>
+                      <div className="text-xs text-gray-600">
+                        {Object.keys(vars).length} variable{Object.keys(vars).length !== 1 ? 's' : ''}: {Object.keys(vars).join(', ')}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="ml-7 mt-2 text-xs text-blue-600">
+                💡 These variables will be restored to a profile named "Snapshot: {selectedSnapshot.name}"
+              </div>
+            </div>
+          )}
 
           {/* Metadata */}
           <div className="mt-6 pt-6 border-t text-sm text-gray-500">
