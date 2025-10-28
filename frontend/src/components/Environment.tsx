@@ -60,6 +60,7 @@ export default function Environment() {
   const [editingVariableId, setEditingVariableId] = useState<string | null>(null)
   const [services, setServices] = useState<any[]>([])
   const [syncing, setSyncing] = useState(false)
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('')
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
@@ -349,6 +350,7 @@ export default function Environment() {
 
   const handleOpenSyncModal = () => {
     fetchServices()
+    setServiceSearchTerm('')
     setShowSyncModal(true)
   }
 
@@ -395,6 +397,31 @@ export default function Environment() {
       variable.value.toLowerCase().includes(search) ||
       (variable.description && variable.description.toLowerCase().includes(search))
     )
+  })
+
+  // Filter services based on search term
+  const filteredServices = services.filter(service => {
+    if (!serviceSearchTerm.trim()) return true
+
+    const search = serviceSearchTerm.toLowerCase()
+    return (
+      service.name.toLowerCase().includes(search) ||
+      service.repoPath.toLowerCase().includes(search)
+    )
+  }).sort((a, b) => {
+    // Get the selected profile name
+    const profileName = profiles.find(p => p.id === selectedProfile)?.name.toLowerCase() || ''
+
+    // Check if service names match the profile name
+    const aMatches = a.name.toLowerCase() === profileName
+    const bMatches = b.name.toLowerCase() === profileName
+
+    // Matching services come first
+    if (aMatches && !bMatches) return -1
+    if (!aMatches && bMatches) return 1
+
+    // Otherwise sort alphabetically
+    return a.name.localeCompare(b.name)
   })
 
   return (
@@ -697,9 +724,9 @@ export default function Environment() {
               {/* Sync to Service Modal */}
               {showSyncModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="env-sync-modal">
-                    <h2 className="text-xl font-bold mb-4">Sync to Service</h2>
-                    <p className="text-gray-600 mb-6">
+                  <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] flex flex-col" data-testid="env-sync-modal">
+                    <h2 className="text-xl font-bold mb-2">Sync to Service</h2>
+                    <p className="text-gray-600 mb-4">
                       Select a service to sync this profile's variables to its .env file.
                     </p>
 
@@ -710,8 +737,41 @@ export default function Environment() {
                         <p className="text-sm mt-2">Add services from the Service Manager first.</p>
                       </div>
                     ) : (
-                      <div className="space-y-2 mb-6" data-testid="env-sync-service-list">
-                        {services.map((service: any) => (
+                      <>
+                        {/* Search Input */}
+                        <div className="mb-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                              type="text"
+                              value={serviceSearchTerm}
+                              onChange={(e) => setServiceSearchTerm(e.target.value)}
+                              placeholder="Search services by name or path..."
+                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              data-testid="env-sync-service-search"
+                            />
+                          </div>
+                          {serviceSearchTerm && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{serviceSearchTerm}"
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Service List */}
+                        <div className="flex-1 overflow-y-auto space-y-2 mb-4" data-testid="env-sync-service-list">
+                          {filteredServices.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                              <p>No services match your search.</p>
+                              <button
+                                onClick={() => setServiceSearchTerm('')}
+                                className="mt-2 text-blue-600 hover:underline text-sm"
+                              >
+                                Clear search
+                              </button>
+                            </div>
+                          ) : (
+                            filteredServices.map((service: any) => (
                           <div
                             key={service.id}
                             onClick={() => !syncing && handleSyncToService(service.id)}
@@ -738,8 +798,10 @@ export default function Environment() {
                               <Zap className="w-5 h-5 text-orange-600" />
                             </div>
                           </div>
-                        ))}
-                      </div>
+                            ))
+                          )}
+                        </div>
+                      </>
                     )}
 
                     <div className="flex justify-end">
