@@ -312,6 +312,7 @@ export default function Services() {
             onClick={fetchServices}
             disabled={loading}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            data-testid="service-refresh-button"
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -320,6 +321,7 @@ export default function Services() {
             onClick={openImportModal}
             disabled={!activeWorkspace}
             className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="service-import-button"
           >
             <FolderInput size={18} />
             Import from Workspace
@@ -327,6 +329,7 @@ export default function Services() {
           <button
             onClick={() => setShowAddForm(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            data-testid="service-add-button"
           >
             <Plus size={18} />
             Add Service
@@ -337,7 +340,7 @@ export default function Services() {
       {/* Add Service Modal */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md" data-testid="service-create-form">
             <h2 className="text-xl font-bold mb-4">Add New Service</h2>
             <div className="space-y-4">
               <div>
@@ -350,6 +353,7 @@ export default function Services() {
                   onChange={(e) => setNewService({ ...newService, name: e.target.value })}
                   placeholder="e.g., Auth Service"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="service-name-input"
                 />
               </div>
               <div>
@@ -362,6 +366,7 @@ export default function Services() {
                   onChange={(e) => setNewService({ ...newService, repoPath: e.target.value })}
                   placeholder="/home/user/my-service"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="service-repoPath-input"
                 />
               </div>
               <div>
@@ -374,6 +379,7 @@ export default function Services() {
                   onChange={(e) => setNewService({ ...newService, command: e.target.value })}
                   placeholder="npm start"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="service-command-input"
                 />
               </div>
               <div>
@@ -386,6 +392,7 @@ export default function Services() {
                   onChange={(e) => setNewService({ ...newService, port: e.target.value })}
                   placeholder="3000"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="service-port-input"
                 />
               </div>
             </div>
@@ -393,6 +400,7 @@ export default function Services() {
               <button
                 onClick={() => setShowAddForm(false)}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                data-testid="service-cancel-button"
               >
                 Cancel
               </button>
@@ -400,6 +408,7 @@ export default function Services() {
                 onClick={handleAddService}
                 disabled={!newService.name || !newService.repoPath || !newService.command}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="service-create-button"
               >
                 Add Service
               </button>
@@ -411,7 +420,7 @@ export default function Services() {
       {/* Import from Workspace Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="service-import-form">
             <h2 className="text-xl font-bold mb-4">Import Services from Workspace</h2>
             <p className="text-gray-600 mb-6">
               Select repositories from <span className="font-medium text-blue-600">{activeWorkspace?.name}</span> to import as services.
@@ -436,6 +445,7 @@ export default function Services() {
                       }
                     }}
                     className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2"
+                    data-testid="service-select-all-button"
                   >
                     {selectedRepos.size === workspaceRepos.length ? (
                       <>
@@ -454,7 +464,7 @@ export default function Services() {
                   </span>
                 </div>
 
-                <div className="space-y-2 mb-6 max-h-96 overflow-y-auto">
+                <div className="space-y-2 mb-6 max-h-96 overflow-y-auto" data-testid="service-import-repo-list">
                   {workspaceRepos.map((repo) => {
                     const isSelected = selectedRepos.has(repo.path)
                     const alreadyExists = services.find(s => s.repoPath === repo.path)
@@ -465,6 +475,7 @@ export default function Services() {
                         className={`p-4 border rounded-lg cursor-pointer transition-all ${
                           isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
                         }`}
+                        data-testid={`service-import-repo-${repo.path.replace(/\//g, '-')}`}
                       >
                         <div className="flex items-center gap-3">
                           {isSelected ? (
@@ -499,6 +510,7 @@ export default function Services() {
                 }}
                 disabled={importing}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                data-testid="service-import-cancel-button"
               >
                 Cancel
               </button>
@@ -506,6 +518,7 @@ export default function Services() {
                 onClick={handleImportFromWorkspace}
                 disabled={importing || selectedRepos.size === 0}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                data-testid="service-import-confirm-button"
               >
                 {importing ? (
                   <>
@@ -527,7 +540,7 @@ export default function Services() {
       {/* Services Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-auto">
         {/* Services List */}
-        <div className="space-y-4">
+        <div className="space-y-4" data-testid="service-list">
           {loading && services.length === 0 && (
             <SkeletonLoader count={3} />
           )}
@@ -539,6 +552,7 @@ export default function Services() {
               <button
                 onClick={() => setShowAddForm(true)}
                 className="mt-4 text-blue-600 hover:underline"
+                data-testid="service-add-first-button"
               >
                 Add your first service
               </button>
@@ -556,6 +570,7 @@ export default function Services() {
                 className={`bg-white border rounded-lg p-4 cursor-pointer transition-all ${
                   isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:shadow-sm'
                 }`}
+                data-testid={`service-item-${service.id}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -589,6 +604,7 @@ export default function Services() {
                         handleStopService(service.id)
                       }}
                       className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center justify-center gap-2"
+                      data-testid={`service-stop-button-${service.id}`}
                     >
                       <Square size={14} />
                       Stop
@@ -600,6 +616,7 @@ export default function Services() {
                         handleStartService(service.id)
                       }}
                       className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center justify-center gap-2"
+                      data-testid={`service-start-button-${service.id}`}
                     >
                       <Play size={14} />
                       Start
@@ -611,6 +628,7 @@ export default function Services() {
                       handleDeleteService(service.id)
                     }}
                     className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 flex items-center gap-2"
+                    data-testid={`service-delete-button-${service.id}`}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -621,13 +639,14 @@ export default function Services() {
         </div>
 
         {/* Logs Viewer */}
-        <div className="bg-gray-900 rounded-lg p-4 overflow-hidden flex flex-col">
+        <div className="bg-gray-900 rounded-lg p-4 overflow-hidden flex flex-col" data-testid="service-logs-viewer">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold">Service Logs</h3>
             {selectedService && (
               <button
                 onClick={() => fetchLogs(selectedService)}
                 className="text-gray-400 hover:text-white"
+                data-testid="service-logs-refresh-button"
               >
                 <RefreshCw size={16} />
               </button>
@@ -639,7 +658,7 @@ export default function Services() {
               Select a service to view logs
             </div>
           ) : (
-            <div className="flex-1 overflow-auto font-mono text-xs text-green-400 space-y-1">
+            <div className="flex-1 overflow-auto font-mono text-xs text-green-400 space-y-1" data-testid="service-logs-content">
               {logs.length === 0 ? (
                 <p className="text-gray-500">No logs available</p>
               ) : (

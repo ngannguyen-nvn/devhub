@@ -30,6 +30,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           return (
             <button
               key={item.id}
+              data-testid={`nav-${item.id}`}
               onClick={() => onViewChange(item.id)}
               className={`
                 w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors

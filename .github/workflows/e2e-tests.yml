@@ -1,0 +1,91 @@
+name: E2E Tests
+
+on:
+  # Manual trigger only
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to test on'
+        required: false
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+          - all
+      test_file:
+        description: 'Specific test file to run (leave empty for all tests)'
+        required: false
+        default: ''
+        type: string
+      headed:
+        description: 'Run tests in headed mode (visible browser)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests
+        run: |
+          # Build test command based on inputs
+          TEST_CMD="npx playwright test"
+
+          # Add browser selection
+          if [ "${{ github.event.inputs.browser }}" != "" ] && [ "${{ github.event.inputs.browser }}" != "all" ]; then
+            TEST_CMD="$TEST_CMD --project=${{ github.event.inputs.browser }}"
+          fi
+
+          # Add specific test file if provided
+          if [ "${{ github.event.inputs.test_file }}" != "" ]; then
+            TEST_CMD="$TEST_CMD ${{ github.event.inputs.test_file }}"
+          fi
+
+          # Add headed mode if requested
+          if [ "${{ github.event.inputs.headed }}" == "true" ]; then
+            TEST_CMD="$TEST_CMD --headed"
+          fi
+
+          echo "Running: $TEST_CMD"
+          eval $TEST_CMD
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-screenshots
+          path: e2e/screenshots/
+          retention-days: 7

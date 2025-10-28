@@ -326,7 +326,7 @@ export default function Docker() {
 
   if (!dockerAvailable) {
     return (
-      <div className="p-8">
+      <div className="p-8" data-testid="docker-unavailable-container">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <div className="flex items-center gap-3">
             <Container className="w-8 h-8 text-yellow-600" />
@@ -338,6 +338,7 @@ export default function Docker() {
               <button
                 onClick={checkDocker}
                 className="mt-3 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                data-testid="docker-check-again-button"
               >
                 Check Again
               </button>
@@ -355,6 +356,7 @@ export default function Docker() {
         <button
           onClick={() => activeTab === 'images' ? fetchImages() : fetchContainers()}
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          data-testid="docker-refresh-button"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -370,6 +372,7 @@ export default function Docker() {
               ? 'border-b-2 border-blue-500 text-blue-600'
               : 'text-gray-600 hover:text-gray-900'
           }`}
+          data-testid="docker-images-tab"
         >
           <Package className="w-4 h-4 inline mr-2" />
           Images ({images.length})
@@ -381,6 +384,7 @@ export default function Docker() {
               ? 'border-b-2 border-blue-500 text-blue-600'
               : 'text-gray-600 hover:text-gray-900'
           }`}
+          data-testid="docker-containers-tab"
         >
           <Container className="w-4 h-4 inline mr-2" />
           Containers ({containers.length})
@@ -394,6 +398,7 @@ export default function Docker() {
             <button
               onClick={() => setShowBuildForm(!showBuildForm)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              data-testid="docker-build-image-button"
             >
               <Plus className="w-4 h-4" />
               Build Image
@@ -402,7 +407,7 @@ export default function Docker() {
 
           {/* Build Form */}
           {showBuildForm && (
-            <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div className="bg-white p-6 rounded-lg shadow-md mb-6" data-testid="docker-build-form">
               <h2 className="text-xl font-bold mb-4">Build Docker Image</h2>
               <div className="space-y-4">
                 <div>
@@ -413,6 +418,7 @@ export default function Docker() {
                     onChange={(e) => setBuildForm({ ...buildForm, contextPath: e.target.value })}
                     placeholder="/path/to/project"
                     className="w-full px-3 py-2 border rounded"
+                    data-testid="docker-context-path-input"
                   />
                 </div>
                 <div>
@@ -423,6 +429,7 @@ export default function Docker() {
                     onChange={(e) => setBuildForm({ ...buildForm, dockerfilePath: e.target.value })}
                     placeholder="Dockerfile"
                     className="w-full px-3 py-2 border rounded"
+                    data-testid="docker-dockerfile-path-input"
                   />
                 </div>
                 <div>
@@ -433,11 +440,12 @@ export default function Docker() {
                     onChange={(e) => setBuildForm({ ...buildForm, tag: e.target.value })}
                     placeholder="my-app:latest"
                     className="w-full px-3 py-2 border rounded"
+                    data-testid="docker-image-tag-input"
                   />
                 </div>
 
                 {building && buildLogs.length > 0 && (
-                  <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-48 overflow-y-auto">
+                  <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-48 overflow-y-auto" data-testid="docker-build-logs">
                     {buildLogs.map((log, i) => (
                       <div key={i}>{log}</div>
                     ))}
@@ -449,12 +457,14 @@ export default function Docker() {
                     onClick={handleBuildImage}
                     disabled={building}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    data-testid="docker-build-submit-button"
                   >
                     {building ? 'Building...' : 'Build'}
                   </button>
                   <button
                     onClick={() => setShowBuildForm(false)}
                     className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                    data-testid="docker-build-cancel-button"
                   >
                     Cancel
                   </button>
@@ -464,14 +474,14 @@ export default function Docker() {
           )}
 
           {/* Images List */}
-          <div className="grid gap-4">
+          <div className="grid gap-4" data-testid="docker-images-list">
             {loading && images.length === 0 ? (
               <SkeletonLoader count={3} />
             ) : images.length === 0 ? (
               <div className="text-center py-8 text-gray-500">No Docker images found</div>
             ) : (
               images.map(image => (
-                <div key={image.id} className="bg-white p-4 rounded-lg shadow hover:shadow-md">
+                <div key={image.id} className="bg-white p-4 rounded-lg shadow hover:shadow-md" data-testid={`docker-image-item-${image.id}`}>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -490,6 +500,7 @@ export default function Docker() {
                       onClick={() => handleRemoveImage(image.id, image.repoTags[0] || 'Unknown')}
                       className="text-red-600 hover:text-red-800"
                       title="Remove Image"
+                      data-testid="docker-delete-image-button"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -510,6 +521,7 @@ export default function Docker() {
               <button
                 onClick={() => setShowRunForm(!showRunForm)}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                data-testid="docker-run-container-button"
               >
                 <Plus className="w-4 h-4" />
                 Run Container
@@ -518,7 +530,7 @@ export default function Docker() {
 
             {/* Run Form */}
             {showRunForm && (
-              <div className="bg-white p-6 rounded-lg shadow-md mb-4">
+              <div className="bg-white p-6 rounded-lg shadow-md mb-4" data-testid="docker-run-form">
                 <h2 className="text-xl font-bold mb-4">Run New Container</h2>
                 <div className="space-y-4">
                   <div>
@@ -529,6 +541,7 @@ export default function Docker() {
                       onChange={(e) => setRunForm({ ...runForm, imageName: e.target.value })}
                       placeholder="nginx:latest"
                       className="w-full px-3 py-2 border rounded"
+                      data-testid="docker-image-name-input"
                     />
                   </div>
                   <div>
@@ -539,6 +552,7 @@ export default function Docker() {
                       onChange={(e) => setRunForm({ ...runForm, containerName: e.target.value })}
                       placeholder="my-container"
                       className="w-full px-3 py-2 border rounded"
+                      data-testid="docker-container-name-input"
                     />
                   </div>
                   <div>
@@ -549,6 +563,7 @@ export default function Docker() {
                       onChange={(e) => setRunForm({ ...runForm, ports: e.target.value })}
                       placeholder="80:8080, 443:8443"
                       className="w-full px-3 py-2 border rounded"
+                      data-testid="docker-port-mappings-input"
                     />
                   </div>
                   <div>
@@ -559,18 +574,21 @@ export default function Docker() {
                       onChange={(e) => setRunForm({ ...runForm, env: e.target.value })}
                       placeholder="KEY=value, FOO=bar"
                       className="w-full px-3 py-2 border rounded"
+                      data-testid="docker-env-vars-input"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={handleRunContainer}
                       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      data-testid="docker-run-submit-button"
                     >
                       Run
                     </button>
                     <button
                       onClick={() => setShowRunForm(false)}
                       className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      data-testid="docker-run-cancel-button"
                     >
                       Cancel
                     </button>
@@ -580,7 +598,7 @@ export default function Docker() {
             )}
 
             {/* Containers List */}
-            <div className="space-y-4">
+            <div className="space-y-4" data-testid="docker-containers-list">
               {loading && containers.length === 0 ? (
                 <SkeletonLoader count={3} />
               ) : containers.length === 0 ? (
@@ -593,6 +611,7 @@ export default function Docker() {
                     className={`bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md ${
                       selectedContainer === container.id ? 'ring-2 ring-blue-500' : ''
                     }`}
+                    data-testid={`docker-container-item-${container.id}`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -630,6 +649,7 @@ export default function Docker() {
                             }}
                             className="text-yellow-600 hover:text-yellow-800"
                             title="Stop"
+                            data-testid="docker-stop-container-button"
                           >
                             <Square className="w-5 h-5" />
                           </button>
@@ -641,6 +661,7 @@ export default function Docker() {
                             }}
                             className="text-green-600 hover:text-green-800"
                             title="Start"
+                            data-testid="docker-start-container-button"
                           >
                             <Play className="w-5 h-5" />
                           </button>
@@ -652,6 +673,7 @@ export default function Docker() {
                           }}
                           className="text-red-600 hover:text-red-800"
                           title="Remove"
+                          data-testid="docker-delete-container-button"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -665,17 +687,18 @@ export default function Docker() {
 
           {/* Container Logs */}
           {selectedContainer && (
-            <div className="bg-white p-4 rounded-lg shadow">
+            <div className="bg-white p-4 rounded-lg shadow" data-testid="docker-container-logs-panel">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Container Logs</h2>
                 <button
                   onClick={() => fetchContainerLogs(selectedContainer)}
                   className="text-blue-600 hover:text-blue-800"
+                  data-testid="docker-refresh-logs-button"
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>
               </div>
-              <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto">
+              <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto" data-testid="docker-container-logs">
                 {containerLogs.length === 0 ? (
                   <div className="text-gray-500">No logs available</div>
                 ) : (

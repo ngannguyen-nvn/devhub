@@ -314,6 +314,7 @@ export default function Environment() {
           )}
         </div>
         <button
+          data-testid="env-refresh-button"
           onClick={fetchProfiles}
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
         >
@@ -328,6 +329,7 @@ export default function Environment() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Profiles</h2>
             <button
+              data-testid="env-add-profile-button"
               onClick={() => setShowAddProfileForm(true)}
               className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               title="Add Profile"
@@ -338,8 +340,9 @@ export default function Environment() {
 
           {/* Add Profile Form */}
           {showAddProfileForm && (
-            <div className="mb-4 p-3 bg-gray-50 rounded">
+            <div data-testid="env-profile-form" className="mb-4 p-3 bg-gray-50 rounded">
               <input
+                data-testid="env-profile-name-input"
                 type="text"
                 value={profileForm.name}
                 onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
@@ -347,6 +350,7 @@ export default function Environment() {
                 className="w-full px-3 py-2 border rounded mb-2"
               />
               <input
+                data-testid="env-profile-description-input"
                 type="text"
                 value={profileForm.description}
                 onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
@@ -355,12 +359,14 @@ export default function Environment() {
               />
               <div className="flex gap-2">
                 <button
+                  data-testid="env-create-profile-button"
                   onClick={handleAddProfile}
                   className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                 >
                   Add
                 </button>
                 <button
+                  data-testid="env-cancel-profile-button"
                   onClick={() => setShowAddProfileForm(false)}
                   className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400 text-sm"
                 >
@@ -371,7 +377,7 @@ export default function Environment() {
           )}
 
           {/* Profiles List */}
-          <div className="space-y-2">
+          <div data-testid="env-profile-list" className="space-y-2">
             {profiles.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm">
                 No profiles. Create one to get started.
@@ -380,6 +386,7 @@ export default function Environment() {
               profiles.map(profile => (
                 <div
                   key={profile.id}
+                  data-testid={`env-profile-item-${profile.id}`}
                   onClick={() => setSelectedProfile(profile.id)}
                   className={`p-3 rounded cursor-pointer border ${
                     selectedProfile === profile.id
@@ -396,6 +403,7 @@ export default function Environment() {
                     </div>
                     <div className="flex gap-1">
                       <button
+                        data-testid={`env-copy-profile-button-${profile.id}`}
                         onClick={(e) => {
                           e.stopPropagation()
                           handleCopyProfile(profile.id)
@@ -406,6 +414,7 @@ export default function Environment() {
                         <Copy className="w-4 h-4" />
                       </button>
                       <button
+                        data-testid={`env-delete-profile-button-${profile.id}`}
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteProfile(profile.id)
@@ -431,6 +440,7 @@ export default function Environment() {
                 <h2 className="text-xl font-bold">Variables</h2>
                 <div className="flex gap-2">
                   <button
+                    data-testid="env-import-button"
                     onClick={() => setShowImportForm(true)}
                     className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                   >
@@ -438,6 +448,7 @@ export default function Environment() {
                     Import
                   </button>
                   <button
+                    data-testid="env-export-button"
                     onClick={() => setShowExportForm(true)}
                     className="flex items-center gap-1 px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
                   >
@@ -445,6 +456,7 @@ export default function Environment() {
                     Export
                   </button>
                   <button
+                    data-testid="env-add-variable-button"
                     onClick={() => setShowAddVariableForm(true)}
                     className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                   >
@@ -456,9 +468,10 @@ export default function Environment() {
 
               {/* Import Form */}
               {showImportForm && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
+                <div data-testid="env-import-form" className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
                   <h3 className="font-semibold mb-2">Import from .env file</h3>
                   <input
+                    data-testid="env-import-filepath-input"
                     type="text"
                     value={importForm.filePath}
                     onChange={(e) => setImportForm({ filePath: e.target.value })}
@@ -467,12 +480,14 @@ export default function Environment() {
                   />
                   <div className="flex gap-2">
                     <button
+                      data-testid="env-submit-import-button"
                       onClick={handleImport}
                       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
                       Import
                     </button>
                     <button
+                      data-testid="env-cancel-import-button"
                       onClick={() => setShowImportForm(false)}
                       className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
                     >
@@ -484,9 +499,10 @@ export default function Environment() {
 
               {/* Export Form */}
               {showExportForm && (
-                <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded">
+                <div data-testid="env-export-form" className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded">
                   <h3 className="font-semibold mb-2">Export to .env file</h3>
                   <input
+                    data-testid="env-export-filepath-input"
                     type="text"
                     value={exportForm.filePath}
                     onChange={(e) => setExportForm({ filePath: e.target.value })}
@@ -495,12 +511,14 @@ export default function Environment() {
                   />
                   <div className="flex gap-2">
                     <button
+                      data-testid="env-submit-export-button"
                       onClick={handleExport}
                       className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
                     >
                       Export
                     </button>
                     <button
+                      data-testid="env-cancel-export-button"
                       onClick={() => setShowExportForm(false)}
                       className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
                     >
@@ -512,10 +530,11 @@ export default function Environment() {
 
               {/* Add Variable Form */}
               {showAddVariableForm && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
+                <div data-testid="env-variable-form" className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
                   <h3 className="font-semibold mb-2">Add New Variable</h3>
                   <div className="space-y-2">
                     <input
+                      data-testid="env-variable-key-input"
                       type="text"
                       value={variableForm.key}
                       onChange={(e) => setVariableForm({ ...variableForm, key: e.target.value })}
@@ -523,6 +542,7 @@ export default function Environment() {
                       className="w-full px-3 py-2 border rounded font-mono"
                     />
                     <input
+                      data-testid="env-variable-value-input"
                       type="text"
                       value={variableForm.value}
                       onChange={(e) => setVariableForm({ ...variableForm, value: e.target.value })}
@@ -530,6 +550,7 @@ export default function Environment() {
                       className="w-full px-3 py-2 border rounded"
                     />
                     <input
+                      data-testid="env-variable-description-input"
                       type="text"
                       value={variableForm.description}
                       onChange={(e) => setVariableForm({ ...variableForm, description: e.target.value })}
@@ -538,6 +559,7 @@ export default function Environment() {
                     />
                     <label className="flex items-center gap-2">
                       <input
+                        data-testid="env-variable-secret-checkbox"
                         type="checkbox"
                         checked={variableForm.isSecret}
                         onChange={(e) => setVariableForm({ ...variableForm, isSecret: e.target.checked })}
@@ -548,12 +570,14 @@ export default function Environment() {
                   </div>
                   <div className="flex gap-2 mt-3">
                     <button
+                      data-testid="env-create-variable-button"
                       onClick={handleAddVariable}
                       className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
                       Add
                     </button>
                     <button
+                      data-testid="env-cancel-variable-button"
                       onClick={() => setShowAddVariableForm(false)}
                       className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
                     >
@@ -571,10 +595,11 @@ export default function Environment() {
                   No variables in this profile. Add one to get started.
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div data-testid="env-variable-list" className="space-y-2">
                   {variables.map(variable => (
                     <div
                       key={variable.id}
+                      data-testid={`env-variable-item-${variable.id}`}
                       className="p-3 bg-gray-50 rounded border border-gray-200"
                     >
                       <div className="flex justify-between items-start">
@@ -595,6 +620,7 @@ export default function Environment() {
                             </code>
                             {variable.isSecret && (
                               <button
+                                data-testid={`env-toggle-secret-button-${variable.id}`}
                                 onClick={() => toggleRevealSecret(variable.id)}
                                 className="text-blue-600 hover:text-blue-800"
                                 title={revealedSecrets.has(variable.id) ? 'Hide' : 'Reveal'}
@@ -612,6 +638,7 @@ export default function Environment() {
                           )}
                         </div>
                         <button
+                          data-testid={`env-delete-variable-button-${variable.id}`}
                           onClick={() => handleDeleteVariable(variable.id)}
                           className="text-red-600 hover:text-red-800"
                           title="Delete"
