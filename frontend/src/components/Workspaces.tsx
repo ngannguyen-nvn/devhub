@@ -81,7 +81,9 @@ export default function Workspaces() {
     description: '',
     depth: '3',
     tags: '',
+    importEnvFiles: false,
   })
+  const [scannedRepositories, setScannedRepositories] = useState<any[]>([])
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -497,6 +499,12 @@ export default function Workspaces() {
 
   // Delete snapshot
   const handleDeleteSnapshot = (snapshotId: string, snapshotName: string) => {
+    // Check if this is the active snapshot
+    if (selectedWorkspace?.activeSnapshotId === snapshotId) {
+      toast.error('Cannot delete the active snapshot. Please clear or restore a different snapshot first.')
+      return
+    }
+
     setConfirmDialog({
       isOpen: true,
       type: 'delete-snapshot',
@@ -541,6 +549,12 @@ export default function Workspaces() {
   }
 
   const handleDeleteSelectedSnapshots = () => {
+    // Check if active snapshot is in selection
+    if (selectedWorkspace?.activeSnapshotId && selectedSnapshots.has(selectedWorkspace.activeSnapshotId)) {
+      toast.error('Cannot delete the active snapshot. Please deselect it or clear the active snapshot first.')
+      return
+    }
+
     setConfirmDialog({
       isOpen: true,
       type: 'delete-multiple-snapshots',
@@ -607,6 +621,63 @@ export default function Workspaces() {
     }
   }
 
+  // Import .env files to workspace
+  const importEnvFilesToWorkspace = async (
+    workspaceId: string,
+    repositories: any[],
+    snapshotName: string
+  ) => {
+    try {
+      // Filter repos that have .env files
+      const reposWithEnv = repositories.filter(r => r.hasEnvFile)
+
+      if (reposWithEnv.length === 0) {
+        return
+      }
+
+      // Create one profile per repository
+      let successCount = 0
+      let failCount = 0
+
+      for (const repo of reposWithEnv) {
+        try {
+          // Create profile with format: "{SnapshotName} - {RepoName}"
+          const profileName = `${snapshotName} - ${repo.name}`
+
+          const createProfileResponse = await axios.post('/api/env/profiles', {
+            name: profileName,
+            description: `Auto-imported from ${repo.path}`,
+            workspace_id: workspaceId,
+          })
+
+          const profileId = createProfileResponse.data.profile.id
+
+          // Import .env file to this profile
+          const envFilePath = `${repo.path}/.env`
+          await axios.post(`/api/env/profiles/${profileId}/import`, {
+            filePath: envFilePath,
+            serviceId: null, // Not tied to a specific service
+          })
+
+          successCount++
+        } catch (error) {
+          console.error(`Failed to import .env from ${repo.path}:`, error)
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Created ${successCount} environment profile${successCount > 1 ? 's' : ''} from .env files`)
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to import ${failCount} .env file${failCount > 1 ? 's' : ''}`)
+      }
+    } catch (error) {
+      console.error('Error importing env files:', error)
+      toast.error('Failed to import environment files')
+    }
+  }
+
   // Scan folder and create snapshot in workspace
   const handleScanFolder = async () => {
     if (!scanForm.path.trim()) {
@@ -633,8 +704,17 @@ export default function Workspaces() {
         tags: tags.length > 0 ? tags : undefined,
       })
 
+      const snapshot = response.data.snapshot
+      const repositories = response.data.scanResult?.repositories || []
+
+      // Import .env files if checkbox is enabled
+      if (scanForm.importEnvFiles && repositories.length > 0) {
+        await importEnvFilesToWorkspace(snapshot.workspaceId, repositories, scanForm.name)
+      }
+
       setShowScanForm(false)
-      setScanForm({ path: '', name: '', description: '', depth: '3', tags: '' })
+      setScanForm({ path: '', name: '', description: '', depth: '3', tags: '', importEnvFiles: false })
+      setScannedRepositories([])
 
       // Refresh workspaces to show the new/updated workspace
       fetchWorkspaces()
@@ -1019,13 +1099,15 @@ export default function Workspaces() {
                     {/* Checkbox for multi-select */}
                     <div className="absolute top-4 left-4">
                       <button
-                        onClick={(e) => toggleSnapshotSelection(snapshot.id, e)}
-                        className="p-1 hover:bg-gray-100 rounded"
+                        onClick={(e) => !isActive && toggleSnapshotSelection(snapshot.id, e)}
+                        disabled={isActive}
+                        className={`p-1 rounded ${isActive ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'}`}
+                        title={isActive ? 'Cannot select active snapshot for deletion' : ''}
                       >
                         {isSelected ? (
                           <CheckSquare size={20} className="text-blue-600" />
                         ) : (
-                          <Square size={20} className="text-gray-400" />
+                          <Square size={20} className={isActive ? "text-gray-300" : "text-gray-400"} />
                         )}
                       </button>
                     </div>
@@ -1218,6 +1300,34 @@ export default function Workspaces() {
                   className="flex-1 px-3 py-2 border rounded"
                 />
               </div>
+
+              {/* Environment Variables Import Checkbox */}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scanForm.importEnvFiles}
+                    onChange={(e) => setScanForm({ ...scanForm, importEnvFiles: e.target.checked })}
+                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      Import .env files to environment profiles
+                    </span>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Will automatically import .env files from scanned repositories
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Profile format: "{scanForm.name || 'Snapshot'} - {'{RepoName}'}"
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                      <AlertCircle size={12} />
+                      Env vars will be encrypted and stored securely
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               <p className="text-xs text-gray-600">
                 This will scan the folder for git repositories and create a workspace + snapshot.
               </p>

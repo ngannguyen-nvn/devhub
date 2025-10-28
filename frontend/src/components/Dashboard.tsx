@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
-import { GitBranch, RefreshCw, Folder, AlertCircle, Save, CheckSquare, Square, Camera, Settings, FileText, Zap, Package, CheckCircle, Clock } from 'lucide-react'
+import { GitBranch, RefreshCw, Folder, AlertCircle, Save, CheckSquare, Square, Camera, Settings, FileText, Zap, Package, CheckCircle, Clock, Trash2 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
 import { useWorkspace } from '../contexts/WorkspaceContext'
+import UncommittedChangesDialog from './UncommittedChangesDialog'
+import StashManager from './StashManager'
 
 interface DashboardProps {
   onViewChange: (view: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki') => void
@@ -39,6 +41,17 @@ interface Snapshot {
   updatedAt: string
 }
 
+interface UncommittedChange {
+  path: string
+  hasChanges: boolean
+  files: {
+    modified: string[]
+    added: string[]
+    deleted: string[]
+    renamed: string[]
+  }
+}
+
 export default function Dashboard({ onViewChange }: DashboardProps) {
   const { allWorkspaces, createWorkspace, refreshWorkspaces, activeWorkspace } = useWorkspace()
 
@@ -66,6 +79,43 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
   const [snapshotDescription, setSnapshotDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [importEnvFiles, setImportEnvFiles] = useState(false)
+
+  // Uncommitted changes dialog state
+  const [uncommittedChangesDialog, setUncommittedChangesDialog] = useState<{
+    isOpen: boolean
+    snapshotId: string | null
+    changes: UncommittedChange[]
+    loading: boolean
+  }>({
+    isOpen: false,
+    snapshotId: null,
+    changes: [],
+    loading: false,
+  })
+
+  // Restoring state
+  const [restoring, setRestoring] = useState(false)
+
+  // Delete snapshot handler
+  const handleDeleteSnapshot = async (snapshotId: string, snapshotName: string) => {
+    // Check if this is the active snapshot
+    if (activeWorkspace?.activeSnapshotId === snapshotId) {
+      toast.error('Cannot delete the active snapshot. Please clear or restore a different snapshot first.')
+      return
+    }
+
+    if (!window.confirm(`Are you sure you want to delete snapshot "${snapshotName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await axios.delete(`/api/workspaces/snapshots/${snapshotId}`)
+      toast.success(`Snapshot "${snapshotName}" deleted successfully`)
+      fetchDashboardData()
+    } catch (error: any) {
+      toast.error(`Failed to delete snapshot: ${error.response?.data?.error || error.message}`)
+    }
+  }
 
   const fetchDashboardData = async () => {
     if (!activeWorkspace) {
@@ -104,11 +154,8 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
     }
 
     try {
-      const snapshotName = `Quick Snapshot - ${new Date().toLocaleString()}`
-      await axios.post('/api/workspaces/snapshots/quick', {
-        name: snapshotName,
-        workspaceId: activeWorkspace.id,
-      })
+      // Backend generates its own timestamp-based name
+      await axios.post('/api/workspaces/snapshots/quick')
       toast.success('Snapshot captured successfully')
       fetchDashboardData()
     } catch (err: any) {
@@ -118,15 +165,156 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
     }
   }
 
-  const handleRestoreSnapshot = async (snapshotId: string) => {
+  // Check for uncommitted changes before restore
+  const checkUncommittedChanges = async (snapshotId: string) => {
     try {
-      await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
-      toast.success('Snapshot restored successfully')
-      fetchDashboardData()
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'Failed to restore snapshot'
-      toast.error(errorMsg)
-      console.error(err)
+      const response = await axios.get(`/api/workspaces/snapshots/${snapshotId}/check-changes`)
+      return response.data.changes || []
+    } catch (error: any) {
+      console.error('Error checking uncommitted changes:', error)
+      toast.error('Failed to check for uncommitted changes')
+      return []
+    }
+  }
+
+  // Handle restore - check for uncommitted changes first
+  const handleRestoreSnapshot = async (snapshotId: string) => {
+    const changes = await checkUncommittedChanges(snapshotId)
+    const hasUncommittedChanges = changes.some((c: UncommittedChange) => c.hasChanges)
+
+    if (hasUncommittedChanges) {
+      // Show uncommitted changes dialog
+      setUncommittedChangesDialog({
+        isOpen: true,
+        snapshotId,
+        changes,
+        loading: false,
+      })
+    } else {
+      // No uncommitted changes, proceed with restore
+      await performRestore(snapshotId)
+    }
+  }
+
+  // Handle stash and restore
+  const handleStashAndRestore = async () => {
+    if (!uncommittedChangesDialog.snapshotId) return
+
+    setUncommittedChangesDialog(prev => ({ ...prev, loading: true }))
+
+    try {
+      // Get repos with changes
+      const reposWithChanges = uncommittedChangesDialog.changes
+        .filter(c => c.hasChanges)
+        .map(c => c.path)
+
+      // Stash changes
+      const stashResponse = await axios.post(
+        `/api/workspaces/snapshots/${uncommittedChangesDialog.snapshotId}/stash-changes`,
+        { repoPaths: reposWithChanges }
+      )
+
+      if (!stashResponse.data.success) {
+        throw new Error('Failed to stash changes')
+      }
+
+      // Close dialog
+      setUncommittedChangesDialog({
+        isOpen: false,
+        snapshotId: null,
+        changes: [],
+        loading: false,
+      })
+
+      // Proceed with restore
+      await performRestore(uncommittedChangesDialog.snapshotId)
+
+      toast.success(
+        `Stashed changes in ${stashResponse.data.stashed.length} ${
+          stashResponse.data.stashed.length === 1 ? 'repository' : 'repositories'
+        }`,
+        { duration: 5000 }
+      )
+    } catch (error: any) {
+      toast.error(`Failed to stash changes: ${error.response?.data?.error || error.message}`)
+      setUncommittedChangesDialog(prev => ({ ...prev, loading: false }))
+    }
+  }
+
+  // Handle commit and restore
+  const handleCommitAndRestore = async (commitMessage: string) => {
+    if (!uncommittedChangesDialog.snapshotId) return
+
+    setUncommittedChangesDialog(prev => ({ ...prev, loading: true }))
+
+    try {
+      // Get repos with changes
+      const reposWithChanges = uncommittedChangesDialog.changes
+        .filter(c => c.hasChanges)
+        .map(c => c.path)
+
+      // Commit changes
+      const commitResponse = await axios.post(
+        `/api/workspaces/snapshots/${uncommittedChangesDialog.snapshotId}/commit-changes`,
+        { repoPaths: reposWithChanges, commitMessage }
+      )
+
+      if (!commitResponse.data.success) {
+        throw new Error('Failed to commit changes')
+      }
+
+      // Close dialog
+      setUncommittedChangesDialog({
+        isOpen: false,
+        snapshotId: null,
+        changes: [],
+        loading: false,
+      })
+
+      // Proceed with restore
+      await performRestore(uncommittedChangesDialog.snapshotId)
+
+      toast.success(
+        `Committed changes in ${commitResponse.data.committed.length} ${
+          commitResponse.data.committed.length === 1 ? 'repository' : 'repositories'
+        }`,
+        { duration: 5000 }
+      )
+    } catch (error: any) {
+      toast.error(`Failed to commit changes: ${error.response?.data?.error || error.message}`)
+      setUncommittedChangesDialog(prev => ({ ...prev, loading: false }))
+    }
+  }
+
+  // Perform the actual restore
+  const performRestore = async (snapshotId: string) => {
+    setRestoring(true)
+    try {
+      const response = await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
+
+      if (response.data.success) {
+        toast.success(
+          `Snapshot restored! Started ${response.data.servicesStarted} service(s), switched ${response.data.branchesSwitched} branch(es)`,
+          { duration: 5000 }
+        )
+
+        // Refresh dashboard data and workspace context
+        fetchDashboardData()
+        await refreshWorkspaces()
+      } else if (response.data.errors && response.data.errors.length > 0) {
+        toast.error(
+          `Snapshot partially restored. Started ${response.data.servicesStarted} service(s), but ${response.data.errors.length} error(s) occurred`,
+          { duration: 5000 }
+        )
+
+        // Still refresh data
+        fetchDashboardData()
+        await refreshWorkspaces()
+      }
+    } catch (error: any) {
+      toast.error(`Failed to restore snapshot: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -351,9 +539,14 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                   <p className="text-sm text-blue-100 font-mono">{activeWorkspace.folderPath}</p>
                 )}
                 {activeWorkspace.activeSnapshotId && (
-                  <div className="mt-3 flex items-center gap-2 text-sm bg-green-500 bg-opacity-20 px-3 py-1 rounded-full w-fit">
+                  <div className="mt-3 flex items-center gap-2 text-sm bg-green-500 bg-opacity-20 px-3 py-1.5 rounded-lg w-fit">
                     <CheckCircle size={16} />
-                    <span>Active Snapshot</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold">Active Snapshot</span>
+                      <span className="text-xs opacity-90">
+                        {recentSnapshots.find(s => s.id === activeWorkspace.activeSnapshotId)?.name || 'Loading...'}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -512,13 +705,22 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                           </p>
                         </div>
                         {activeWorkspace.activeSnapshotId !== snapshot.id && (
-                          <button
-                            onClick={() => handleRestoreSnapshot(snapshot.id)}
-                            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                          >
-                            <RefreshCw size={16} />
-                            Restore
-                          </button>
+                          <div className="ml-4 flex items-center gap-2">
+                            <button
+                              onClick={() => handleRestoreSnapshot(snapshot.id)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            >
+                              <RefreshCw size={16} />
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSnapshot(snapshot.id, snapshot.name)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete snapshot"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -761,7 +963,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 type="text"
                 value={snapshotName}
                 onChange={(e) => setSnapshotName(e.target.value)}
-                placeholder={`Scan - ${new Date().toLocaleString()}`}
+                placeholder="Auto-generated: Scan YYYY-MM-DD HH:MM:SS"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -844,6 +1046,23 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
           </div>
         </div>
       )}
+
+      {/* Uncommitted Changes Dialog */}
+      <UncommittedChangesDialog
+        isOpen={uncommittedChangesDialog.isOpen}
+        changes={uncommittedChangesDialog.changes}
+        onStash={handleStashAndRestore}
+        onCommit={handleCommitAndRestore}
+        onCancel={() =>
+          setUncommittedChangesDialog({
+            isOpen: false,
+            snapshotId: null,
+            changes: [],
+            loading: false,
+          })
+        }
+        loading={uncommittedChangesDialog.loading}
+      />
     </div>
   )
 }

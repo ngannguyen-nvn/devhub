@@ -135,7 +135,7 @@ router.post('/snapshots/scan', async (req: Request, res: Response) => {
     // Create snapshot with scanned repositories (workspace auto-created/found)
     const repoPaths = repositories.map(r => r.path)
     const snapshot = await workspaceManager.createSnapshot(
-      name || `Snapshot - ${new Date().toLocaleString()}`,
+      name || workspaceManager.generateSnapshotName('Scan'),
       description || `Scanned from ${path}`,
       repoPaths,
       undefined,
