@@ -216,6 +216,8 @@ export default function Workspaces() {
       setShowCreateWorkspaceForm(false)
       setCreateWorkspaceForm({ name: '', description: '', folderPath: '', tags: '' })
       fetchWorkspaces()
+      // Also refresh global workspace context to update header
+      refreshGlobalWorkspaces()
       toast.success(`Workspace "${createWorkspaceForm.name}" created successfully!`)
     } catch (error: any) {
       toast.error(`Failed to create workspace: ${error.response?.data?.error || error.message}`)
@@ -254,6 +256,8 @@ export default function Workspaces() {
         handleBackToWorkspaces()
       }
       fetchWorkspaces()
+      // Also refresh global workspace context to update header
+      refreshGlobalWorkspaces()
       toast.success(`Workspace "${confirmDialog.name}" deleted`)
     } catch (error: any) {
       toast.error(`Failed to delete workspace: ${error.response?.data?.error || error.message}`)
@@ -451,8 +455,15 @@ export default function Workspaces() {
       const response = await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
 
       if (response.data.success) {
+        const parts = [
+          `Started ${response.data.servicesStarted} service(s)`,
+          `switched ${response.data.branchesSwitched} branch(es)`,
+        ]
+        if (response.data.envVarsRestored > 0) {
+          parts.push(`restored ${response.data.envVarsRestored} env variable(s)`)
+        }
         toast.success(
-          `Workspace restored! Started ${response.data.servicesStarted} service(s), switched ${response.data.branchesSwitched} branch(es)`,
+          `Workspace restored! ${parts.join(', ')}`,
           { duration: 5000 }
         )
 
@@ -467,8 +478,12 @@ export default function Workspaces() {
           )
         }
       } else if (response.data.errors && response.data.errors.length > 0) {
+        const parts = [`Started ${response.data.servicesStarted} service(s)`]
+        if (response.data.envVarsRestored > 0) {
+          parts.push(`restored ${response.data.envVarsRestored} env variable(s)`)
+        }
         toast.error(
-          `Workspace partially restored. Started ${response.data.servicesStarted} service(s), but ${response.data.errors.length} error(s) occurred`,
+          `Workspace partially restored. ${parts.join(', ')}, but ${response.data.errors.length} error(s) occurred`,
           { duration: 5000 }
         )
 
@@ -689,6 +704,7 @@ export default function Workspaces() {
       return
     }
 
+    setLoading(true)
     try {
       const tags = scanForm.tags
         .split(',')
@@ -716,6 +732,8 @@ export default function Workspaces() {
 
       // Refresh workspaces to show the new/updated workspace
       fetchWorkspaces()
+      // Also refresh global workspace context to update header
+      refreshGlobalWorkspaces()
 
       toast.success(
         `Snapshot "${scanForm.name}" created! Found ${response.data.scanResult?.count || 0} repositories.`,
@@ -723,6 +741,8 @@ export default function Workspaces() {
       )
     } catch (error: any) {
       toast.error(`Failed to scan folder: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -1159,6 +1179,14 @@ export default function Workspaces() {
                       <GitBranch className="w-3 h-3" />
                       {snapshot.repositories.length} repos
                     </span>
+                    {snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0 && (
+                      <span className="flex items-center gap-1" title="Environment variables">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        {Object.values(snapshot.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} env vars
+                      </span>
+                    )}
                   </div>
                   {snapshot.tags && snapshot.tags.length > 0 && (
                     <div className="flex gap-1 flex-wrap mb-2">
@@ -1276,6 +1304,43 @@ export default function Workspaces() {
             )}
           </div>
 
+          {/* Environment Variables */}
+          {selectedSnapshot.envVariables && Object.keys(selectedSnapshot.envVariables).length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Environment Variables ({Object.values(selectedSnapshot.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} total)
+              </h3>
+              <div className="space-y-3 ml-7">
+                {Object.entries(selectedSnapshot.envVariables).map(([id, vars]) => {
+                  // Check if this is a service ID or profile ID
+                  const isProfile = id.startsWith('profile_')
+                  const service = selectedSnapshot.runningServices.find(s => s.serviceId === id)
+                  const displayName = isProfile
+                    ? id.replace('profile_', 'Profile: ')  // Profile-level vars
+                    : (service?.serviceName || id)         // Service-specific vars
+
+                  return (
+                    <div key={id} className="border-l-2 border-blue-300 pl-3">
+                      <div className="font-medium text-sm mb-1">
+                        {displayName}
+                        {isProfile && <span className="ml-2 text-xs text-gray-500">(Profile)</span>}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {Object.keys(vars).length} variable{Object.keys(vars).length !== 1 ? 's' : ''}: {Object.keys(vars).join(', ')}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="ml-7 mt-2 text-xs text-blue-600">
+                💡 These variables will be restored to a profile named "Snapshot: {selectedSnapshot.name}"
+              </div>
+            </div>
+          )}
+
           {/* Metadata */}
           <div className="mt-6 pt-6 border-t text-sm text-gray-500">
             <div>Created: {formatDate(selectedSnapshot.createdAt)}</div>
@@ -1370,17 +1435,26 @@ export default function Workspaces() {
             <div className="flex gap-2 mt-4 justify-end">
               <button
                 onClick={() => setShowScanForm(false)}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                disabled={loading}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="workspace-scan-cancel-button"
               >
                 Cancel
               </button>
               <button
                 onClick={handleScanFolder}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                disabled={loading}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 data-testid="workspace-scan-submit-button"
               >
-                Scan & Create
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  'Scan & Create'
+                )}
               </button>
             </div>
           </div>

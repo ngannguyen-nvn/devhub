@@ -431,12 +431,13 @@ export class WorkspaceManager {
       dockerContainers = []
     }
 
-    // Get environment variables for all services in this workspace
+    // Get environment variables for all profiles and services in this workspace
     const envVariables: Record<string, Record<string, string>> = {}
     try {
       const allServices = this.serviceManager.getAllServices(workspaceId)
       const profiles = this.envManager.getAllProfiles(workspaceId)
 
+      // Capture service-specific variables
       for (const service of allServices) {
         const serviceEnv: Record<string, string> = {}
 
@@ -450,6 +451,21 @@ export class WorkspaceManager {
 
         if (Object.keys(serviceEnv).length > 0) {
           envVariables[service.id] = serviceEnv
+        }
+      }
+
+      // Also capture profile-level variables (not tied to specific services)
+      for (const profile of profiles) {
+        const profileVars = this.envManager.getVariables(profile.id) // No serviceId = get global vars
+        if (profileVars.length > 0) {
+          const profileEnv: Record<string, string> = {}
+          for (const variable of profileVars) {
+            profileEnv[variable.key] = variable.value
+          }
+          // Store under profile ID to keep them separate
+          if (Object.keys(profileEnv).length > 0) {
+            envVariables[profile.id] = profileEnv
+          }
         }
       }
     } catch (error) {
@@ -527,11 +543,15 @@ export class WorkspaceManager {
       } else {
         // Create new workspace for this folder
         const folderName = scannedPath.split('/').filter(Boolean).pop() || 'Unnamed Workspace'
+        // Check if this is the first workspace - if so, set as active
+        const allWorkspaces = this.getAllWorkspaces()
+        const setAsActive = allWorkspaces.length === 0
         const newWorkspace = this.createWorkspace({
           name: folderName,
           description: `Auto-created from folder scan`,
           folderPath: scannedPath,
           tags,
+          setAsActive,
         })
         targetWorkspaceId = newWorkspace.id
       }
@@ -1048,6 +1068,7 @@ export class WorkspaceManager {
     success: boolean
     servicesStarted: number
     branchesSwitched: number
+    envVarsRestored: number
     errors: string[]
   }> {
     const snapshot = this.getSnapshot(snapshotId)
@@ -1058,6 +1079,7 @@ export class WorkspaceManager {
     const errors: string[] = []
     let servicesStarted = 0
     let branchesSwitched = 0
+    let envVarsRestored = 0
 
     // 1. Stop all currently running services
     this.serviceManager.stopAll()
@@ -1092,7 +1114,59 @@ export class WorkspaceManager {
       }
     }
 
-    // 3. Start services
+    // 3. Restore environment variables
+    if (snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0) {
+      try {
+        // Create a profile for the restored env vars
+        const profileName = `Snapshot: ${snapshot.name}`
+
+        // Check if a restore profile already exists for this snapshot
+        let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
+
+        if (!profile) {
+          // Create new profile
+          profile = this.envManager.createProfile(
+            snapshot.workspaceId,
+            profileName,
+            `Environment variables restored from snapshot "${snapshot.name}"`
+          )
+          console.log(`Created env profile "${profileName}" for restored variables`)
+        } else {
+          console.log(`Using existing env profile "${profileName}" for restored variables`)
+        }
+
+        // Restore variables for each service
+        for (const [serviceId, vars] of Object.entries(snapshot.envVariables)) {
+          for (const [key, value] of Object.entries(vars)) {
+            // Check if variable already exists
+            const existingVars = this.envManager.getVariables(profile.id, serviceId)
+            const existingVar = existingVars.find(v => v.key === key)
+
+            if (existingVar) {
+              // Update existing variable
+              this.envManager.updateVariable(existingVar.id, { value })
+            } else {
+              // Create new variable
+              this.envManager.createVariable({
+                key,
+                value,
+                profileId: profile.id,
+                serviceId,
+                isSecret: false, // Assume non-secret for restored vars
+              })
+            }
+            envVarsRestored++
+          }
+        }
+
+        console.log(`Restored ${envVarsRestored} environment variables to profile "${profileName}"`)
+      } catch (error: any) {
+        errors.push(`Failed to restore environment variables: ${error.message}`)
+        console.error('Error restoring environment variables:', error)
+      }
+    }
+
+    // 4. Start services
     for (const service of snapshot.runningServices) {
       try {
         await this.serviceManager.startService(service.serviceId)
@@ -1102,7 +1176,7 @@ export class WorkspaceManager {
       }
     }
 
-    // 4. Set this snapshot as active in the workspace (if restore was successful or partial)
+    // 5. Set this snapshot as active in the workspace (if restore was successful or partial)
     try {
       const now = new Date().toISOString()
       db.prepare('UPDATE workspaces SET active_snapshot_id = ?, updated_at = ? WHERE id = ?')
@@ -1116,6 +1190,7 @@ export class WorkspaceManager {
       success: errors.length === 0,
       servicesStarted,
       branchesSwitched,
+      envVarsRestored,
       errors,
     }
   }
