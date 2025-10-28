@@ -402,10 +402,28 @@ export default function Environment() {
   })
 
   // Get the selected profile name
-  const currentProfileName = profiles.find(p => p.id === selectedProfile)?.name.toLowerCase() || ''
+  const currentProfile = profiles.find(p => p.id === selectedProfile)
+  const currentProfileName = currentProfile?.name.toLowerCase() || ''
 
   // Find service that matches the profile name
-  const matchingService = services.find(s => s.name.toLowerCase() === currentProfileName)
+  // Support formats like "Scan - 28/10/2025, 09:00:35 - admin-api" → match "admin-api"
+  const matchingService = services.find(s => {
+    const serviceName = s.name.toLowerCase()
+
+    // Exact match
+    if (serviceName === currentProfileName) return true
+
+    // Profile name ends with " - {service-name}" pattern
+    if (currentProfileName.includes(' - ')) {
+      const lastPart = currentProfileName.split(' - ').pop() || ''
+      if (lastPart === serviceName) return true
+    }
+
+    // Profile name contains service name
+    if (currentProfileName.includes(serviceName)) return true
+
+    return false
+  })
 
   // Filter services based on search term
   const filteredServices = services.filter(service => {
