@@ -395,6 +395,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
           await axios.post(`/api/env/profiles/${profileId}/import`, {
             filePath: envFilePath,
             serviceId: null, // Not tied to a specific service
+            workspace_id: workspaceId, // Override active workspace check
           })
 
           // 3. Auto-create service if it doesn't exist
