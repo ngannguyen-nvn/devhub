@@ -12,6 +12,9 @@ import {
   EyeOff,
   AlertCircle,
   Search,
+  Edit,
+  X,
+  Check,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -52,10 +55,17 @@ export default function Environment() {
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
   const [profileSearchTerm, setProfileSearchTerm] = useState('')
   const [variableSearchTerm, setVariableSearchTerm] = useState('')
+  const [editingVariableId, setEditingVariableId] = useState<string | null>(null)
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
   const [variableForm, setVariableForm] = useState({
+    key: '',
+    value: '',
+    isSecret: false,
+    description: '',
+  })
+  const [editVariableForm, setEditVariableForm] = useState({
     key: '',
     value: '',
     isSecret: false,
@@ -203,17 +213,39 @@ export default function Environment() {
     }
   }
 
-  // const handleUpdateVariable = async (variableId: string, updates: Partial<EnvVariable>) => {
-  //   try {
-  //     await axios.put(`/api/env/variables/${variableId}`, updates)
-  //     if (selectedProfile) {
-  //       fetchVariables(selectedProfile)
-  //     }
-  //     toast.success('Variable updated successfully')
-  //   } catch (error: any) {
-  //     toast.error(`Failed to update variable: ${error.response?.data?.error || error.message}`)
-  //   }
-  // }
+  const handleEditVariable = (variable: EnvVariable) => {
+    setEditingVariableId(variable.id)
+    setEditVariableForm({
+      key: variable.key,
+      value: variable.value,
+      isSecret: variable.isSecret,
+      description: variable.description || '',
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingVariableId(null)
+    setEditVariableForm({ key: '', value: '', isSecret: false, description: '' })
+  }
+
+  const handleUpdateVariable = async () => {
+    if (!editingVariableId || !editVariableForm.key.trim()) {
+      toast.error('Key is required')
+      return
+    }
+
+    try {
+      await axios.put(`/api/env/variables/${editingVariableId}`, editVariableForm)
+      if (selectedProfile) {
+        fetchVariables(selectedProfile)
+      }
+      setEditingVariableId(null)
+      setEditVariableForm({ key: '', value: '', isSecret: false, description: '' })
+      toast.success('Variable updated successfully')
+    } catch (error: any) {
+      toast.error(`Failed to update variable: ${error.response?.data?.error || error.message}`)
+    }
+  }
 
   const handleDeleteVariable = (variableId: string) => {
     const variable = variables.find(v => v.id === variableId)
@@ -697,60 +729,136 @@ export default function Environment() {
                       data-testid={`env-variable-item-${variable.id}`}
                       className="p-3 bg-gray-50 rounded border border-gray-200"
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            {variable.isSecret ? (
-                              <Lock className="w-4 h-4 text-yellow-600" />
-                            ) : (
-                              <Unlock className="w-4 h-4 text-gray-400" />
-                            )}
-                            <span className="font-mono font-semibold">{variable.key}</span>
+                      {editingVariableId === variable.id ? (
+                        // Edit Mode
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Key</label>
+                            <input
+                              data-testid={`env-edit-variable-key-input-${variable.id}`}
+                              type="text"
+                              value={editVariableForm.key}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, key: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-mono"
+                              placeholder="KEY"
+                            />
                           </div>
-                          <div className="mt-1 flex items-center gap-2">
-                            <code className="text-sm bg-white px-2 py-1 rounded">
-                              {variable.isSecret && !revealedSecrets.has(variable.id)
-                                ? maskValue(variable.value)
-                                : variable.value}
-                            </code>
-                            {variable.isSecret && (
-                              <button
-                                data-testid={`env-toggle-secret-button-${variable.id}`}
-                                onClick={() => toggleRevealSecret(variable.id)}
-                                className="text-blue-600 hover:text-blue-800"
-                                title={revealedSecrets.has(variable.id) ? 'Hide' : 'Reveal'}
-                              >
-                                {revealedSecrets.has(variable.id) ? (
-                                  <EyeOff className="w-4 h-4" />
-                                ) : (
-                                  <Eye className="w-4 h-4" />
-                                )}
-                              </button>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Value</label>
+                            <input
+                              data-testid={`env-edit-variable-value-input-${variable.id}`}
+                              type="text"
+                              value={editVariableForm.value}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, value: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                              placeholder="Value"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Description (optional)</label>
+                            <input
+                              data-testid={`env-edit-variable-description-input-${variable.id}`}
+                              type="text"
+                              value={editVariableForm.description}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, description: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                              placeholder="Description"
+                            />
+                          </div>
+                          <label className="flex items-center gap-2">
+                            <input
+                              data-testid={`env-edit-variable-secret-checkbox-${variable.id}`}
+                              type="checkbox"
+                              checked={editVariableForm.isSecret}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, isSecret: e.target.checked })}
+                            />
+                            <Lock className="w-4 h-4" />
+                            <span className="text-sm">Mark as secret (encrypted)</span>
+                          </label>
+                          <div className="flex gap-2">
+                            <button
+                              data-testid={`env-save-variable-button-${variable.id}`}
+                              onClick={handleUpdateVariable}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                            >
+                              <Check className="w-4 h-4" />
+                              Save
+                            </button>
+                            <button
+                              data-testid={`env-cancel-edit-button-${variable.id}`}
+                              onClick={handleCancelEdit}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                            >
+                              <X className="w-4 h-4" />
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Display Mode
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              {variable.isSecret ? (
+                                <Lock className="w-4 h-4 text-yellow-600" />
+                              ) : (
+                                <Unlock className="w-4 h-4 text-gray-400" />
+                              )}
+                              <span className="font-mono font-semibold">{variable.key}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <code className="text-sm bg-white px-2 py-1 rounded">
+                                {variable.isSecret && !revealedSecrets.has(variable.id)
+                                  ? maskValue(variable.value)
+                                  : variable.value}
+                              </code>
+                              {variable.isSecret && (
+                                <button
+                                  data-testid={`env-toggle-secret-button-${variable.id}`}
+                                  onClick={() => toggleRevealSecret(variable.id)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title={revealedSecrets.has(variable.id) ? 'Hide' : 'Reveal'}
+                                >
+                                  {revealedSecrets.has(variable.id) ? (
+                                    <EyeOff className="w-4 h-4" />
+                                  ) : (
+                                    <Eye className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                            {variable.description && (
+                              <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
                             )}
                           </div>
-                          {variable.description && (
-                            <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
-                          )}
+                          <div className="flex gap-2">
+                            <button
+                              data-testid={`env-edit-variable-button-${variable.id}`}
+                              onClick={() => handleEditVariable(variable)}
+                              className="text-gray-600 hover:text-gray-800"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              data-testid={`env-copy-variable-button-${variable.id}`}
+                              onClick={() => handleCopyVariable(variable)}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Copy KEY=VALUE"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            <button
+                              data-testid={`env-delete-variable-button-${variable.id}`}
+                              onClick={() => handleDeleteVariable(variable.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            data-testid={`env-copy-variable-button-${variable.id}`}
-                            onClick={() => handleCopyVariable(variable)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Copy KEY=VALUE"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                          <button
-                            data-testid={`env-delete-variable-button-${variable.id}`}
-                            onClick={() => handleDeleteVariable(variable.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
