@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  Search,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -49,6 +50,8 @@ export default function Environment() {
   const [showImportForm, setShowImportForm] = useState(false)
   const [showExportForm, setShowExportForm] = useState(false)
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
+  const [profileSearchTerm, setProfileSearchTerm] = useState('')
+  const [variableSearchTerm, setVariableSearchTerm] = useState('')
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
@@ -288,6 +291,29 @@ export default function Environment() {
     return '•'.repeat(Math.min(value.length, 20))
   }
 
+  // Filter profiles based on search term
+  const filteredProfiles = profiles.filter(profile => {
+    if (!profileSearchTerm.trim()) return true
+
+    const search = profileSearchTerm.toLowerCase()
+    return (
+      profile.name.toLowerCase().includes(search) ||
+      (profile.description && profile.description.toLowerCase().includes(search))
+    )
+  })
+
+  // Filter variables based on search term
+  const filteredVariables = variables.filter(variable => {
+    if (!variableSearchTerm.trim()) return true
+
+    const search = variableSearchTerm.toLowerCase()
+    return (
+      variable.key.toLowerCase().includes(search) ||
+      variable.value.toLowerCase().includes(search) ||
+      (variable.description && variable.description.toLowerCase().includes(search))
+    )
+  })
+
   return (
     <div>
       {/* No Workspace Warning */}
@@ -338,6 +364,23 @@ export default function Environment() {
             </button>
           </div>
 
+          {/* Profile Search */}
+          {profiles.length > 0 && (
+            <div className="mb-3">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  value={profileSearchTerm}
+                  onChange={(e) => setProfileSearchTerm(e.target.value)}
+                  placeholder="Search profiles..."
+                  className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="env-profile-search-input"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Add Profile Form */}
           {showAddProfileForm && (
             <div data-testid="env-profile-form" className="mb-4 p-3 bg-gray-50 rounded">
@@ -382,8 +425,18 @@ export default function Environment() {
               <div className="text-center py-8 text-gray-500 text-sm">
                 No profiles. Create one to get started.
               </div>
+            ) : filteredProfiles.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                No profiles match your search.
+                <button
+                  onClick={() => setProfileSearchTerm('')}
+                  className="block mx-auto mt-2 text-blue-600 hover:underline text-sm"
+                >
+                  Clear search
+                </button>
+              </div>
             ) : (
-              profiles.map(profile => (
+              filteredProfiles.map(profile => (
                 <div
                   key={profile.id}
                   data-testid={`env-profile-item-${profile.id}`}
@@ -465,6 +518,28 @@ export default function Environment() {
                   </button>
                 </div>
               </div>
+
+              {/* Variable Search */}
+              {variables.length > 0 && (
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="text"
+                      value={variableSearchTerm}
+                      onChange={(e) => setVariableSearchTerm(e.target.value)}
+                      placeholder="Search variables by key, value, or description..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="env-variable-search-input"
+                    />
+                  </div>
+                  {variableSearchTerm && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Found {filteredVariables.length} variable{filteredVariables.length !== 1 ? 's' : ''} matching "{variableSearchTerm}"
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Import Form */}
               {showImportForm && (
@@ -594,9 +669,19 @@ export default function Environment() {
                 <div className="text-center py-8 text-gray-500">
                   No variables in this profile. Add one to get started.
                 </div>
+              ) : filteredVariables.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No variables match your search.
+                  <button
+                    onClick={() => setVariableSearchTerm('')}
+                    className="block mx-auto mt-2 text-blue-600 hover:underline text-sm"
+                  >
+                    Clear search
+                  </button>
+                </div>
               ) : (
                 <div data-testid="env-variable-list" className="space-y-2">
-                  {variables.map(variable => (
+                  {filteredVariables.map(variable => (
                     <div
                       key={variable.id}
                       data-testid={`env-variable-item-${variable.id}`}
