@@ -38,6 +38,9 @@ logs/
 # Testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+e2e/screenshots/
 
 # Misc
 .cache/
