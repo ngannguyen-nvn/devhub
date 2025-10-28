@@ -543,11 +543,15 @@ export class WorkspaceManager {
       } else {
         // Create new workspace for this folder
         const folderName = scannedPath.split('/').filter(Boolean).pop() || 'Unnamed Workspace'
+        // Check if this is the first workspace - if so, set as active
+        const allWorkspaces = this.getAllWorkspaces()
+        const setAsActive = allWorkspaces.length === 0
         const newWorkspace = this.createWorkspace({
           name: folderName,
           description: `Auto-created from folder scan`,
           folderPath: scannedPath,
           tags,
+          setAsActive,
         })
         targetWorkspaceId = newWorkspace.id
       }
