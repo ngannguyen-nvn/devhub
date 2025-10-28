@@ -80,14 +80,14 @@ test.describe('Docker Management', () => {
     // Check for images and containers sections
     await expect(
       page
-        .locator('text=/images|containers/i')
-        .or(page.locator('[data-testid="docker-images"]'))
+        .locator('[data-testid="docker-images-list"]')
+        .or(page.locator('[data-testid="docker-containers-list"]'))
     ).toBeVisible();
   });
 
   test('should list Docker images', async ({ page }) => {
-    // Click refresh or wait for images to load
-    await clickButton(page, 'button:has-text("Refresh")').catch(() => {
+    // Click refresh button
+    await clickButton(page, '[data-testid="docker-refresh-button"]').catch(() => {
       console.log('Refresh button may not exist');
     });
 
@@ -100,10 +100,10 @@ test.describe('Docker Management', () => {
         console.log('Images may already be loaded');
       });
 
-    // Verify images section exists (may be empty)
+    // Verify images list exists (may be empty)
     await expect(
       page
-        .locator('[data-testid="docker-images"]')
+        .locator('[data-testid="docker-images-list"]')
         .or(page.locator('text=/no images|build image/i'))
     ).toBeVisible();
   });
@@ -112,15 +112,15 @@ test.describe('Docker Management', () => {
     const imageName = uniqueName('test-image');
 
     // Click build image button
-    await clickButton(page, 'button:has-text("Build Image")');
+    await clickButton(page, '[data-testid="docker-build-image-button"]');
 
     // Fill build form
-    await fillField(page, 'input[name="repository"]', imageName);
-    await fillField(page, 'input[name="tag"]', 'latest');
-    await fillField(page, 'input[name="context"]', '/home/user/devhub');
+    await fillField(page, '[data-testid="docker-image-tag-input"]', imageName);
+    await fillField(page, '[data-testid="docker-image-tag-version-input"]', 'latest');
+    await fillField(page, '[data-testid="docker-context-path-input"]', process.cwd());
 
     // Select or provide Dockerfile path
-    await fillField(page, 'input[name="dockerfile"]', 'Dockerfile').catch(() => {
+    await fillField(page, '[data-testid="docker-dockerfile-path-input"]', 'Dockerfile').catch(() => {
       console.log('Dockerfile field may have different implementation');
     });
 
@@ -130,7 +130,7 @@ test.describe('Docker Management', () => {
       { timeout: 120000 } // Building can take time
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Build")');
+    await clickButton(page, '[data-testid="docker-build-submit-button"]');
 
     // Wait for build to start
     await expect(
@@ -171,9 +171,9 @@ test.describe('Docker Management', () => {
 
       // Find and click delete button for the image
       await page
-        .click(`[data-image-id="${imageId}"] button:has-text("Delete")`)
+        .click(`[data-testid="docker-image-item-${imageId}"] [data-testid="docker-delete-image-button"]`)
         .catch(() => {
-          page.click(`[data-image-id="${imageId}"] button[aria-label="Delete"]`);
+          page.click(`[data-testid="docker-image-item-${imageId}"] button[aria-label="Delete"]`);
         });
 
       // Confirm deletion
@@ -200,21 +200,21 @@ test.describe('Docker Management', () => {
 
       // Click run button
       await page
-        .click(`[data-image-id="${imageId}"] button:has-text("Run")`)
+        .click(`[data-testid="docker-image-item-${imageId}"] [data-testid="docker-run-container-button"]`)
         .catch(() => {
-          page.click(`[data-image-id="${imageId}"] button[aria-label="Run"]`);
+          page.click(`[data-testid="docker-image-item-${imageId}"] button[aria-label="Run"]`);
         });
 
       // Fill run form
       const containerName = uniqueName('test-container');
-      await fillField(page, 'input[name="name"]', containerName);
+      await fillField(page, '[data-testid="docker-container-name-input"]', containerName);
 
       // Port mapping (optional)
-      await fillField(page, 'input[name="hostPort"]', '8888').catch(() => {
+      await fillField(page, '[data-testid="docker-host-port-input"]', '8888').catch(() => {
         console.log('Port mapping fields may differ');
       });
 
-      await fillField(page, 'input[name="containerPort"]', '8080').catch(() => {
+      await fillField(page, '[data-testid="docker-container-port-input"]', '8080').catch(() => {
         console.log('Port mapping fields may differ');
       });
 
@@ -223,7 +223,7 @@ test.describe('Docker Management', () => {
         (response) => response.url().includes('/api/docker/images') && response.url().includes('/run')
       );
 
-      await clickButton(page, 'button[type="submit"]:has-text("Run")');
+      await clickButton(page, '[data-testid="docker-run-submit-button"]');
 
       const runData = await runResponse;
       const result = await runData.json();
@@ -240,8 +240,8 @@ test.describe('Docker Management', () => {
   });
 
   test('should list containers', async ({ page }) => {
-    // Navigate to containers tab/section
-    await page.click('text="Containers"').catch(() => {
+    // Navigate to containers tab
+    await page.click('[data-testid="docker-containers-tab"]').catch(() => {
       page.click('[data-tab="containers"]');
     });
 
@@ -254,10 +254,10 @@ test.describe('Docker Management', () => {
         console.log('Containers may already be loaded');
       });
 
-    // Verify containers section exists
+    // Verify containers list exists
     await expect(
       page
-        .locator('[data-testid="docker-containers"]')
+        .locator('[data-testid="docker-containers-list"]')
         .or(page.locator('text=/no containers|running containers/i'))
     ).toBeVisible();
   });
@@ -274,13 +274,13 @@ test.describe('Docker Management', () => {
       const containerId = container.Id;
 
       // Navigate to containers section
-      await page.click('text="Containers"').catch(() => {
+      await page.click('[data-testid="docker-containers-tab"]').catch(() => {
         console.log('Already in containers view');
       });
 
       // Start the container
       await page
-        .click(`[data-container-id="${containerId}"] button:has-text("Start")`)
+        .click(`[data-testid="docker-container-item-${containerId}"] [data-testid="docker-start-container-button"]`)
         .catch(() => {
           console.log('Container may already be running');
         });
@@ -288,15 +288,15 @@ test.describe('Docker Management', () => {
       await page.waitForTimeout(1000);
 
       // Stop the container
-      await page.click(`[data-container-id="${containerId}"] button:has-text("Stop")`);
+      await page.click(`[data-testid="docker-container-item-${containerId}"] [data-testid="docker-stop-container-button"]`);
 
       await page.waitForTimeout(1000);
 
       // Verify container stopped
       await expect(
         page
-          .locator(`[data-container-id="${containerId}"] text=/stopped|exited/i`)
-          .or(page.locator(`[data-container-id="${containerId}"] [data-status="stopped"]`))
+          .locator(`[data-testid="docker-container-item-${containerId}"] text=/stopped|exited/i`)
+          .or(page.locator(`[data-testid="docker-container-item-${containerId}"] [data-status="stopped"]`))
       ).toBeVisible({ timeout: 5000 });
     } else {
       console.log('No containers available for start/stop test');
@@ -314,15 +314,15 @@ test.describe('Docker Management', () => {
       const containerId = response[0].Id;
 
       // Navigate to containers
-      await page.click('text="Containers"').catch(() => {
+      await page.click('[data-testid="docker-containers-tab"]').catch(() => {
         console.log('Already in containers view');
       });
 
       // Click to view logs
       await page
-        .click(`[data-container-id="${containerId}"] button:has-text("Logs")`)
+        .click(`[data-testid="docker-container-item-${containerId}"] [data-testid="docker-container-logs-button"]`)
         .catch(() => {
-          page.click(`[data-container-id="${containerId}"]`);
+          page.click(`[data-testid="docker-container-item-${containerId}"]`);
         });
 
       // Wait for logs to load
@@ -355,15 +355,15 @@ test.describe('Docker Management', () => {
         const containerId = container.Id;
 
         // Navigate to containers
-        await page.click('text="Containers"').catch(() => {
+        await page.click('[data-testid="docker-containers-tab"]').catch(() => {
           console.log('Already in containers view');
         });
 
         // Delete container
         await page
-          .click(`[data-container-id="${containerId}"] button:has-text("Delete")`)
+          .click(`[data-testid="docker-container-item-${containerId}"] [data-testid="docker-delete-container-button"]`)
           .catch(() => {
-            page.click(`[data-container-id="${containerId}"] button[aria-label="Delete"]`);
+            page.click(`[data-testid="docker-container-item-${containerId}"] button[aria-label="Delete"]`);
           });
 
         // Confirm deletion
@@ -383,12 +383,12 @@ test.describe('Docker Management', () => {
 
   test('should generate docker-compose.yml', async ({ page }) => {
     // Click generate docker-compose button
-    await clickButton(page, 'button:has-text("Generate Compose")').catch(() => {
+    await clickButton(page, '[data-testid="docker-compose-generate-button"]').catch(() => {
       clickButton(page, 'button:has-text("docker-compose")');
     });
 
     // Fill form with services
-    await fillField(page, 'input[name="projectName"]', 'test-project').catch(() => {
+    await fillField(page, '[data-testid="docker-compose-project-name-input"]', 'test-project').catch(() => {
       console.log('Project name field may not exist');
     });
 
@@ -403,7 +403,7 @@ test.describe('Docker Management', () => {
       { timeout: 10000 }
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Generate")');
+    await clickButton(page, '[data-testid="docker-compose-submit-button"]');
 
     try {
       const response = await generateResponse;
@@ -424,7 +424,7 @@ test.describe('Docker Management', () => {
 
   test('should display Docker daemon info', async ({ page }) => {
     // Click to view Docker info
-    await clickButton(page, 'button:has-text("Info")').catch(() => {
+    await clickButton(page, '[data-testid="docker-info-button"]').catch(() => {
       clickButton(page, 'button:has-text("Docker Info")');
     });
 
@@ -447,7 +447,7 @@ test.describe('Docker Management', () => {
 
   test('should display Docker version', async ({ page }) => {
     // Docker version should be visible somewhere on the page or in info modal
-    await clickButton(page, 'button:has-text("Info")').catch(() => {
+    await clickButton(page, '[data-testid="docker-info-button"]').catch(() => {
       console.log('Info button may not exist');
     });
 
@@ -487,17 +487,17 @@ test.describe('Docker Management', () => {
 
   test('should filter containers by status', async ({ page }) => {
     // Navigate to containers
-    await page.click('text="Containers"').catch(() => {
+    await page.click('[data-testid="docker-containers-tab"]').catch(() => {
       console.log('Already in containers view');
     });
 
     // Try to filter by status
-    await page.click('select[name="status"]').catch(() => {
+    await page.click('[data-testid="docker-container-status-filter"]').catch(() => {
       page.click('button:has-text("All")');
     });
 
     await page.click('text="Running"').catch(() => {
-      page.selectOption('select[name="status"]', 'running');
+      page.selectOption('[data-testid="docker-container-status-filter"]', 'running');
     });
 
     // Verify filter applied
@@ -515,7 +515,7 @@ test.describe('Docker Management', () => {
 
   test('should search for images', async ({ page }) => {
     // Try to search for images
-    await fillField(page, 'input[placeholder*="Search"]', 'node').catch(() => {
+    await fillField(page, '[data-testid="docker-search-input"]', 'node').catch(() => {
       console.log('Search functionality may not be implemented');
     });
 
@@ -523,7 +523,7 @@ test.describe('Docker Management', () => {
 
     // Results should be filtered
     const visibleImages = await page
-      .locator('[data-testid="image-item"]')
+      .locator('[data-testid^="docker-image-item-"]')
       .or(page.locator('table tbody tr'))
       .count();
 

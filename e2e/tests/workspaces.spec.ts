@@ -47,7 +47,7 @@ test.describe('Workspace Management', () => {
     await expect(page.locator('h1, h2')).toContainText(/Workspaces/i);
 
     // Check that workspace list is visible
-    await expect(page.locator('[data-testid="workspace-list"]').or(page.locator('text=Create Workspace'))).toBeVisible();
+    await expect(page.locator('[data-testid="workspace-list"]').or(page.locator('[data-testid="workspace-create-button"]'))).toBeVisible();
   });
 
   test('should create a new workspace manually', async ({ page }) => {
@@ -56,11 +56,11 @@ test.describe('Workspace Management', () => {
     const workspaceName = uniqueName(testWorkspace.name);
 
     // Click create workspace button
-    await clickButton(page, 'button:has-text("Create Workspace")');
+    await clickButton(page, '[data-testid="workspace-create-button"]');
 
     // Fill workspace form
-    await fillField(page, 'input[name="name"]', workspaceName);
-    await fillField(page, 'textarea[name="description"]', testWorkspace.description);
+    await fillField(page, '[data-testid="workspace-name-input"]', workspaceName);
+    await fillField(page, '[data-testid="workspace-description-input"]', testWorkspace.description);
 
     // Capture the created workspace ID
     const responsePromise = page.waitForResponse(
@@ -68,7 +68,7 @@ test.describe('Workspace Management', () => {
     );
 
     // Submit form
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
     const response = await responsePromise;
     const data = await response.json();
@@ -91,21 +91,21 @@ test.describe('Workspace Management', () => {
 
     const workspaceName = uniqueName('Workspace to Activate');
 
-    await clickButton(page, 'button:has-text("Create Workspace")');
-    await fillField(page, 'input[name="name"]', workspaceName);
+    await clickButton(page, '[data-testid="workspace-create-button"]');
+    await fillField(page, '[data-testid="workspace-name-input"]', workspaceName);
 
     const responsePromise = page.waitForResponse(
       (response) => response.url().includes('/api/workspaces') && response.status() === 200
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
     const response = await responsePromise;
     const data = await response.json();
     createdWorkspaceIds.push(data.data.id);
 
     // Activate the workspace
-    await page.click(`[data-workspace-id="${data.data.id}"] button:has-text("Activate")`).catch(() => {
+    await page.click(`[data-testid="workspace-activate-button-${data.data.id}"]`).catch(() => {
       // Alternative: click on the workspace card/row to activate
       page.click(`text="${workspaceName}"`);
     });
@@ -128,28 +128,28 @@ test.describe('Workspace Management', () => {
     const originalName = uniqueName('Original Workspace');
     const updatedName = uniqueName('Updated Workspace');
 
-    await clickButton(page, 'button:has-text("Create Workspace")');
-    await fillField(page, 'input[name="name"]', originalName);
+    await clickButton(page, '[data-testid="workspace-create-button"]');
+    await fillField(page, '[data-testid="workspace-name-input"]', originalName);
 
     const createResponse = page.waitForResponse(
       (response) => response.url().includes('/api/workspaces') && response.status() === 200
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
     const response = await createResponse;
     const data = await response.json();
     createdWorkspaceIds.push(data.data.id);
 
     // Find and click edit button
-    await page.click(`[data-workspace-id="${data.data.id}"] button:has-text("Edit")`).catch(() => {
+    await page.click(`[data-testid="workspace-edit-button-${data.data.id}"]`).catch(() => {
       // Alternative: use icon button or menu
       page.click(`[data-workspace-id="${data.data.id}"] button[aria-label="Edit"]`);
     });
 
     // Update the name
-    await fillField(page, 'input[name="name"]', updatedName);
-    await clickButton(page, 'button[type="submit"]:has-text("Update")');
+    await fillField(page, '[data-testid="workspace-name-input"]', updatedName);
+    await clickButton(page, '[data-testid="workspace-update-submit-button"]');
 
     // Verify update
     await waitForToast(page);
@@ -162,14 +162,14 @@ test.describe('Workspace Management', () => {
 
     const workspaceName = uniqueName('Workspace with Snapshot');
 
-    await clickButton(page, 'button:has-text("Create Workspace")');
-    await fillField(page, 'input[name="name"]', workspaceName);
+    await clickButton(page, '[data-testid="workspace-create-button"]');
+    await fillField(page, '[data-testid="workspace-name-input"]', workspaceName);
 
     const createWorkspaceResponse = page.waitForResponse(
       (response) => response.url().includes('/api/workspaces') && response.status() === 200
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
     const workspaceResponse = await createWorkspaceResponse;
     const workspaceData = await workspaceResponse.json();
@@ -179,13 +179,13 @@ test.describe('Workspace Management', () => {
     await page.click(`text="${workspaceName}"`);
 
     // Create a snapshot
-    await clickButton(page, 'button:has-text("Create Snapshot")');
+    await clickButton(page, '[data-testid="snapshot-create-button"]');
 
     const snapshotName = uniqueName(testSnapshot.name);
-    await fillField(page, 'input[name="name"]', snapshotName);
-    await fillField(page, 'textarea[name="description"]', testSnapshot.description);
+    await fillField(page, '[data-testid="snapshot-name-input"]', snapshotName);
+    await fillField(page, '[data-testid="snapshot-description-input"]', testSnapshot.description);
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="snapshot-create-submit-button"]');
 
     // Verify snapshot created
     await waitForToast(page);
@@ -198,26 +198,26 @@ test.describe('Workspace Management', () => {
 
     const workspaceName = uniqueName('Workspace to Delete');
 
-    await clickButton(page, 'button:has-text("Create Workspace")');
-    await fillField(page, 'input[name="name"]', workspaceName);
+    await clickButton(page, '[data-testid="workspace-create-button"]');
+    await fillField(page, '[data-testid="workspace-name-input"]', workspaceName);
 
     const createResponse = page.waitForResponse(
       (response) => response.url().includes('/api/workspaces') && response.status() === 200
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
     const response = await createResponse;
     const data = await response.json();
     const workspaceId = data.data.id;
 
     // Delete the workspace
-    await page.click(`[data-workspace-id="${workspaceId}"] button:has-text("Delete")`).catch(() => {
+    await page.click(`[data-testid="workspace-delete-button-${workspaceId}"]`).catch(() => {
       page.click(`[data-workspace-id="${workspaceId}"] button[aria-label="Delete"]`);
     });
 
     // Confirm deletion
-    await page.click('button:has-text("Confirm")').catch(() => {
+    await page.click('[data-testid="workspace-delete-confirm-button"]').catch(() => {
       page.click('button:has-text("Delete")');
     });
 
@@ -233,16 +233,16 @@ test.describe('Workspace Management', () => {
     await navigateToSection(page, 'Workspaces');
 
     // Click scan folder button
-    await clickButton(page, 'button:has-text("Scan Folder")');
+    await clickButton(page, '[data-testid="workspace-scan-folder-button"]');
 
-    // Enter folder path
-    await fillField(page, 'input[name="folderPath"]', '/home/user/devhub');
+    // Enter folder path - use process.cwd() for current directory
+    await fillField(page, '[data-testid="workspace-folderpath-input"]', process.cwd());
 
     const createResponse = page.waitForResponse(
       (response) => response.url().includes('/api/workspaces') && response.status() === 200
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Scan")');
+    await clickButton(page, '[data-testid="workspace-scan-submit-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -261,14 +261,14 @@ test.describe('Workspace Management', () => {
 
     const workspaceName = uniqueName('Hierarchical Workspace');
 
-    await clickButton(page, 'button:has-text("Create Workspace")');
-    await fillField(page, 'input[name="name"]', workspaceName);
+    await clickButton(page, '[data-testid="workspace-create-button"]');
+    await fillField(page, '[data-testid="workspace-name-input"]', workspaceName);
 
     const createWorkspaceResponse = page.waitForResponse(
       (response) => response.url().includes('/api/workspaces') && response.status() === 200
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
     const workspaceResponse = await createWorkspaceResponse;
     const workspaceData = await workspaceResponse.json();
@@ -282,7 +282,7 @@ test.describe('Workspace Management', () => {
 
     // Verify snapshots section is visible
     await expect(
-      page.locator('text="Snapshots"').or(page.locator('text="Create Snapshot"'))
+      page.locator('[data-testid="snapshot-list"]').or(page.locator('[data-testid="snapshot-create-button"]'))
     ).toBeVisible();
   });
 
@@ -292,14 +292,14 @@ test.describe('Workspace Management', () => {
 
     const workspaceName = uniqueName('Workspace for Restore');
 
-    await clickButton(page, 'button:has-text("Create Workspace")');
-    await fillField(page, 'input[name="name"]', workspaceName);
+    await clickButton(page, '[data-testid="workspace-create-button"]');
+    await fillField(page, '[data-testid="workspace-name-input"]', workspaceName);
 
     const createWorkspaceResponse = page.waitForResponse(
       (response) => response.url().includes('/api/workspaces') && response.status() === 200
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
     const workspaceResponse = await createWorkspaceResponse;
     const workspaceData = await workspaceResponse.json();
@@ -309,12 +309,12 @@ test.describe('Workspace Management', () => {
     await page.click(`text="${workspaceName}"`);
 
     // Create snapshot
-    await clickButton(page, 'button:has-text("Create Snapshot")');
+    await clickButton(page, '[data-testid="snapshot-create-button"]');
 
     const snapshotName = uniqueName('Snapshot to Restore');
-    await fillField(page, 'input[name="name"]', snapshotName);
+    await fillField(page, '[data-testid="snapshot-name-input"]', snapshotName);
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="snapshot-create-submit-button"]');
 
     await waitForToast(page);
 
@@ -323,10 +323,10 @@ test.describe('Workspace Management', () => {
       page.locator(`[data-snapshot-name="${snapshotName}"]`).click();
     });
 
-    await clickButton(page, 'button:has-text("Restore")');
+    await clickButton(page, '[data-testid="snapshot-restore-button"]');
 
     // Confirm restore
-    await page.click('button:has-text("Confirm")').catch(() => {
+    await page.click('[data-testid="snapshot-restore-confirm-button"]').catch(() => {
       page.click('button:has-text("Restore")');
     });
 

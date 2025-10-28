@@ -103,12 +103,12 @@ test.describe('Service Manager', () => {
     await expect(page.locator('h1, h2')).toContainText(/Services/i);
 
     // Check that create service button exists
-    await expect(page.locator('button:has-text("Create Service")')).toBeVisible();
+    await expect(page.locator('[data-testid="service-add-button"]')).toBeVisible();
 
     // Check services list or empty state
     await expect(
       page
-        .locator('[data-testid="services-list"]')
+        .locator('[data-testid="service-list"]')
         .or(page.locator('text=/no services|create your first/i'))
     ).toBeVisible();
   });
@@ -117,20 +117,20 @@ test.describe('Service Manager', () => {
     const serviceName = uniqueName(testService.name);
 
     // Click create service button
-    await clickButton(page, 'button:has-text("Create Service")');
+    await clickButton(page, '[data-testid="service-add-button"]');
 
     // Fill service form
-    await fillField(page, 'input[name="name"]', serviceName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'echo "Hello from test service"');
-    await fillField(page, 'input[name="port"]', '9999');
+    await fillField(page, '[data-testid="service-name-input"]', serviceName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'echo "Hello from test service"');
+    await fillField(page, '[data-testid="service-port-input"]', '9999');
 
     // Submit form
     const responsePromise = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await responsePromise;
     const data = await response.json();
@@ -149,16 +149,16 @@ test.describe('Service Manager', () => {
     // Create a service first
     const originalName = uniqueName('Original Service');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', originalName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'echo "test"');
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', originalName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'echo "test"');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -167,12 +167,12 @@ test.describe('Service Manager', () => {
     await waitForToast(page);
 
     // Edit the service
-    await page.click(`[data-service-id="${data.data.id}"] button:has-text("Edit")`).catch(() => {
+    await page.click(`[data-testid="service-edit-button-${data.data.id}"]`).catch(() => {
       page.click(`[data-service-id="${data.data.id}"] button[aria-label="Edit"]`);
     });
 
     const updatedName = uniqueName('Updated Service');
-    await fillField(page, 'input[name="name"]', updatedName);
+    await fillField(page, '[data-testid="service-name-input"]', updatedName);
 
     await clickButton(page, 'button[type="submit"]:has-text("Update")');
 
@@ -185,16 +185,16 @@ test.describe('Service Manager', () => {
     // Create a service
     const serviceName = uniqueName('Service to Delete');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', serviceName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'echo "test"');
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', serviceName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'echo "test"');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -203,7 +203,7 @@ test.describe('Service Manager', () => {
     await waitForToast(page);
 
     // Delete the service
-    await page.click(`[data-service-id="${serviceId}"] button:has-text("Delete")`).catch(() => {
+    await page.click(`[data-testid="service-delete-button-${serviceId}"]`).catch(() => {
       page.click(`[data-service-id="${serviceId}"] button[aria-label="Delete"]`);
     });
 
@@ -224,16 +224,16 @@ test.describe('Service Manager', () => {
     // Create a simple service that runs successfully
     const serviceName = uniqueName('Service to Start');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', serviceName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'sleep 10'); // Simple long-running command
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', serviceName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'sleep 10'); // Simple long-running command
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -242,7 +242,7 @@ test.describe('Service Manager', () => {
     await waitForToast(page);
 
     // Start the service
-    await page.click(`[data-service-id="${data.data.id}"] button:has-text("Start")`);
+    await page.click(`[data-testid="service-start-button-${data.data.id}"]`);
 
     // Wait for service to start
     await page.waitForTimeout(1000);
@@ -250,13 +250,13 @@ test.describe('Service Manager', () => {
     // Verify service is running (status indicator)
     await expect(
       page
-        .locator(`[data-service-id="${data.data.id}"] text=/running|active/i`)
-        .or(page.locator(`[data-service-id="${data.data.id}"] [data-status="running"]`))
+        .locator(`[data-testid="service-item-${data.data.id}"] text=/running|active/i`)
+        .or(page.locator(`[data-testid="service-item-${data.data.id}"] [data-status="running"]`))
     ).toBeVisible({ timeout: 5000 });
 
     // Verify stop button is now available
     await expect(
-      page.locator(`[data-service-id="${data.data.id}"] button:has-text("Stop")`)
+      page.locator(`[data-testid="service-stop-button-${data.data.id}"]`)
     ).toBeVisible();
   });
 
@@ -264,16 +264,16 @@ test.describe('Service Manager', () => {
     // Create and start a service
     const serviceName = uniqueName('Service to Stop');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', serviceName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'sleep 30');
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', serviceName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'sleep 30');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -282,22 +282,22 @@ test.describe('Service Manager', () => {
     await waitForToast(page);
 
     // Start the service
-    await page.click(`[data-service-id="${data.data.id}"] button:has-text("Start")`);
+    await page.click(`[data-testid="service-start-button-${data.data.id}"]`);
     await page.waitForTimeout(1000);
 
     // Stop the service
-    await page.click(`[data-service-id="${data.data.id}"] button:has-text("Stop")`);
+    await page.click(`[data-testid="service-stop-button-${data.data.id}"]`);
 
     // Verify service is stopped
     await expect(
       page
-        .locator(`[data-service-id="${data.data.id}"] text=/stopped|inactive/i`)
-        .or(page.locator(`[data-service-id="${data.data.id}"] [data-status="stopped"]`))
+        .locator(`[data-testid="service-item-${data.data.id}"] text=/stopped|inactive/i`)
+        .or(page.locator(`[data-testid="service-item-${data.data.id}"] [data-status="stopped"]`))
     ).toBeVisible({ timeout: 5000 });
 
     // Verify start button is available again
     await expect(
-      page.locator(`[data-service-id="${data.data.id}"] button:has-text("Start")`)
+      page.locator(`[data-testid="service-start-button-${data.data.id}"]`)
     ).toBeVisible();
   });
 
@@ -305,16 +305,16 @@ test.describe('Service Manager', () => {
     // Create and start a service that produces logs
     const serviceName = uniqueName('Service with Logs');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', serviceName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'echo "Test log output" && sleep 5');
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', serviceName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'echo "Test log output" && sleep 5');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -323,22 +323,22 @@ test.describe('Service Manager', () => {
     await waitForToast(page);
 
     // Start the service
-    await page.click(`[data-service-id="${data.data.id}"] button:has-text("Start")`);
+    await page.click(`[data-testid="service-start-button-${data.data.id}"]`);
     await page.waitForTimeout(1000);
 
     // Click to view logs
-    await page.click(`[data-service-id="${data.data.id}"]`).catch(() => {
-      page.click(`[data-service-id="${data.data.id}"] button:has-text("Logs")`);
+    await page.click(`[data-testid="service-item-${data.data.id}"]`).catch(() => {
+      page.click(`[data-testid="service-logs-button-${data.data.id}"]`);
     });
 
     // Wait for logs to appear
-    await waitForElement(page, '[data-testid="logs-viewer"]', 5000).catch(() => {
+    await waitForElement(page, '[data-testid="service-logs-viewer"]', 5000).catch(() => {
       waitForElement(page, 'pre, code, .log-output', 5000);
     });
 
     // Verify logs contain expected output
     await expect(
-      page.locator('text="Test log output"').or(page.locator('[data-testid="logs-viewer"]'))
+      page.locator('text="Test log output"').or(page.locator('[data-testid="service-logs-viewer"]'))
     ).toBeVisible({ timeout: 5000 });
   });
 
@@ -346,16 +346,16 @@ test.describe('Service Manager', () => {
     // Create a service with an invalid command
     const serviceName = uniqueName('Failing Service');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', serviceName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'invalid-command-xyz-123');
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', serviceName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'invalid-command-xyz-123');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -364,7 +364,7 @@ test.describe('Service Manager', () => {
     await waitForToast(page);
 
     // Start the service (should fail)
-    await page.click(`[data-service-id="${data.data.id}"] button:has-text("Start")`);
+    await page.click(`[data-testid="service-start-button-${data.data.id}"]`);
 
     // Wait a bit for the service to fail
     await page.waitForTimeout(2000);
@@ -372,8 +372,8 @@ test.describe('Service Manager', () => {
     // Verify error state is shown
     await expect(
       page
-        .locator(`[data-service-id="${data.data.id}"] text=/error|failed|exited/i`)
-        .or(page.locator(`[data-service-id="${data.data.id}"] [data-status="error"]`))
+        .locator(`[data-testid="service-item-${data.data.id}"] text=/error|failed|exited/i`)
+        .or(page.locator(`[data-testid="service-item-${data.data.id}"] [data-status="error"]`))
     ).toBeVisible({ timeout: 5000 });
   });
 
@@ -381,16 +381,16 @@ test.describe('Service Manager', () => {
     // Create a service
     const serviceName = uniqueName('Auto-refresh Service');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', serviceName);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'sleep 20');
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', serviceName);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'sleep 20');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -399,7 +399,7 @@ test.describe('Service Manager', () => {
     await waitForToast(page);
 
     // Start the service
-    await page.click(`[data-service-id="${data.data.id}"] button:has-text("Start")`);
+    await page.click(`[data-testid="service-start-button-${data.data.id}"]`);
 
     // Wait for auto-refresh to occur (services refresh every 3s)
     await page.waitForResponse((response) => response.url().includes('/api/services'), {
@@ -414,16 +414,16 @@ test.describe('Service Manager', () => {
     // Create a service in current workspace
     const service1Name = uniqueName('Workspace 1 Service');
 
-    await clickButton(page, 'button:has-text("Create Service")');
-    await fillField(page, 'input[name="name"]', service1Name);
-    await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-    await fillField(page, 'input[name="command"]', 'echo "test"');
+    await clickButton(page, '[data-testid="service-add-button"]');
+    await fillField(page, '[data-testid="service-name-input"]', service1Name);
+    await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+    await fillField(page, '[data-testid="service-command-input"]', 'echo "test"');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/services') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="service-create-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -475,16 +475,16 @@ test.describe('Service Manager', () => {
   test('should show service count', async ({ page }) => {
     // Create a couple of services
     for (let i = 0; i < 2; i++) {
-      await clickButton(page, 'button:has-text("Create Service")');
-      await fillField(page, 'input[name="name"]', uniqueName(`Service ${i + 1}`));
-      await fillField(page, 'input[name="repoPath"]', '/home/user/devhub');
-      await fillField(page, 'input[name="command"]', 'echo "test"');
+      await clickButton(page, '[data-testid="service-add-button"]');
+      await fillField(page, '[data-testid="service-name-input"]', uniqueName(`Service ${i + 1}`));
+      await fillField(page, '[data-testid="service-repoPath-input"]', process.cwd());
+      await fillField(page, '[data-testid="service-command-input"]', 'echo "test"');
 
       const createResponse = page.waitForResponse((response) =>
         response.url().includes('/api/services') && response.request().method() === 'POST'
       );
 
-      await clickButton(page, 'button[type="submit"]:has-text("Create")');
+      await clickButton(page, '[data-testid="service-create-button"]');
 
       const response = await createResponse;
       const data = await response.json();

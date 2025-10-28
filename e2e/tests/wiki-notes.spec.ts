@@ -100,12 +100,12 @@ test.describe('Wiki/Notes System', () => {
     await expect(page.locator('h1, h2')).toContainText(/Wiki|Notes/i);
 
     // Check create note button
-    await expect(page.locator('button:has-text("Create Note")')).toBeVisible();
+    await expect(page.locator('[data-testid="wiki-new-note-button"]')).toBeVisible();
 
     // Check notes list or empty state
     await expect(
       page
-        .locator('[data-testid="notes-list"]')
+        .locator('[data-testid="wiki-notes-list"]')
         .or(page.locator('text=/no notes|create your first/i'))
     ).toBeVisible();
   });
@@ -114,22 +114,22 @@ test.describe('Wiki/Notes System', () => {
     const noteTitle = uniqueName(testNote.title);
 
     // Click create note
-    await clickButton(page, 'button:has-text("Create Note")');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
 
     // Fill note form
-    await fillField(page, 'input[name="title"]', noteTitle);
-    await fillField(page, 'textarea[name="content"]', testNote.content);
-    await fillField(page, 'input[name="category"]', testNote.category);
+    await fillField(page, '[data-testid="wiki-title-input"]', noteTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', testNote.content);
+    await fillField(page, '[data-testid="wiki-category-input"]', testNote.category);
 
     // Add tags
-    await fillField(page, 'input[name="tags"]', testNote.tags.join(', '));
+    await fillField(page, '[data-testid="wiki-tags-input"]', testNote.tags.join(', '));
 
     // Submit
     const responsePromise = page.waitForResponse(
       (response) => response.url().includes('/api/notes') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await responsePromise;
     const data = await response.json();
@@ -146,24 +146,24 @@ test.describe('Wiki/Notes System', () => {
 
   test('should create note from template', async ({ page }) => {
     // Click create note
-    await clickButton(page, 'button:has-text("Create Note")');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
 
-    // Select template
-    await page.selectOption('select[name="template"]', 'Architecture').catch(() => {
-      page.click('button:has-text("Architecture")');
+    // Select template - try button first, then select
+    await page.locator('[data-testid="wiki-template-architecture"]').click().catch(async () => {
+      await page.selectOption('[data-testid="wiki-template-select"]', 'Architecture');
     });
 
     // Template content should be populated
-    await expect(page.locator('textarea[name="content"]')).not.toBeEmpty();
+    await expect(page.locator('[data-testid="wiki-content-input"]')).not.toBeEmpty();
 
     const noteTitle = uniqueName('Architecture Doc');
-    await fillField(page, 'input[name="title"]', noteTitle);
+    await fillField(page, '[data-testid="wiki-title-input"]', noteTitle);
 
     const responsePromise = page.waitForResponse(
       (response) => response.url().includes('/api/notes') && response.request().method() === 'POST'
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await responsePromise;
     const data = await response.json();
@@ -177,15 +177,15 @@ test.describe('Wiki/Notes System', () => {
     // Create note first
     const originalTitle = uniqueName('Original Note');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', originalTitle);
-    await fillField(page, 'textarea[name="content"]', '# Original Content');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', originalTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Original Content');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -194,15 +194,16 @@ test.describe('Wiki/Notes System', () => {
     await waitForToast(page);
 
     // Edit note
-    await page.click(`[data-note-id="${data.data.id}"] button:has-text("Edit")`).catch(() => {
-      page.click(`text="${originalTitle}"`);
+    await page.locator(`[data-testid="wiki-note-item-${data.data.id}"] [data-testid="wiki-edit-button"]`).click().catch(async () => {
+      await page.click(`text="${originalTitle}"`);
+      await page.locator('[data-testid="wiki-edit-button"]').click();
     });
 
     const updatedTitle = uniqueName('Updated Note');
-    await fillField(page, 'input[name="title"]', updatedTitle);
-    await fillField(page, 'textarea[name="content"]', '# Updated Content');
+    await fillField(page, '[data-testid="wiki-title-input"]', updatedTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Updated Content');
 
-    await clickButton(page, 'button[type="submit"]:has-text("Update")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     // Verify update
     await waitForToast(page);
@@ -213,15 +214,15 @@ test.describe('Wiki/Notes System', () => {
     // Create note
     const noteTitle = uniqueName('Note to Delete');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', noteTitle);
-    await fillField(page, 'textarea[name="content"]', '# Delete me');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', noteTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Delete me');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -230,13 +231,13 @@ test.describe('Wiki/Notes System', () => {
     await waitForToast(page);
 
     // Delete note
-    await page.click(`[data-note-id="${noteId}"] button:has-text("Delete")`).catch(() => {
-      page.click(`[data-note-id="${noteId}"] button[aria-label="Delete"]`);
+    await page.locator(`[data-testid="wiki-note-item-${noteId}"] [data-testid="wiki-delete-button"]`).click().catch(async () => {
+      await page.locator('[data-testid="wiki-delete-button"]').first().click();
     });
 
     // Confirm
-    await page.click('button:has-text("Confirm")').catch(() => {
-      page.click('button:has-text("Delete")');
+    await page.click('button:has-text("Confirm")').catch(async () => {
+      await page.locator('[data-testid="wiki-delete-button"]').click();
     });
 
     // Verify deletion
@@ -251,15 +252,15 @@ test.describe('Wiki/Notes System', () => {
     const noteTitle = uniqueName('Markdown Note');
     const markdownContent = '# Heading\n\n**Bold text**\n\n- List item 1\n- List item 2';
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', noteTitle);
-    await fillField(page, 'textarea[name="content"]', markdownContent);
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', noteTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', markdownContent);
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -270,27 +271,25 @@ test.describe('Wiki/Notes System', () => {
     // View note
     await page.click(`text="${noteTitle}"`);
 
-    // Verify markdown is rendered
-    await expect(page.locator('h1:has-text("Heading")')).toBeVisible();
-    await expect(page.locator('strong:has-text("Bold text")')).toBeVisible();
-    await expect(page.locator('ul li:has-text("List item 1")')).toBeVisible();
+    // Verify markdown is rendered in preview
+    await expect(page.locator('[data-testid="wiki-preview"] h1:has-text("Heading")')).toBeVisible();
+    await expect(page.locator('[data-testid="wiki-preview"] strong:has-text("Bold text")')).toBeVisible();
+    await expect(page.locator('[data-testid="wiki-preview"] ul li:has-text("List item 1")')).toBeVisible();
   });
 
   test('should show live markdown preview', async ({ page }) => {
     // Create note
-    await clickButton(page, 'button:has-text("Create Note")');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
 
     // Type markdown content
-    await fillField(page, 'input[name="title"]', uniqueName('Preview Test'));
-    await fillField(page, 'textarea[name="content"]', '# Test Heading');
+    await fillField(page, '[data-testid="wiki-title-input"]', uniqueName('Preview Test'));
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Test Heading');
 
     // Check for preview panel
-    await expect(
-      page
-        .locator('[data-testid="markdown-preview"]')
-        .or(page.locator('.preview-panel'))
-        .or(page.locator('h1:has-text("Test Heading")'))
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="wiki-preview"]')).toBeVisible({ timeout: 5000 });
+
+    // Verify content is rendered in preview
+    await expect(page.locator('[data-testid="wiki-preview"] h1:has-text("Test Heading")')).toBeVisible();
   });
 
   test('should perform full-text search', async ({ page }) => {
@@ -298,15 +297,15 @@ test.describe('Wiki/Notes System', () => {
     const searchTerm = uniqueName('UniqueSearchTerm');
     const noteTitle = uniqueName('Searchable Note');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', noteTitle);
-    await fillField(page, 'textarea[name="content"]', `This note contains ${searchTerm}`);
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', noteTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', `This note contains ${searchTerm}`);
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -315,7 +314,7 @@ test.describe('Wiki/Notes System', () => {
     await waitForToast(page);
 
     // Search for the term
-    await fillField(page, 'input[placeholder*="Search"]', searchTerm);
+    await fillField(page, '[data-testid="wiki-search-input"]', searchTerm);
 
     // Wait for search results
     await page.waitForTimeout(500);
@@ -328,15 +327,15 @@ test.describe('Wiki/Notes System', () => {
     // Create first note
     const note1Title = uniqueName('Note One');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', note1Title);
-    await fillField(page, 'textarea[name="content"]', '# First note');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', note1Title);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# First note');
 
     const createResponse1 = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response1 = await createResponse1;
     const data1 = await response1.json();
@@ -347,15 +346,15 @@ test.describe('Wiki/Notes System', () => {
     // Create second note with link to first
     const note2Title = uniqueName('Note Two');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', note2Title);
-    await fillField(page, 'textarea[name="content"]', `Links to [[${note1Title}]]`);
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', note2Title);
+    await fillField(page, '[data-testid="wiki-content-input"]', `Links to [[${note1Title}]]`);
 
     const createResponse2 = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response2 = await createResponse2;
     const data2 = await response2.json();
@@ -366,9 +365,9 @@ test.describe('Wiki/Notes System', () => {
     // View second note and verify link
     await page.click(`text="${note2Title}"`);
 
-    // Click on the link
-    await page.click(`a:has-text("${note1Title}")`).catch(() => {
-      page.click(`[data-note-link="${note1Title}"]`);
+    // Click on the link in the preview
+    await page.locator(`[data-testid="wiki-preview"] a:has-text("${note1Title}")`).click().catch(async () => {
+      await page.locator(`[data-note-link="${note1Title}"]`).click();
     });
 
     // Should navigate to first note
@@ -379,15 +378,15 @@ test.describe('Wiki/Notes System', () => {
     // Create note that will be linked to
     const targetNote = uniqueName('Target Note');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', targetNote);
-    await fillField(page, 'textarea[name="content"]', '# Target');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', targetNote);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Target');
 
     const createResponse1 = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response1 = await createResponse1;
     const data1 = await response1.json();
@@ -398,15 +397,15 @@ test.describe('Wiki/Notes System', () => {
     // Create note that links to target
     const linkingNote = uniqueName('Linking Note');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', linkingNote);
-    await fillField(page, 'textarea[name="content"]', `References [[${targetNote}]]`);
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', linkingNote);
+    await fillField(page, '[data-testid="wiki-content-input"]', `References [[${targetNote}]]`);
 
     const createResponse2 = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response2 = await createResponse2;
     const data2 = await response2.json();
@@ -418,11 +417,7 @@ test.describe('Wiki/Notes System', () => {
     await page.click(`text="${targetNote}"`);
 
     // Verify backlinks section shows linking note
-    await expect(
-      page
-        .locator('[data-testid="backlinks"]')
-        .or(page.locator('text="Backlinks"'))
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="wiki-backlinks"]')).toBeVisible({ timeout: 5000 });
 
     await expect(page.locator(`text="${linkingNote}"`)).toBeVisible();
   });
@@ -433,16 +428,16 @@ test.describe('Wiki/Notes System', () => {
     const category2 = uniqueName('Category2');
 
     // Create note in category 1
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', uniqueName('Cat1 Note'));
-    await fillField(page, 'textarea[name="content"]', '# Content');
-    await fillField(page, 'input[name="category"]', category1);
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', uniqueName('Cat1 Note'));
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Content');
+    await fillField(page, '[data-testid="wiki-category-input"]', category1);
 
     const createResponse1 = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response1 = await createResponse1;
     const data1 = await response1.json();
@@ -451,16 +446,16 @@ test.describe('Wiki/Notes System', () => {
     await waitForToast(page);
 
     // Create note in category 2
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', uniqueName('Cat2 Note'));
-    await fillField(page, 'textarea[name="content"]', '# Content');
-    await fillField(page, 'input[name="category"]', category2);
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', uniqueName('Cat2 Note'));
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Content');
+    await fillField(page, '[data-testid="wiki-category-input"]', category2);
 
     const createResponse2 = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response2 = await createResponse2;
     const data2 = await response2.json();
@@ -469,8 +464,8 @@ test.describe('Wiki/Notes System', () => {
     await waitForToast(page);
 
     // Filter by category 1
-    await page.selectOption('select[name="category"]', category1).catch(() => {
-      page.click(`text="${category1}"`);
+    await page.selectOption('[data-testid="wiki-category-filter"]', category1).catch(async () => {
+      await page.click(`text="${category1}"`);
     });
 
     await page.waitForTimeout(500);
@@ -484,16 +479,16 @@ test.describe('Wiki/Notes System', () => {
     const tag1 = uniqueName('tag1');
     const noteTitle = uniqueName('Tagged Note');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', noteTitle);
-    await fillField(page, 'textarea[name="content"]', '# Content');
-    await fillField(page, 'input[name="tags"]', tag1);
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', noteTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Content');
+    await fillField(page, '[data-testid="wiki-tags-input"]', tag1);
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -502,8 +497,8 @@ test.describe('Wiki/Notes System', () => {
     await waitForToast(page);
 
     // Click on tag to filter
-    await page.click(`[data-tag="${tag1}"]`).catch(() => {
-      page.click(`text="${tag1}"`);
+    await page.locator(`[data-testid="wiki-tag-${tag1}"]`).click().catch(async () => {
+      await page.click(`text="${tag1}"`);
     });
 
     await page.waitForTimeout(500);
@@ -516,15 +511,15 @@ test.describe('Wiki/Notes System', () => {
     // Create note in current workspace
     const note1Title = uniqueName('Workspace 1 Note');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', note1Title);
-    await fillField(page, 'textarea[name="content"]', '# Content');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', note1Title);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Content');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -575,17 +570,29 @@ test.describe('Wiki/Notes System', () => {
 
   test('should list available templates', async ({ page }) => {
     // Click create note
-    await clickButton(page, 'button:has-text("Create Note")');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
 
-    // Check template selector
-    await expect(page.locator('select[name="template"]')).toBeVisible();
+    // Check template selector - try data-testid first, then fallback to name selector
+    await expect(
+      page.locator('[data-testid="wiki-template-select"]')
+        .or(page.locator('select[name="template"]'))
+    ).toBeVisible();
 
     // Verify templates are available
-    const templates = ['Architecture', 'API', 'Runbook', 'Troubleshooting', 'Meeting'];
+    const templates = [
+      { id: 'architecture', name: 'Architecture' },
+      { id: 'api', name: 'API' },
+      { id: 'runbook', name: 'Runbook' },
+      { id: 'troubleshooting', name: 'Troubleshooting' },
+      { id: 'meeting', name: 'Meeting' }
+    ];
 
     for (const template of templates) {
-      await expect(page.locator(`option:has-text("${template}")`)).toBeVisible().catch(() => {
-        console.log(`Template ${template} may be implemented differently`);
+      await expect(
+        page.locator(`[data-testid="wiki-template-${template.id}"]`)
+          .or(page.locator(`option:has-text("${template.name}")`))
+      ).toBeVisible().catch(() => {
+        console.log(`Template ${template.name} may be implemented differently`);
       });
     }
   });
@@ -594,15 +601,15 @@ test.describe('Wiki/Notes System', () => {
     // Create note
     const noteTitle = uniqueName('Note to Export');
 
-    await clickButton(page, 'button:has-text("Create Note")');
-    await fillField(page, 'input[name="title"]', noteTitle);
-    await fillField(page, 'textarea[name="content"]', '# Export this content');
+    await clickButton(page, '[data-testid="wiki-new-note-button"]');
+    await fillField(page, '[data-testid="wiki-title-input"]', noteTitle);
+    await fillField(page, '[data-testid="wiki-content-input"]', '# Export this content');
 
     const createResponse = page.waitForResponse((response) =>
       response.url().includes('/api/notes')
     );
 
-    await clickButton(page, 'button[type="submit"]:has-text("Create")');
+    await clickButton(page, '[data-testid="wiki-save-button"]');
 
     const response = await createResponse;
     const data = await response.json();
@@ -614,7 +621,7 @@ test.describe('Wiki/Notes System', () => {
     await page.click(`text="${noteTitle}"`);
 
     // Export note
-    await clickButton(page, 'button:has-text("Export")').catch(() => {
+    await clickButton(page, '[data-testid="wiki-export-button"]').catch(async () => {
       console.log('Export functionality may not be implemented');
     });
 
@@ -622,7 +629,7 @@ test.describe('Wiki/Notes System', () => {
     await expect(
       page
         .locator('text=/markdown|download|export/i')
-        .or(page.locator('[data-testid="export-options"]'))
+        .or(page.locator('[data-testid="wiki-export-options"]'))
     ).toBeVisible({ timeout: 5000 }).catch(() => {
       console.log('Export options may differ');
     });

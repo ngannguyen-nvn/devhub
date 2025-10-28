@@ -20,7 +20,18 @@ export async function waitForPageLoad(page: Page) {
  * Navigate to a specific section using the sidebar
  */
 export async function navigateToSection(page: Page, sectionName: string) {
-  await page.click(`nav a:has-text("${sectionName}")`);
+  // Map section names to nav IDs
+  const sectionMap: Record<string, string> = {
+    'Dashboard': 'dashboard',
+    'Services': 'services',
+    'Workspaces': 'workspaces',
+    'Docker': 'docker',
+    'Environment': 'env',
+    'Wiki': 'wiki',
+  };
+
+  const navId = sectionMap[sectionName] || sectionName.toLowerCase();
+  await page.click(`[data-testid="nav-${navId}"]`);
   await waitForPageLoad(page);
 }
 
@@ -179,17 +190,17 @@ export async function createAndActivateWorkspace(
   await navigateToSection(page, 'Workspaces');
 
   // Click create button
-  await clickButton(page, 'button:has-text("Create Workspace")');
+  await clickButton(page, '[data-testid="workspace-create-button"]');
 
   // Fill form
-  await fillField(page, 'input[name="name"]', name);
+  await fillField(page, '[data-testid="workspace-name-input"]', name);
   if (description) {
-    await fillField(page, 'textarea[name="description"]', description);
+    await fillField(page, '[data-testid="workspace-description-input"]', description);
   }
 
   // Submit and capture ID
   const idPromise = getCreatedResourceId(page, /\/api\/workspaces$/);
-  await clickButton(page, 'button[type="submit"]');
+  await clickButton(page, '[data-testid="workspace-create-submit-button"]');
 
   const workspaceId = await idPromise;
 

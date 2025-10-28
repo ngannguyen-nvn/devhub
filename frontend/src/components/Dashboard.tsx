@@ -553,6 +553,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
               <button
                 onClick={() => onViewChange('workspaces')}
                 className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+                data-testid="dashboard-manage-workspace-button"
               >
                 Manage Workspace
               </button>
@@ -594,6 +595,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                   <button
                     onClick={() => onViewChange('services')}
                     className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    data-testid="dashboard-manage-services-button"
                   >
                     Manage Services
                   </button>
@@ -626,6 +628,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     <button
                       onClick={handleQuickSnapshot}
                       className="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                      data-testid="dashboard-quick-snapshot-button"
                     >
                       <Camera size={18} />
                       Quick Snapshot
@@ -634,6 +637,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     <button
                       onClick={() => onViewChange('workspaces')}
                       className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      data-testid="dashboard-manage-snapshots-button"
                     >
                       Manage Snapshots
                     </button>
@@ -650,6 +654,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     <button
                       onClick={() => onViewChange('env')}
                       className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-left flex items-center gap-2"
+                      data-testid="dashboard-environment-profiles-button"
                     >
                       <FileText size={18} />
                       Environment Profiles
@@ -657,6 +662,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     <button
                       onClick={() => onViewChange('wiki')}
                       className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-left flex items-center gap-2"
+                      data-testid="dashboard-wiki-notes-button"
                     >
                       <FileText size={18} />
                       Wiki & Notes
@@ -673,12 +679,13 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     <button
                       onClick={() => onViewChange('workspaces')}
                       className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      data-testid="dashboard-view-all-snapshots-button"
                     >
                       View All →
                     </button>
                   </div>
-                  <div className="space-y-3">
-                    {recentSnapshots.map((snapshot) => (
+                  <div className="space-y-3" data-testid="dashboard-snapshots-list">
+                    {recentSnapshots.map((snapshot, index) => (
                       <div
                         key={snapshot.id}
                         className={`flex items-center justify-between p-4 rounded-lg border ${
@@ -686,6 +693,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                             ? 'border-green-500 bg-green-50'
                             : 'border-gray-200 bg-gray-50'
                         }`}
+                        data-testid={`dashboard-snapshot-item-${index}`}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -709,6 +717,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                             <button
                               onClick={() => handleRestoreSnapshot(snapshot.id)}
                               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                              data-testid={`dashboard-restore-snapshot-button-${index}`}
                             >
                               <RefreshCw size={16} />
                               Restore
@@ -717,6 +726,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                               onClick={() => handleDeleteSnapshot(snapshot.id, snapshot.name)}
                               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Delete snapshot"
+                              data-testid={`dashboard-delete-snapshot-button-${index}`}
                             >
                               <Trash2 size={18} />
                             </button>
@@ -742,6 +752,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
               <button
                 onClick={() => onViewChange('workspaces')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                data-testid="dashboard-go-to-workspaces-button"
               >
                 Go to Workspaces
               </button>
@@ -765,11 +776,13 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
               onChange={(e) => setScanPath(e.target.value)}
               placeholder="Path to scan (e.g., /home/user)"
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="dashboard-scan-path-input"
             />
             <button
               onClick={scanRepositories}
               disabled={loading}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              data-testid="dashboard-scan-button"
             >
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
               {loading ? 'Scanning...' : 'Scan'}
@@ -791,6 +804,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     <button
                       onClick={toggleAllRepos}
                       className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium"
+                      data-testid="dashboard-toggle-all-repos-button"
                     >
                       {selectedRepos.size === repos.length ? (
                         <CheckSquare size={20} />
@@ -807,6 +821,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     onClick={() => setShowSaveModal(true)}
                     disabled={selectedRepos.size === 0}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    data-testid="dashboard-save-to-workspace-button"
                   >
                     <Save size={18} />
                     Save to Workspace
@@ -814,8 +829,8 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                {repos.map((repo) => {
+              <div className="grid gap-4" data-testid="dashboard-repo-list">
+                {repos.map((repo, index) => {
                   const isSelected = selectedRepos.has(repo.path)
                   return (
                     <div
@@ -824,6 +839,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                         isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
                       }`}
                       onClick={() => toggleRepo(repo.path)}
+                      data-testid={`dashboard-repo-item-${index}`}
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-start gap-3 flex-1">
@@ -833,6 +849,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                               toggleRepo(repo.path)
                             }}
                             className="mt-1"
+                            data-testid={`dashboard-repo-checkbox-${index}`}
                           >
                             {isSelected ? (
                               <CheckSquare size={20} className="text-blue-600" />
@@ -915,6 +932,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                       ? 'bg-blue-50 border-blue-500 text-blue-700'
                       : 'bg-white border-gray-300 text-gray-700'
                   }`}
+                  data-testid="dashboard-workspace-mode-new-button"
                 >
                   Create New
                 </button>
@@ -925,6 +943,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                       ? 'bg-blue-50 border-blue-500 text-blue-700'
                       : 'bg-white border-gray-300 text-gray-700'
                   }`}
+                  data-testid="dashboard-workspace-mode-existing-button"
                 >
                   Use Existing
                 </button>
@@ -937,12 +956,14 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                   onChange={(e) => setNewWorkspaceName(e.target.value)}
                   placeholder="Enter workspace name"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="dashboard-workspace-name-input"
                 />
               ) : (
                 <select
                   value={selectedWorkspaceId}
                   onChange={(e) => setSelectedWorkspaceId(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="dashboard-workspace-select"
                 >
                   <option value="">Select a workspace</option>
                   {allWorkspaces.map((workspace) => (
@@ -965,6 +986,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 onChange={(e) => setSnapshotName(e.target.value)}
                 placeholder="Auto-generated: Scan YYYY-MM-DD HH:MM:SS"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="dashboard-snapshot-name-input"
               />
             </div>
 
@@ -978,6 +1000,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 placeholder={`Scanned ${selectedRepos.size} repositories from ${scanPath}`}
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="dashboard-snapshot-description-input"
               />
             </div>
 
@@ -993,6 +1016,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                         checked={importEnvFiles}
                         onChange={(e) => setImportEnvFiles(e.target.checked)}
                         className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        data-testid="dashboard-import-env-checkbox"
                       />
                       <div className="flex-1">
                         <span className="text-sm font-medium text-gray-900">
@@ -1022,6 +1046,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 onClick={() => setShowSaveModal(false)}
                 disabled={saving}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                data-testid="dashboard-modal-cancel-button"
               >
                 Cancel
               </button>
@@ -1029,6 +1054,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 onClick={handleSaveToWorkspace}
                 disabled={saving}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                data-testid="dashboard-modal-save-button"
               >
                 {saving ? (
                   <>

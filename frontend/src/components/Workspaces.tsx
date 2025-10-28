@@ -737,10 +737,11 @@ export default function Workspaces() {
 
   // Breadcrumb navigation
   const renderBreadcrumb = () => (
-    <div className="flex items-center gap-2 text-sm mb-4">
+    <div className="flex items-center gap-2 text-sm mb-4" data-testid="workspace-breadcrumb">
       <button
         onClick={handleBackToWorkspaces}
         className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+        data-testid="workspace-breadcrumb-home-button"
       >
         <Home className="w-4 h-4" />
         Workspaces
@@ -754,6 +755,7 @@ export default function Workspaces() {
             <button
               onClick={handleBackToSnapshots}
               className="text-blue-600 hover:text-blue-800"
+              data-testid="workspace-breadcrumb-workspace-button"
             >
               {selectedWorkspace.name}
             </button>
@@ -783,6 +785,7 @@ export default function Workspaces() {
               <button
                 onClick={fetchWorkspaces}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                data-testid="workspace-refresh-button"
               >
                 <RefreshCw className="w-4 h-4" />
                 Refresh
@@ -790,6 +793,7 @@ export default function Workspaces() {
               <button
                 onClick={() => setShowScanForm(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                data-testid="workspace-scan-folder-button"
               >
                 <Folder className="w-4 h-4" />
                 Scan Folder
@@ -797,6 +801,7 @@ export default function Workspaces() {
               <button
                 onClick={() => setShowCreateWorkspaceForm(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                data-testid="workspace-create-button"
               >
                 <Plus className="w-4 h-4" />
                 New Workspace
@@ -806,7 +811,7 @@ export default function Workspaces() {
 
           {/* Create Workspace Form */}
           {showCreateWorkspaceForm && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded" data-testid="workspace-create-form">
               <h3 className="font-semibold mb-3">Create New Workspace</h3>
               <div className="space-y-3">
                 <input
@@ -815,6 +820,7 @@ export default function Workspaces() {
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, name: e.target.value })}
                   placeholder="Workspace name *"
                   className="w-full px-3 py-2 border rounded"
+                  data-testid="workspace-name-input"
                 />
                 <input
                   type="text"
@@ -822,6 +828,7 @@ export default function Workspaces() {
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, description: e.target.value })}
                   placeholder="Description (optional)"
                   className="w-full px-3 py-2 border rounded"
+                  data-testid="workspace-description-input"
                 />
                 <input
                   type="text"
@@ -829,6 +836,7 @@ export default function Workspaces() {
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, folderPath: e.target.value })}
                   placeholder="Folder path (optional)"
                   className="w-full px-3 py-2 border rounded"
+                  data-testid="workspace-folderpath-input"
                 />
                 <input
                   type="text"
@@ -836,18 +844,21 @@ export default function Workspaces() {
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, tags: e.target.value })}
                   placeholder="Tags (comma-separated, optional)"
                   className="w-full px-3 py-2 border rounded"
+                  data-testid="workspace-tags-input"
                 />
               </div>
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleCreateWorkspace}
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  data-testid="workspace-create-submit-button"
                 >
                   Create
                 </button>
                 <button
                   onClick={() => setShowCreateWorkspaceForm(false)}
                   className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  data-testid="workspace-create-cancel-button"
                 >
                   Cancel
                 </button>
@@ -856,7 +867,7 @@ export default function Workspaces() {
           )}
 
           {/* Workspaces Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="workspace-list">
             {loading && workspaces.length === 0 ? (
               <SkeletonLoader count={3} />
             ) : workspaces.length === 0 ? (
@@ -871,6 +882,7 @@ export default function Workspaces() {
                   key={workspace.id}
                   className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 p-4 cursor-pointer transition-colors"
                   onClick={() => handleWorkspaceClick(workspace.id)}
+                  data-testid={`workspace-item-${workspace.id}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-lg">{workspace.name}</h3>
@@ -909,6 +921,7 @@ export default function Workspaces() {
                         handleActivateWorkspace(workspace.id)
                       }}
                       className="flex-1 px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                      data-testid={`workspace-activate-button-${workspace.id}`}
                     >
                       Activate
                     </button>
@@ -918,6 +931,7 @@ export default function Workspaces() {
                         handleDeleteWorkspace(workspace.id, workspace.name)
                       }}
                       className="px-3 py-1 text-xs text-red-600 hover:text-red-800"
+                      data-testid={`workspace-delete-button-${workspace.id}`}
                     >
                       Delete
                     </button>
@@ -943,6 +957,7 @@ export default function Workspaces() {
               <button
                 onClick={() => fetchSnapshots(selectedWorkspaceId!)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                data-testid="snapshot-refresh-button"
               >
                 <RefreshCw className="w-4 h-4" />
                 Refresh
@@ -950,6 +965,7 @@ export default function Workspaces() {
               <button
                 onClick={handleQuickSnapshot}
                 className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                data-testid="snapshot-quick-button"
               >
                 <Zap className="w-4 h-4" />
                 Quick Snapshot
@@ -957,6 +973,7 @@ export default function Workspaces() {
               <button
                 onClick={() => setShowCreateSnapshotForm(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                data-testid="snapshot-create-button"
               >
                 <Plus className="w-4 h-4" />
                 New Snapshot
@@ -979,6 +996,7 @@ export default function Workspaces() {
               <button
                 onClick={handleClearActiveSnapshot}
                 className="px-3 py-1.5 text-sm bg-white border border-green-300 text-green-700 rounded hover:bg-green-100"
+                data-testid="snapshot-clear-active-button"
               >
                 Clear Active Snapshot
               </button>
@@ -987,7 +1005,7 @@ export default function Workspaces() {
 
           {/* Create Snapshot Form */}
           {showCreateSnapshotForm && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded" data-testid="snapshot-create-form">
               <h3 className="font-semibold mb-3">Create Snapshot</h3>
               <div className="space-y-3">
                 <input
@@ -996,6 +1014,7 @@ export default function Workspaces() {
                   onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, name: e.target.value })}
                   placeholder="Snapshot name *"
                   className="w-full px-3 py-2 border rounded"
+                  data-testid="snapshot-name-input"
                 />
                 <textarea
                   value={createSnapshotForm.description}
@@ -1003,6 +1022,7 @@ export default function Workspaces() {
                   placeholder="Description (optional)"
                   className="w-full px-3 py-2 border rounded"
                   rows={2}
+                  data-testid="snapshot-description-input"
                 />
                 <textarea
                   value={createSnapshotForm.repoPaths}
@@ -1010,6 +1030,7 @@ export default function Workspaces() {
                   placeholder="Repository paths (comma-separated) *"
                   className="w-full px-3 py-2 border rounded font-mono text-sm"
                   rows={3}
+                  data-testid="snapshot-repopaths-input"
                 />
                 <input
                   type="text"
@@ -1017,18 +1038,21 @@ export default function Workspaces() {
                   onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, tags: e.target.value })}
                   placeholder="Tags (comma-separated, optional)"
                   className="w-full px-3 py-2 border rounded"
+                  data-testid="snapshot-tags-input"
                 />
               </div>
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleCreateSnapshot}
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  data-testid="snapshot-create-submit-button"
                 >
                   Create
                 </button>
                 <button
                   onClick={() => setShowCreateSnapshotForm(false)}
                   className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  data-testid="snapshot-create-cancel-button"
                 >
                   Cancel
                 </button>
@@ -1038,12 +1062,13 @@ export default function Workspaces() {
 
           {/* Bulk Action Bar */}
           {snapshots.length > 0 && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg" data-testid="snapshot-bulk-action-bar">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={toggleAllSnapshots}
                     className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium"
+                    data-testid="snapshot-toggle-all-button"
                   >
                     {selectedSnapshots.size === snapshots.length ? (
                       <CheckSquare size={20} />
@@ -1060,6 +1085,7 @@ export default function Workspaces() {
                   <button
                     onClick={handleDeleteSelectedSnapshots}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                    data-testid="snapshot-delete-selected-button"
                   >
                     <Trash2 size={18} />
                     Delete Selected ({selectedSnapshots.size})
@@ -1070,7 +1096,7 @@ export default function Workspaces() {
           )}
 
           {/* Snapshots List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" data-testid="snapshot-list">
             {loading && snapshots.length === 0 ? (
               <SkeletonLoader count={3} />
             ) : snapshots.length === 0 ? (
@@ -1095,6 +1121,7 @@ export default function Workspaces() {
                         : 'border-gray-200 hover:border-blue-400'
                     } p-4 cursor-pointer transition-colors relative`}
                     onClick={() => handleSnapshotClick(snapshot.id)}
+                    data-testid={`snapshot-item-${snapshot.id}`}
                   >
                     {/* Checkbox for multi-select */}
                     <div className="absolute top-4 left-4">
@@ -1103,6 +1130,7 @@ export default function Workspaces() {
                         disabled={isActive}
                         className={`p-1 rounded ${isActive ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'}`}
                         title={isActive ? 'Cannot select active snapshot for deletion' : ''}
+                        data-testid={`snapshot-checkbox-${snapshot.id}`}
                       >
                         {isSelected ? (
                           <CheckSquare size={20} className="text-blue-600" />
@@ -1167,7 +1195,7 @@ export default function Workspaces() {
 
       {/* View Level 3: Snapshot Detail */}
       {viewLevel === 'snapshot-detail' && selectedSnapshot && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6" data-testid="snapshot-detail-view">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">{selectedSnapshot.name}</h2>
             <div className="flex gap-2">
@@ -1175,6 +1203,7 @@ export default function Workspaces() {
                 onClick={() => handleExport(selectedSnapshot.id, selectedSnapshot.name)}
                 className="p-2 text-blue-600 hover:text-blue-800"
                 title="Export"
+                data-testid="snapshot-export-button"
               >
                 <Download className="w-5 h-5" />
               </button>
@@ -1182,6 +1211,7 @@ export default function Workspaces() {
                 onClick={() => handleRestore(selectedSnapshot.id, selectedSnapshot.name)}
                 disabled={restoring}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                data-testid="snapshot-restore-button"
               >
                 <RotateCcw className="w-4 h-4" />
                 {restoring ? 'Restoring...' : 'Restore'}
@@ -1190,6 +1220,7 @@ export default function Workspaces() {
                 onClick={() => handleDeleteSnapshot(selectedSnapshot.id, selectedSnapshot.name)}
                 className="p-2 text-red-600 hover:text-red-800"
                 title="Delete"
+                data-testid="snapshot-delete-button"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
@@ -1257,8 +1288,8 @@ export default function Workspaces() {
 
       {/* Scan Folder Form (shown at workspace list level) */}
       {showScanForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="workspace-scan-modal">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 p-6" data-testid="workspace-scan-form">
             <h3 className="text-xl font-bold mb-4">Scan Folder & Create Snapshot</h3>
             <div className="space-y-3">
               <input
@@ -1267,6 +1298,7 @@ export default function Workspaces() {
                 onChange={(e) => setScanForm({ ...scanForm, path: e.target.value })}
                 placeholder="Folder path to scan *"
                 className="w-full px-3 py-2 border rounded"
+                data-testid="workspace-scan-path-input"
               />
               <input
                 type="text"
@@ -1274,6 +1306,7 @@ export default function Workspaces() {
                 onChange={(e) => setScanForm({ ...scanForm, name: e.target.value })}
                 placeholder="Snapshot name *"
                 className="w-full px-3 py-2 border rounded"
+                data-testid="workspace-scan-name-input"
               />
               <textarea
                 value={scanForm.description}
@@ -1281,6 +1314,7 @@ export default function Workspaces() {
                 placeholder="Description (optional)"
                 className="w-full px-3 py-2 border rounded"
                 rows={2}
+                data-testid="workspace-scan-description-input"
               />
               <div className="flex gap-2">
                 <input
@@ -1291,6 +1325,7 @@ export default function Workspaces() {
                   min="0"
                   max="5"
                   className="w-24 px-3 py-2 border rounded"
+                  data-testid="workspace-scan-depth-input"
                 />
                 <input
                   type="text"
@@ -1298,6 +1333,7 @@ export default function Workspaces() {
                   onChange={(e) => setScanForm({ ...scanForm, tags: e.target.value })}
                   placeholder="Tags (comma-separated, optional)"
                   className="flex-1 px-3 py-2 border rounded"
+                  data-testid="workspace-scan-tags-input"
                 />
               </div>
 
@@ -1309,6 +1345,7 @@ export default function Workspaces() {
                     checked={scanForm.importEnvFiles}
                     onChange={(e) => setScanForm({ ...scanForm, importEnvFiles: e.target.checked })}
                     className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    data-testid="workspace-scan-import-env-checkbox"
                   />
                   <div className="flex-1">
                     <span className="text-sm font-medium text-gray-900">
@@ -1336,12 +1373,14 @@ export default function Workspaces() {
               <button
                 onClick={() => setShowScanForm(false)}
                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                data-testid="workspace-scan-cancel-button"
               >
                 Cancel
               </button>
               <button
                 onClick={handleScanFolder}
                 className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                data-testid="workspace-scan-submit-button"
               >
                 Scan & Create
               </button>

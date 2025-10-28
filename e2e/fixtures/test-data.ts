@@ -12,7 +12,7 @@ export const testWorkspace = {
 
 export const testService = {
   name: 'Test Service',
-  repoPath: '/tmp/test-repo',
+  repoPath: process.cwd(),
   command: 'node server.js',
   port: 8080,
 };
@@ -68,8 +68,9 @@ export const uniqueName = (base: string): string => {
 };
 
 // Sample git repository paths (these should exist in test environment)
+// Using process.cwd() to get current working directory dynamically
 export const sampleRepos = [
-  '/home/user/devhub',
+  process.cwd(),
   '/tmp/test-repos/repo1',
   '/tmp/test-repos/repo2',
 ];
