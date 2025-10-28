@@ -216,6 +216,8 @@ export default function Workspaces() {
       setShowCreateWorkspaceForm(false)
       setCreateWorkspaceForm({ name: '', description: '', folderPath: '', tags: '' })
       fetchWorkspaces()
+      // Also refresh global workspace context to update header
+      refreshGlobalWorkspaces()
       toast.success(`Workspace "${createWorkspaceForm.name}" created successfully!`)
     } catch (error: any) {
       toast.error(`Failed to create workspace: ${error.response?.data?.error || error.message}`)
@@ -254,6 +256,8 @@ export default function Workspaces() {
         handleBackToWorkspaces()
       }
       fetchWorkspaces()
+      // Also refresh global workspace context to update header
+      refreshGlobalWorkspaces()
       toast.success(`Workspace "${confirmDialog.name}" deleted`)
     } catch (error: any) {
       toast.error(`Failed to delete workspace: ${error.response?.data?.error || error.message}`)
