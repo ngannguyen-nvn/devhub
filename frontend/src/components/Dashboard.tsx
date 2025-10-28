@@ -400,8 +400,10 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
           // 3. Auto-create service if it doesn't exist
           try {
-            // Check if service with this repo path already exists
-            const servicesResponse = await axios.get('/api/services')
+            // Check if service with this repo path already exists IN THE TARGET WORKSPACE
+            const servicesResponse = await axios.get('/api/services', {
+              params: { workspace_id: workspaceId }
+            })
             const existingService = servicesResponse.data.services.find((s: any) => s.repoPath === repo.path)
 
             if (!existingService) {
