@@ -103,6 +103,25 @@ export class EnvManager {
   }
 
   /**
+   * Get profile by name in a specific workspace
+   */
+  getProfileByName(workspaceId: string, profileName: string): EnvProfile | null {
+    const stmt = db.prepare('SELECT * FROM env_profiles WHERE workspace_id = ? AND name = ?')
+    const row = stmt.get(workspaceId, profileName) as any
+
+    if (!row) return null
+
+    return {
+      id: row.id,
+      workspaceId: row.workspace_id,
+      name: row.name,
+      description: row.description,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  /**
    * Create a new profile in a workspace
    */
   createProfile(workspaceId: string, name: string, description?: string): EnvProfile {

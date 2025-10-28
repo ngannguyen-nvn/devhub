@@ -1048,6 +1048,7 @@ export class WorkspaceManager {
     success: boolean
     servicesStarted: number
     branchesSwitched: number
+    envVarsRestored: number
     errors: string[]
   }> {
     const snapshot = this.getSnapshot(snapshotId)
@@ -1058,6 +1059,7 @@ export class WorkspaceManager {
     const errors: string[] = []
     let servicesStarted = 0
     let branchesSwitched = 0
+    let envVarsRestored = 0
 
     // 1. Stop all currently running services
     this.serviceManager.stopAll()
@@ -1092,7 +1094,59 @@ export class WorkspaceManager {
       }
     }
 
-    // 3. Start services
+    // 3. Restore environment variables
+    if (snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0) {
+      try {
+        // Create a profile for the restored env vars
+        const profileName = `Snapshot: ${snapshot.name}`
+
+        // Check if a restore profile already exists for this snapshot
+        let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
+
+        if (!profile) {
+          // Create new profile
+          profile = this.envManager.createProfile(
+            snapshot.workspaceId,
+            profileName,
+            `Environment variables restored from snapshot "${snapshot.name}"`
+          )
+          console.log(`Created env profile "${profileName}" for restored variables`)
+        } else {
+          console.log(`Using existing env profile "${profileName}" for restored variables`)
+        }
+
+        // Restore variables for each service
+        for (const [serviceId, vars] of Object.entries(snapshot.envVariables)) {
+          for (const [key, value] of Object.entries(vars)) {
+            // Check if variable already exists
+            const existingVars = this.envManager.getVariables(profile.id, serviceId)
+            const existingVar = existingVars.find(v => v.key === key)
+
+            if (existingVar) {
+              // Update existing variable
+              this.envManager.updateVariable(existingVar.id, { value })
+            } else {
+              // Create new variable
+              this.envManager.createVariable({
+                key,
+                value,
+                profileId: profile.id,
+                serviceId,
+                isSecret: false, // Assume non-secret for restored vars
+              })
+            }
+            envVarsRestored++
+          }
+        }
+
+        console.log(`Restored ${envVarsRestored} environment variables to profile "${profileName}"`)
+      } catch (error: any) {
+        errors.push(`Failed to restore environment variables: ${error.message}`)
+        console.error('Error restoring environment variables:', error)
+      }
+    }
+
+    // 4. Start services
     for (const service of snapshot.runningServices) {
       try {
         await this.serviceManager.startService(service.serviceId)
@@ -1102,7 +1156,7 @@ export class WorkspaceManager {
       }
     }
 
-    // 4. Set this snapshot as active in the workspace (if restore was successful or partial)
+    // 5. Set this snapshot as active in the workspace (if restore was successful or partial)
     try {
       const now = new Date().toISOString()
       db.prepare('UPDATE workspaces SET active_snapshot_id = ?, updated_at = ? WHERE id = ?')
@@ -1116,6 +1170,7 @@ export class WorkspaceManager {
       success: errors.length === 0,
       servicesStarted,
       branchesSwitched,
+      envVarsRestored,
       errors,
     }
   }
