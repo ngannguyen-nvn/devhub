@@ -408,12 +408,13 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
               const analysisResponse = await axios.post('/api/repos/analyze', { repoPath: repo.path })
               const analysis = analysisResponse.data.analysis
 
-              // Create service with analyzed data
+              // Create service with analyzed data in the correct workspace
               await axios.post('/api/services', {
                 name: analysis.name,
                 repoPath: repo.path,
                 command: analysis.command || 'npm start',
                 port: analysis.port || undefined,
+                workspace_id: workspaceId,
               })
               servicesCreated++
             }
