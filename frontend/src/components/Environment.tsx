@@ -61,6 +61,7 @@ export default function Environment() {
   const [services, setServices] = useState<any[]>([])
   const [syncing, setSyncing] = useState(false)
   const [serviceSearchTerm, setServiceSearchTerm] = useState('')
+  const [showAllServices, setShowAllServices] = useState(false)
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
@@ -351,6 +352,7 @@ export default function Environment() {
   const handleOpenSyncModal = () => {
     fetchServices()
     setServiceSearchTerm('')
+    setShowAllServices(false)
     setShowSyncModal(true)
   }
 
@@ -399,6 +401,12 @@ export default function Environment() {
     )
   })
 
+  // Get the selected profile name
+  const currentProfileName = profiles.find(p => p.id === selectedProfile)?.name.toLowerCase() || ''
+
+  // Find service that matches the profile name
+  const matchingService = services.find(s => s.name.toLowerCase() === currentProfileName)
+
   // Filter services based on search term
   const filteredServices = services.filter(service => {
     if (!serviceSearchTerm.trim()) return true
@@ -408,21 +416,12 @@ export default function Environment() {
       service.name.toLowerCase().includes(search) ||
       service.repoPath.toLowerCase().includes(search)
     )
-  }).sort((a, b) => {
-    // Get the selected profile name
-    const profileName = profiles.find(p => p.id === selectedProfile)?.name.toLowerCase() || ''
+  }).sort((a, b) => a.name.localeCompare(b.name))
 
-    // Check if service names match the profile name
-    const aMatches = a.name.toLowerCase() === profileName
-    const bMatches = b.name.toLowerCase() === profileName
-
-    // Matching services come first
-    if (aMatches && !bMatches) return -1
-    if (!aMatches && bMatches) return 1
-
-    // Otherwise sort alphabetically
-    return a.name.localeCompare(b.name)
-  })
+  // Services to display: matching service only, or all filtered services
+  const servicesToShow = (!showAllServices && !serviceSearchTerm && matchingService)
+    ? [matchingService]
+    : filteredServices
 
   return (
     <div>
@@ -738,29 +737,40 @@ export default function Environment() {
                       </div>
                     ) : (
                       <>
-                        {/* Search Input */}
-                        <div className="mb-4">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                              type="text"
-                              value={serviceSearchTerm}
-                              onChange={(e) => setServiceSearchTerm(e.target.value)}
-                              placeholder="Search services by name or path..."
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              data-testid="env-sync-service-search"
-                            />
-                          </div>
-                          {serviceSearchTerm && (
-                            <p className="text-sm text-gray-600 mt-2">
-                              Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{serviceSearchTerm}"
+                        {/* Show matching service notice */}
+                        {matchingService && !showAllServices && !serviceSearchTerm && (
+                          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-900">
+                              <strong>Recommended:</strong> This profile matches the <strong>{matchingService.name}</strong> service.
                             </p>
-                          )}
-                        </div>
+                          </div>
+                        )}
+
+                        {/* Search Input - only show when showing all services or searching */}
+                        {(showAllServices || serviceSearchTerm) && (
+                          <div className="mb-4">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <input
+                                type="text"
+                                value={serviceSearchTerm}
+                                onChange={(e) => setServiceSearchTerm(e.target.value)}
+                                placeholder="Search services by name or path..."
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                data-testid="env-sync-service-search"
+                              />
+                            </div>
+                            {serviceSearchTerm && (
+                              <p className="text-sm text-gray-600 mt-2">
+                                Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{serviceSearchTerm}"
+                              </p>
+                            )}
+                          </div>
+                        )}
 
                         {/* Service List */}
                         <div className="flex-1 overflow-y-auto space-y-2 mb-4" data-testid="env-sync-service-list">
-                          {filteredServices.length === 0 ? (
+                          {servicesToShow.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
                               <p>No services match your search.</p>
                               <button
@@ -771,7 +781,7 @@ export default function Environment() {
                               </button>
                             </div>
                           ) : (
-                            filteredServices.map((service: any) => (
+                            servicesToShow.map((service: any) => (
                           <div
                             key={service.id}
                             onClick={() => !syncing && handleSyncToService(service.id)}
@@ -801,6 +811,19 @@ export default function Environment() {
                             ))
                           )}
                         </div>
+
+                        {/* Show All Services button - only show when there's a matching service */}
+                        {matchingService && !showAllServices && !serviceSearchTerm && services.length > 1 && (
+                          <div className="mb-4">
+                            <button
+                              onClick={() => setShowAllServices(true)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
+                              data-testid="env-show-all-services-button"
+                            >
+                              Or choose a different service ({services.length - 1} more)
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
 
