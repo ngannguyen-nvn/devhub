@@ -10,9 +10,6 @@ import {
   Upload,
   Eye,
   EyeOff,
-  Edit2,
-  Check,
-  X,
   AlertCircle,
 } from 'lucide-react'
 import axios from 'axios'
@@ -51,7 +48,6 @@ export default function Environment() {
   const [showAddVariableForm, setShowAddVariableForm] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
   const [showExportForm, setShowExportForm] = useState(false)
-  const [editingVariable, setEditingVariable] = useState<string | null>(null)
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
 
   // Forms
@@ -204,18 +200,17 @@ export default function Environment() {
     }
   }
 
-  const handleUpdateVariable = async (variableId: string, updates: Partial<EnvVariable>) => {
-    try {
-      await axios.put(`/api/env/variables/${variableId}`, updates)
-      setEditingVariable(null)
-      if (selectedProfile) {
-        fetchVariables(selectedProfile)
-      }
-      toast.success('Variable updated successfully')
-    } catch (error: any) {
-      toast.error(`Failed to update variable: ${error.response?.data?.error || error.message}`)
-    }
-  }
+  // const handleUpdateVariable = async (variableId: string, updates: Partial<EnvVariable>) => {
+  //   try {
+  //     await axios.put(`/api/env/variables/${variableId}`, updates)
+  //     if (selectedProfile) {
+  //       fetchVariables(selectedProfile)
+  //     }
+  //     toast.success('Variable updated successfully')
+  //   } catch (error: any) {
+  //     toast.error(`Failed to update variable: ${error.response?.data?.error || error.message}`)
+  //   }
+  // }
 
   const handleDeleteVariable = (variableId: string) => {
     const variable = variables.find(v => v.id === variableId)
@@ -506,7 +501,7 @@ export default function Environment() {
                       Export
                     </button>
                     <button
-                      onClick={() => setExportForm(false)}
+                      onClick={() => setShowExportForm(false)}
                       className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
                     >
                       Cancel

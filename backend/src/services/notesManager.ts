@@ -262,7 +262,7 @@ export class NotesManager {
     const note = this.getNote(noteId)
     if (!note) return []
 
-    const allNotes = this.getAllNotes()
+    const allNotes = this.getAllNotes(note.workspaceId)
     const backlinks: Array<{ id: string; title: string }> = []
 
     allNotes.forEach(otherNote => {

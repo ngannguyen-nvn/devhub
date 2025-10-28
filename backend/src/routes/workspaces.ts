@@ -267,7 +267,7 @@ router.post('/snapshots/:snapshotId/stash-changes', async (req: Request, res: Re
     }
 
     const result = await workspaceManager.stashChanges(repoPaths)
-    res.json({ success: result.success, ...result })
+    res.json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -291,7 +291,7 @@ router.post('/snapshots/:snapshotId/commit-changes', async (req: Request, res: R
     }
 
     const result = await workspaceManager.commitChanges(repoPaths, commitMessage)
-    res.json({ success: result.success, ...result })
+    res.json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -311,7 +311,7 @@ router.post('/snapshots/:snapshotId/list-stashes', async (req: Request, res: Res
     }
 
     const result = await workspaceManager.listStashes(repoPaths)
-    res.json({ success: result.success, ...result })
+    res.json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }

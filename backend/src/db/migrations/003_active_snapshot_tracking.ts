@@ -61,8 +61,8 @@ export function up(db: Database.Database): void {
     console.log('  → Verifying migration...')
 
     // Verify column exists
-    const columns = db.pragma('table_info(workspaces)')
-    const hasColumn = columns.some((col: any) => col.name === 'active_snapshot_id')
+    const columns = db.pragma('table_info(workspaces)') as Array<{ name: string }>
+    const hasColumn = columns.some((col) => col.name === 'active_snapshot_id')
     if (!hasColumn) {
       throw new Error('active_snapshot_id column not found in workspaces table')
     }

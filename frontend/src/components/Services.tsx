@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import Loading, { SkeletonLoader } from './Loading'
+import { SkeletonLoader } from './Loading'
 import ConfirmDialog from './ConfirmDialog'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 
@@ -208,7 +208,7 @@ export default function Services() {
       }
 
       if (skippedCount > 0) {
-        toast.info(`Skipped ${skippedCount} service${skippedCount > 1 ? 's' : ''} (already exists)`)
+        toast(`Skipped ${skippedCount} service${skippedCount > 1 ? 's' : ''} (already exists)`)
       }
 
       if (failCount > 0) {
@@ -216,7 +216,7 @@ export default function Services() {
       }
 
       if (successCount === 0 && skippedCount === 0 && failCount === 0) {
-        toast.info('No services to import')
+        toast('No services to import')
       }
 
       setShowImportModal(false)

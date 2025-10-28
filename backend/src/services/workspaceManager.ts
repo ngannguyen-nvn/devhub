@@ -1239,8 +1239,14 @@ export class WorkspaceManager {
   importSnapshot(jsonData: string, newName?: string): WorkspaceSnapshot {
     const data = JSON.parse(jsonData)
 
-    const id = `workspace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const name = newName || data.name || 'Imported Workspace'
+    const id = `snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const name = newName || data.name || 'Imported Snapshot'
+
+    // Get active workspace or use workspaceId from data
+    const workspaceId = data.workspaceId || this.getActiveWorkspace()?.id
+    if (!workspaceId) {
+      throw new Error('No active workspace found. Please activate a workspace first.')
+    }
 
     const config = {
       description: data.description,
@@ -1249,21 +1255,22 @@ export class WorkspaceManager {
       activeEnvProfile: data.activeEnvProfile,
       tags: data.tags || [],
       autoRestore: false,
-      updatedAt: new Date().toISOString(),
     }
 
     const stmt = db.prepare(`
-      INSERT INTO workspaces (id, name, config)
-      VALUES (?, ?, ?)
+      INSERT INTO workspace_snapshots (id, name, workspace_id, config, created_at, updated_at)
+      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
     `)
 
-    stmt.run(id, name, JSON.stringify(config))
+    stmt.run(id, name, workspaceId, JSON.stringify(config))
 
     return {
       id,
       name,
+      workspaceId,
       ...config,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
   }
 
