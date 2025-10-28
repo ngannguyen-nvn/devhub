@@ -83,7 +83,6 @@ export default function Workspaces() {
     tags: '',
     importEnvFiles: false,
   })
-  const [scannedRepositories, setScannedRepositories] = useState<any[]>([])
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -714,7 +713,6 @@ export default function Workspaces() {
 
       setShowScanForm(false)
       setScanForm({ path: '', name: '', description: '', depth: '3', tags: '', importEnvFiles: false })
-      setScannedRepositories([])
 
       // Refresh workspaces to show the new/updated workspace
       fetchWorkspaces()

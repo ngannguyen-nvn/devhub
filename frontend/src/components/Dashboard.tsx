@@ -5,7 +5,6 @@ import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import UncommittedChangesDialog from './UncommittedChangesDialog'
-import StashManager from './StashManager'
 
 interface DashboardProps {
   onViewChange: (view: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki') => void
@@ -92,9 +91,6 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
     changes: [],
     loading: false,
   })
-
-  // Restoring state
-  const [restoring, setRestoring] = useState(false)
 
   // Delete snapshot handler
   const handleDeleteSnapshot = async (snapshotId: string, snapshotName: string) => {
@@ -288,7 +284,6 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
   // Perform the actual restore
   const performRestore = async (snapshotId: string) => {
-    setRestoring(true)
     try {
       const response = await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
 
@@ -313,8 +308,6 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
       }
     } catch (error: any) {
       toast.error(`Failed to restore snapshot: ${error.response?.data?.error || error.message}`)
-    } finally {
-      setRestoring(false)
     }
   }
 
