@@ -655,12 +655,12 @@ export default function Workspaces() {
 
       for (const repo of reposWithEnv) {
         try {
-          // Create profile with format: "{SnapshotName} - {RepoName}"
-          const profileName = `${snapshotName} - ${repo.name}`
+          // Use repo name as profile name (e.g., "admin-api")
+          const profileName = repo.name
 
           const createProfileResponse = await axios.post('/api/env/profiles', {
             name: profileName,
-            description: `Auto-imported from ${repo.path}`,
+            description: `Auto-imported from ${repo.path} (${snapshotName})`,
             workspace_id: workspaceId,
           })
 
