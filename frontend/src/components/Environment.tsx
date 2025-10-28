@@ -15,6 +15,7 @@ import {
   Edit,
   X,
   Check,
+  Zap,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -52,10 +53,13 @@ export default function Environment() {
   const [showAddVariableForm, setShowAddVariableForm] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
   const [showExportForm, setShowExportForm] = useState(false)
+  const [showSyncModal, setShowSyncModal] = useState(false)
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
   const [profileSearchTerm, setProfileSearchTerm] = useState('')
   const [variableSearchTerm, setVariableSearchTerm] = useState('')
   const [editingVariableId, setEditingVariableId] = useState<string | null>(null)
+  const [services, setServices] = useState<any[]>([])
+  const [syncing, setSyncing] = useState(false)
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
@@ -333,6 +337,43 @@ export default function Environment() {
     }
   }
 
+  const fetchServices = async () => {
+    try {
+      const response = await axios.get('/api/services')
+      setServices(response.data.services || [])
+    } catch (error) {
+      console.error('Error fetching services:', error)
+      toast.error('Failed to load services')
+    }
+  }
+
+  const handleOpenSyncModal = () => {
+    fetchServices()
+    setShowSyncModal(true)
+  }
+
+  const handleSyncToService = async (serviceId: string) => {
+    if (!selectedProfile) {
+      toast.error('No profile selected')
+      return
+    }
+
+    setSyncing(true)
+    try {
+      const response = await axios.post(`/api/env/profiles/${selectedProfile}/sync-to-service`, {
+        serviceId,
+      })
+
+      toast.success(`Synced ${response.data.synced} variables to ${response.data.serviceName}`)
+      toast.success(`File: ${response.data.filePath}`)
+      setShowSyncModal(false)
+    } catch (error: any) {
+      toast.error(`Failed to sync: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   // Filter profiles based on search term
   const filteredProfiles = profiles.filter(profile => {
     if (!profileSearchTerm.trim()) return true
@@ -551,6 +592,14 @@ export default function Environment() {
                     Export
                   </button>
                   <button
+                    data-testid="env-sync-button"
+                    onClick={handleOpenSyncModal}
+                    className="flex items-center gap-1 px-3 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Sync to Service
+                  </button>
+                  <button
                     data-testid="env-add-variable-button"
                     onClick={() => setShowAddVariableForm(true)}
                     className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
@@ -641,6 +690,68 @@ export default function Environment() {
                     >
                       Cancel
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Sync to Service Modal */}
+              {showSyncModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="env-sync-modal">
+                    <h2 className="text-xl font-bold mb-4">Sync to Service</h2>
+                    <p className="text-gray-600 mb-6">
+                      Select a service to sync this profile's variables to its .env file.
+                    </p>
+
+                    {services.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Zap size={48} className="mx-auto mb-4 text-gray-400" />
+                        <p>No services found.</p>
+                        <p className="text-sm mt-2">Add services from the Service Manager first.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 mb-6" data-testid="env-sync-service-list">
+                        {services.map((service: any) => (
+                          <div
+                            key={service.id}
+                            onClick={() => !syncing && handleSyncToService(service.id)}
+                            className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                              syncing
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'border-gray-200 hover:bg-gray-50 hover:border-blue-500'
+                            }`}
+                            data-testid={`env-sync-service-${service.id}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                                  {service.running?.status === 'running' && (
+                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                      Running
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-500 truncate">{service.repoPath}</p>
+                                <p className="text-xs text-blue-600 mt-1">→ {service.repoPath}/.env</p>
+                              </div>
+                              <Zap className="w-5 h-5 text-orange-600" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setShowSyncModal(false)}
+                        disabled={syncing}
+                        className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
+                        data-testid="env-sync-cancel-button"
+                      >
+                        {syncing ? 'Syncing...' : 'Cancel'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
