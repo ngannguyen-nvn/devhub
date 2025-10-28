@@ -70,15 +70,76 @@ export default function WorkspaceSwitcher() {
 
   if (!activeWorkspace) {
     return (
-      <div className="flex items-center gap-2">
-        <AlertCircle className="h-4 w-4 text-yellow-600" />
-        <span className="text-sm text-yellow-600">No active workspace</span>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="ml-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Create Workspace
-        </button>
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <span className="text-sm text-yellow-600">No active workspace</span>
+          <button
+            onClick={() => {
+              setIsCreating(true)
+              setIsOpen(true)
+            }}
+            className="ml-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Create Workspace
+          </button>
+        </div>
+
+        {/* Dropdown Menu for Create Form */}
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <div className="fixed inset-0 z-10" onClick={() => {
+              setIsOpen(false)
+              setIsCreating(false)
+              setNewWorkspaceName('')
+            }} />
+
+            {/* Menu */}
+            <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+              <div className="p-2">
+                {/* Create New Workspace Form */}
+                {isCreating && (
+                  <form onSubmit={handleCreateWorkspace} className="px-3 py-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Create Your First Workspace
+                    </label>
+                    <input
+                      type="text"
+                      value={newWorkspaceName}
+                      onChange={e => setNewWorkspaceName(e.target.value)}
+                      placeholder="Workspace name..."
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoFocus
+                      disabled={isSwitching}
+                    />
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        type="submit"
+                        className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        disabled={isSwitching}
+                      >
+                        {isSwitching ? 'Creating...' : 'Create'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCreating(false)
+                          setIsOpen(false)
+                          setNewWorkspaceName('')
+                        }}
+                        className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                        disabled={isSwitching}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     )
   }

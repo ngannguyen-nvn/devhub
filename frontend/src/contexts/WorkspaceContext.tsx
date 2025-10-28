@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import axios from 'axios'
 import { Workspace } from '@devhub/shared'
 
@@ -83,10 +83,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     try {
       setError(null)
 
+      // If no workspaces exist, automatically set the new one as active
+      const setAsActive = allWorkspaces.length === 0
+
       const response = await axios.post('/api/workspaces', {
         name,
         description,
         folderPath,
+        setAsActive,
       })
 
       if (response.data.success) {

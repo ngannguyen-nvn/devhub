@@ -37,6 +37,7 @@ export interface Workspace {
   description?: string
   folderPath?: string // Base folder path (can be null for manual workspaces)
   active: boolean // Is this the currently active workspace
+  activeSnapshotId?: string // Currently applied snapshot (if any)
   tags?: string[]
   createdAt: string
   updatedAt: string

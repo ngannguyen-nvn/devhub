@@ -15,16 +15,35 @@ import {
   ChevronRight,
   Home,
   Layers,
+  CheckSquare,
+  Square,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
+import UncommittedChangesDialog from './UncommittedChangesDialog'
+import StashManager from './StashManager'
 import { SkeletonLoader } from './Loading'
+import { useWorkspace } from '../contexts/WorkspaceContext'
 import type { Workspace, WorkspaceSnapshot } from '@devhub/shared'
+
+interface UncommittedChange {
+  path: string
+  hasChanges: boolean
+  files: {
+    modified: string[]
+    added: string[]
+    deleted: string[]
+    renamed: string[]
+  }
+}
 
 type ViewLevel = 'workspace-list' | 'workspace-detail' | 'snapshot-detail'
 
 export default function Workspaces() {
+  // Workspace context
+  const { refreshWorkspaces: refreshGlobalWorkspaces } = useWorkspace()
+
   // Navigation state
   const [viewLevel, setViewLevel] = useState<ViewLevel>('workspace-list')
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null)
@@ -41,6 +60,7 @@ export default function Workspaces() {
   const [showCreateWorkspaceForm, setShowCreateWorkspaceForm] = useState(false)
   const [showCreateSnapshotForm, setShowCreateSnapshotForm] = useState(false)
   const [showScanForm, setShowScanForm] = useState(false)
+  const [selectedSnapshots, setSelectedSnapshots] = useState<Set<string>>(new Set())
 
   // Forms
   const [createWorkspaceForm, setCreateWorkspaceForm] = useState({
@@ -61,12 +81,14 @@ export default function Workspaces() {
     description: '',
     depth: '3',
     tags: '',
+    importEnvFiles: false,
   })
+  const [scannedRepositories, setScannedRepositories] = useState<any[]>([])
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
-    type: 'restore' | 'delete-workspace' | 'delete-snapshot'
+    type: 'restore' | 'delete-workspace' | 'delete-snapshot' | 'delete-multiple-snapshots'
     id: string | null
     name: string
   }>({
@@ -74,6 +96,19 @@ export default function Workspaces() {
     type: 'restore',
     id: null,
     name: '',
+  })
+
+  // Uncommitted changes dialog state
+  const [uncommittedChangesDialog, setUncommittedChangesDialog] = useState<{
+    isOpen: boolean
+    snapshotId: string | null
+    changes: UncommittedChange[]
+    loading: boolean
+  }>({
+    isOpen: false,
+    snapshotId: null,
+    changes: [],
+    loading: false,
   })
 
   // Fetch workspaces
@@ -128,6 +163,13 @@ export default function Workspaces() {
       fetchSnapshotDetails(selectedSnapshotId)
     }
   }, [viewLevel, selectedWorkspaceId, selectedSnapshotId])
+
+  // Clear selection when navigating away from workspace-detail
+  useEffect(() => {
+    if (viewLevel !== 'workspace-detail') {
+      setSelectedSnapshots(new Set())
+    }
+  }, [viewLevel])
 
   // Navigation handlers
   const handleWorkspaceClick = (workspaceId: string) => {
@@ -186,6 +228,8 @@ export default function Workspaces() {
     try {
       await axios.post(`/api/workspaces/${workspaceId}/activate`)
       fetchWorkspaces()
+      // Also refresh global context so header updates
+      await refreshGlobalWorkspaces()
       toast.success('Workspace activated!')
     } catch (error: any) {
       toast.error(`Failed to activate workspace: ${error.response?.data?.error || error.message}`)
@@ -274,33 +318,171 @@ export default function Workspaces() {
     }
   }
 
-  // Restore snapshot
-  const handleRestore = (snapshotId: string, snapshotName: string) => {
-    setConfirmDialog({
-      isOpen: true,
-      type: 'restore',
-      id: snapshotId,
-      name: snapshotName,
-    })
+  // Check for uncommitted changes before restore
+  const checkUncommittedChanges = async (snapshotId: string) => {
+    try {
+      const response = await axios.get(`/api/workspaces/snapshots/${snapshotId}/check-changes`)
+      return response.data.changes || []
+    } catch (error: any) {
+      console.error('Error checking uncommitted changes:', error)
+      toast.error('Failed to check for uncommitted changes')
+      return []
+    }
   }
 
-  const confirmRestore = async () => {
-    if (!confirmDialog.id) return
+  // Restore snapshot - first check for uncommitted changes
+  const handleRestore = async (snapshotId: string, snapshotName: string) => {
+    // Check for uncommitted changes first
+    const changes = await checkUncommittedChanges(snapshotId)
+    const hasUncommittedChanges = changes.some((c: UncommittedChange) => c.hasChanges)
 
+    if (hasUncommittedChanges) {
+      // Show uncommitted changes dialog
+      setUncommittedChangesDialog({
+        isOpen: true,
+        snapshotId,
+        changes,
+        loading: false,
+      })
+    } else {
+      // No uncommitted changes, show regular confirm dialog
+      setConfirmDialog({
+        isOpen: true,
+        type: 'restore',
+        id: snapshotId,
+        name: snapshotName,
+      })
+    }
+  }
+
+  // Handle stash and restore
+  const handleStashAndRestore = async () => {
+    if (!uncommittedChangesDialog.snapshotId) return
+
+    setUncommittedChangesDialog(prev => ({ ...prev, loading: true }))
+
+    try {
+      // Get repos with changes
+      const reposWithChanges = uncommittedChangesDialog.changes
+        .filter(c => c.hasChanges)
+        .map(c => c.path)
+
+      // Stash changes
+      const stashResponse = await axios.post(
+        `/api/workspaces/snapshots/${uncommittedChangesDialog.snapshotId}/stash-changes`,
+        { repoPaths: reposWithChanges }
+      )
+
+      if (!stashResponse.data.success) {
+        throw new Error('Failed to stash changes')
+      }
+
+      // Close dialog
+      setUncommittedChangesDialog({
+        isOpen: false,
+        snapshotId: null,
+        changes: [],
+        loading: false,
+      })
+
+      // Proceed with restore
+      await performRestore(uncommittedChangesDialog.snapshotId)
+
+      toast.success(
+        `Stashed changes in ${stashResponse.data.stashed.length} ${
+          stashResponse.data.stashed.length === 1 ? 'repository' : 'repositories'
+        }`,
+        { duration: 5000 }
+      )
+    } catch (error: any) {
+      toast.error(`Failed to stash changes: ${error.response?.data?.error || error.message}`)
+      setUncommittedChangesDialog(prev => ({ ...prev, loading: false }))
+    }
+  }
+
+  // Handle commit and restore
+  const handleCommitAndRestore = async (commitMessage: string) => {
+    if (!uncommittedChangesDialog.snapshotId) return
+
+    setUncommittedChangesDialog(prev => ({ ...prev, loading: true }))
+
+    try {
+      // Get repos with changes
+      const reposWithChanges = uncommittedChangesDialog.changes
+        .filter(c => c.hasChanges)
+        .map(c => c.path)
+
+      // Commit changes
+      const commitResponse = await axios.post(
+        `/api/workspaces/snapshots/${uncommittedChangesDialog.snapshotId}/commit-changes`,
+        { repoPaths: reposWithChanges, commitMessage }
+      )
+
+      if (!commitResponse.data.success) {
+        throw new Error('Failed to commit changes')
+      }
+
+      // Close dialog
+      setUncommittedChangesDialog({
+        isOpen: false,
+        snapshotId: null,
+        changes: [],
+        loading: false,
+      })
+
+      // Proceed with restore
+      await performRestore(uncommittedChangesDialog.snapshotId)
+
+      toast.success(
+        `Committed changes in ${commitResponse.data.committed.length} ${
+          commitResponse.data.committed.length === 1 ? 'repository' : 'repositories'
+        }`,
+        { duration: 5000 }
+      )
+    } catch (error: any) {
+      toast.error(`Failed to commit changes: ${error.response?.data?.error || error.message}`)
+      setUncommittedChangesDialog(prev => ({ ...prev, loading: false }))
+    }
+  }
+
+  // Perform the actual restore
+  const performRestore = async (snapshotId: string) => {
     setRestoring(true)
     try {
-      const response = await axios.post(`/api/workspaces/snapshots/${confirmDialog.id}/restore`)
+      const response = await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
 
       if (response.data.success) {
         toast.success(
           `Workspace restored! Started ${response.data.servicesStarted} service(s), switched ${response.data.branchesSwitched} branch(es)`,
           { duration: 5000 }
         )
+
+        // Refresh workspace data to show active snapshot indicator
+        if (selectedWorkspaceId) {
+          const workspaceResponse = await axios.get(`/api/workspaces/${selectedWorkspaceId}`)
+          const updatedWorkspace = workspaceResponse.data.workspace
+
+          // Update the workspace in the workspaces array
+          setWorkspaces(prev =>
+            prev.map(w => w.id === selectedWorkspaceId ? updatedWorkspace : w)
+          )
+        }
       } else if (response.data.errors && response.data.errors.length > 0) {
         toast.error(
           `Workspace partially restored. Started ${response.data.servicesStarted} service(s), but ${response.data.errors.length} error(s) occurred`,
           { duration: 5000 }
         )
+
+        // Still refresh workspace to update active snapshot even if partial restore
+        if (selectedWorkspaceId) {
+          const workspaceResponse = await axios.get(`/api/workspaces/${selectedWorkspaceId}`)
+          const updatedWorkspace = workspaceResponse.data.workspace
+
+          // Update the workspace in the workspaces array
+          setWorkspaces(prev =>
+            prev.map(w => w.id === selectedWorkspaceId ? updatedWorkspace : w)
+          )
+        }
       }
     } catch (error: any) {
       toast.error(`Failed to restore workspace: ${error.response?.data?.error || error.message}`)
@@ -309,8 +491,20 @@ export default function Workspaces() {
     }
   }
 
+  // Confirm restore (when no uncommitted changes)
+  const confirmRestore = async () => {
+    if (!confirmDialog.id) return
+    await performRestore(confirmDialog.id)
+  }
+
   // Delete snapshot
   const handleDeleteSnapshot = (snapshotId: string, snapshotName: string) => {
+    // Check if this is the active snapshot
+    if (selectedWorkspace?.activeSnapshotId === snapshotId) {
+      toast.error('Cannot delete the active snapshot. Please clear or restore a different snapshot first.')
+      return
+    }
+
     setConfirmDialog({
       isOpen: true,
       type: 'delete-snapshot',
@@ -334,6 +528,79 @@ export default function Workspaces() {
     }
   }
 
+  // Multi-select handlers
+  const toggleSnapshotSelection = (snapshotId: string, event: React.MouseEvent) => {
+    event.stopPropagation()
+    const newSelected = new Set(selectedSnapshots)
+    if (newSelected.has(snapshotId)) {
+      newSelected.delete(snapshotId)
+    } else {
+      newSelected.add(snapshotId)
+    }
+    setSelectedSnapshots(newSelected)
+  }
+
+  const toggleAllSnapshots = () => {
+    if (selectedSnapshots.size === snapshots.length) {
+      setSelectedSnapshots(new Set())
+    } else {
+      setSelectedSnapshots(new Set(snapshots.map(s => s.id)))
+    }
+  }
+
+  const handleDeleteSelectedSnapshots = () => {
+    // Check if active snapshot is in selection
+    if (selectedWorkspace?.activeSnapshotId && selectedSnapshots.has(selectedWorkspace.activeSnapshotId)) {
+      toast.error('Cannot delete the active snapshot. Please deselect it or clear the active snapshot first.')
+      return
+    }
+
+    setConfirmDialog({
+      isOpen: true,
+      type: 'delete-multiple-snapshots',
+      id: null,
+      name: `${selectedSnapshots.size} snapshots`,
+    })
+  }
+
+  const confirmDeleteMultipleSnapshots = async () => {
+    if (!selectedWorkspaceId || selectedSnapshots.size === 0) return
+    try {
+      const deletePromises = Array.from(selectedSnapshots).map(snapshotId =>
+        axios.delete(`/api/workspaces/snapshots/${snapshotId}`)
+      )
+      await Promise.all(deletePromises)
+
+      // Clear selection and fetch updated list
+      setSelectedSnapshots(new Set())
+      fetchSnapshots(selectedWorkspaceId)
+      toast.success(`${selectedSnapshots.size} snapshots deleted successfully`)
+    } catch (error: any) {
+      toast.error(`Failed to delete snapshots: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
+  // Clear active snapshot
+  const handleClearActiveSnapshot = async () => {
+    if (!selectedWorkspaceId) return
+
+    try {
+      await axios.post(`/api/workspaces/${selectedWorkspaceId}/clear-snapshot`)
+      toast.success('Active snapshot cleared')
+
+      // Refresh workspace to update activeSnapshotId
+      const workspaceResponse = await axios.get(`/api/workspaces/${selectedWorkspaceId}`)
+      const updatedWorkspace = workspaceResponse.data.workspace
+
+      // Update the workspace in the workspaces array
+      setWorkspaces(prev =>
+        prev.map(w => w.id === selectedWorkspaceId ? updatedWorkspace : w)
+      )
+    } catch (error: any) {
+      toast.error(`Failed to clear active snapshot: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
   // Export snapshot
   const handleExport = async (snapshotId: string, snapshotName: string) => {
     try {
@@ -351,6 +618,63 @@ export default function Workspaces() {
       toast.success(`Snapshot "${snapshotName}" exported`)
     } catch (error: any) {
       toast.error(`Failed to export snapshot: ${error.message}`)
+    }
+  }
+
+  // Import .env files to workspace
+  const importEnvFilesToWorkspace = async (
+    workspaceId: string,
+    repositories: any[],
+    snapshotName: string
+  ) => {
+    try {
+      // Filter repos that have .env files
+      const reposWithEnv = repositories.filter(r => r.hasEnvFile)
+
+      if (reposWithEnv.length === 0) {
+        return
+      }
+
+      // Create one profile per repository
+      let successCount = 0
+      let failCount = 0
+
+      for (const repo of reposWithEnv) {
+        try {
+          // Create profile with format: "{SnapshotName} - {RepoName}"
+          const profileName = `${snapshotName} - ${repo.name}`
+
+          const createProfileResponse = await axios.post('/api/env/profiles', {
+            name: profileName,
+            description: `Auto-imported from ${repo.path}`,
+            workspace_id: workspaceId,
+          })
+
+          const profileId = createProfileResponse.data.profile.id
+
+          // Import .env file to this profile
+          const envFilePath = `${repo.path}/.env`
+          await axios.post(`/api/env/profiles/${profileId}/import`, {
+            filePath: envFilePath,
+            serviceId: null, // Not tied to a specific service
+          })
+
+          successCount++
+        } catch (error) {
+          console.error(`Failed to import .env from ${repo.path}:`, error)
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Created ${successCount} environment profile${successCount > 1 ? 's' : ''} from .env files`)
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to import ${failCount} .env file${failCount > 1 ? 's' : ''}`)
+      }
+    } catch (error) {
+      console.error('Error importing env files:', error)
+      toast.error('Failed to import environment files')
     }
   }
 
@@ -380,8 +704,17 @@ export default function Workspaces() {
         tags: tags.length > 0 ? tags : undefined,
       })
 
+      const snapshot = response.data.snapshot
+      const repositories = response.data.scanResult?.repositories || []
+
+      // Import .env files if checkbox is enabled
+      if (scanForm.importEnvFiles && repositories.length > 0) {
+        await importEnvFilesToWorkspace(snapshot.workspaceId, repositories, scanForm.name)
+      }
+
       setShowScanForm(false)
-      setScanForm({ path: '', name: '', description: '', depth: '3', tags: '' })
+      setScanForm({ path: '', name: '', description: '', depth: '3', tags: '', importEnvFiles: false })
+      setScannedRepositories([])
 
       // Refresh workspaces to show the new/updated workspace
       fetchWorkspaces()
@@ -631,6 +964,27 @@ export default function Workspaces() {
             </div>
           </div>
 
+          {/* Current Active Snapshot Info */}
+          {selectedWorkspace.activeSnapshotId && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <div>
+                  <p className="font-semibold text-green-900">Active Snapshot</p>
+                  <p className="text-sm text-green-700">
+                    {snapshots.find(s => s.id === selectedWorkspace.activeSnapshotId)?.name || 'Unknown'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleClearActiveSnapshot}
+                className="px-3 py-1.5 text-sm bg-white border border-green-300 text-green-700 rounded hover:bg-green-100"
+              >
+                Clear Active Snapshot
+              </button>
+            </div>
+          )}
+
           {/* Create Snapshot Form */}
           {showCreateSnapshotForm && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
@@ -682,8 +1036,41 @@ export default function Workspaces() {
             </div>
           )}
 
+          {/* Bulk Action Bar */}
+          {snapshots.length > 0 && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={toggleAllSnapshots}
+                    className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium"
+                  >
+                    {selectedSnapshots.size === snapshots.length ? (
+                      <CheckSquare size={20} />
+                    ) : (
+                      <Square size={20} />
+                    )}
+                    {selectedSnapshots.size === snapshots.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <span className="text-blue-700">
+                    {selectedSnapshots.size} of {snapshots.length} selected
+                  </span>
+                </div>
+                {selectedSnapshots.size > 0 && (
+                  <button
+                    onClick={handleDeleteSelectedSnapshots}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                  >
+                    <Trash2 size={18} />
+                    Delete Selected ({selectedSnapshots.size})
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Snapshots List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {loading && snapshots.length === 0 ? (
               <SkeletonLoader count={3} />
             ) : snapshots.length === 0 ? (
@@ -693,16 +1080,50 @@ export default function Workspaces() {
                 <p className="text-sm mt-2">Create your first snapshot to save your workspace state</p>
               </div>
             ) : (
-              snapshots.map((snapshot) => (
-                <div
-                  key={snapshot.id}
-                  className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 p-4 cursor-pointer transition-colors"
-                  onClick={() => handleSnapshotClick(snapshot.id)}
-                >
-                  <h3 className="font-bold text-lg mb-2">{snapshot.name}</h3>
-                  {snapshot.description && (
-                    <p className="text-sm text-gray-600 mb-3">{snapshot.description}</p>
-                  )}
+              snapshots.map((snapshot) => {
+                const isActive = selectedWorkspace?.activeSnapshotId === snapshot.id
+                const isSelected = selectedSnapshots.has(snapshot.id)
+
+                return (
+                  <div
+                    key={snapshot.id}
+                    className={`bg-white rounded-lg border-2 ${
+                      isSelected
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : isActive
+                        ? 'border-green-500'
+                        : 'border-gray-200 hover:border-blue-400'
+                    } p-4 cursor-pointer transition-colors relative`}
+                    onClick={() => handleSnapshotClick(snapshot.id)}
+                  >
+                    {/* Checkbox for multi-select */}
+                    <div className="absolute top-4 left-4">
+                      <button
+                        onClick={(e) => !isActive && toggleSnapshotSelection(snapshot.id, e)}
+                        disabled={isActive}
+                        className={`p-1 rounded ${isActive ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'}`}
+                        title={isActive ? 'Cannot select active snapshot for deletion' : ''}
+                      >
+                        {isSelected ? (
+                          <CheckSquare size={20} className="text-blue-600" />
+                        ) : (
+                          <Square size={20} className={isActive ? "text-gray-300" : "text-gray-400"} />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex items-start justify-between mb-2 ml-8">
+                      <h3 className="font-bold text-lg">{snapshot.name}</h3>
+                      {isActive && (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    {snapshot.description && (
+                      <p className="text-sm text-gray-600 mb-3">{snapshot.description}</p>
+                    )}
                   <div className="flex gap-3 text-xs text-gray-500 mb-2">
                     <span className="flex items-center gap-1">
                       <Server className="w-3 h-3" />
@@ -726,9 +1147,21 @@ export default function Workspaces() {
                     {formatDate(snapshot.createdAt)}
                   </div>
                 </div>
-              ))
+                )
+              })
             )}
           </div>
+
+          {/* Stash Manager */}
+          {snapshots.length > 0 && (
+            <StashManager
+              repoPaths={[...new Set(snapshots.flatMap(s => s.repositories.map(r => r.path)))]}
+              onStashApplied={() => {
+                // Optionally refresh snapshots or show a notification
+                toast.success('Stash applied successfully!')
+              }}
+            />
+          )}
         </>
       )}
 
@@ -867,6 +1300,34 @@ export default function Workspaces() {
                   className="flex-1 px-3 py-2 border rounded"
                 />
               </div>
+
+              {/* Environment Variables Import Checkbox */}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scanForm.importEnvFiles}
+                    onChange={(e) => setScanForm({ ...scanForm, importEnvFiles: e.target.checked })}
+                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      Import .env files to environment profiles
+                    </span>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Will automatically import .env files from scanned repositories
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Profile format: "{scanForm.name || 'Snapshot'} - {'{RepoName}'}"
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                      <AlertCircle size={12} />
+                      Env vars will be encrypted and stored securely
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               <p className="text-xs text-gray-600">
                 This will scan the folder for git repositories and create a workspace + snapshot.
               </p>
@@ -889,22 +1350,43 @@ export default function Workspaces() {
         </div>
       )}
 
+      {/* Uncommitted Changes Dialog */}
+      <UncommittedChangesDialog
+        isOpen={uncommittedChangesDialog.isOpen}
+        changes={uncommittedChangesDialog.changes}
+        onStash={handleStashAndRestore}
+        onCommit={handleCommitAndRestore}
+        onCancel={() =>
+          setUncommittedChangesDialog({
+            isOpen: false,
+            snapshotId: null,
+            changes: [],
+            loading: false,
+          })
+        }
+        loading={uncommittedChangesDialog.loading}
+      />
+
       {/* Confirm Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={() => setConfirmDialog({ isOpen: false, type: 'restore', id: null, name: '' })}
         onConfirm={
-          confirmDialog.type === 'restore' 
-            ? confirmRestore 
+          confirmDialog.type === 'restore'
+            ? confirmRestore
             : confirmDialog.type === 'delete-workspace'
             ? confirmDeleteWorkspace
+            : confirmDialog.type === 'delete-multiple-snapshots'
+            ? confirmDeleteMultipleSnapshots
             : confirmDeleteSnapshot
         }
         title={
-          confirmDialog.type === 'restore' 
-            ? 'Restore Snapshot' 
+          confirmDialog.type === 'restore'
+            ? 'Restore Snapshot'
             : confirmDialog.type === 'delete-workspace'
             ? 'Delete Workspace'
+            : confirmDialog.type === 'delete-multiple-snapshots'
+            ? 'Delete Multiple Snapshots'
             : 'Delete Snapshot'
         }
         message={
@@ -912,6 +1394,8 @@ export default function Workspaces() {
             ? `Are you sure you want to restore snapshot "${confirmDialog.name}"? This will stop all running services and switch git branches.`
             : confirmDialog.type === 'delete-workspace'
             ? `Are you sure you want to delete workspace "${confirmDialog.name}"? This will also delete all its snapshots. This action cannot be undone.`
+            : confirmDialog.type === 'delete-multiple-snapshots'
+            ? `Are you sure you want to delete ${confirmDialog.name}? This action cannot be undone.`
             : `Are you sure you want to delete snapshot "${confirmDialog.name}"? This action cannot be undone.`
         }
         confirmText={

@@ -25,6 +25,30 @@ export class WorkspaceManager {
     this.notesManager = notesManager
   }
 
+  // ==================== HELPER METHODS ====================
+
+  /**
+   * Generate standardized timestamp for snapshot names
+   * Format: YYYY-MM-DD HH:MM:SS
+   */
+  private generateTimestamp(): string {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  }
+
+  /**
+   * Public method to generate snapshot name with standard timestamp
+   */
+  generateSnapshotName(prefix: string = 'Snapshot'): string {
+    return `${prefix} ${this.generateTimestamp()}`
+  }
+
   // ==================== WORKSPACE CRUD METHODS ====================
 
   /**
@@ -60,6 +84,7 @@ export class WorkspaceManager {
         description: row.description || undefined,
         folderPath: row.folder_path || undefined,
         active: Boolean(row.active),
+        activeSnapshotId: row.active_snapshot_id || undefined,
         tags: row.tags ? JSON.parse(row.tags) : undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -102,6 +127,7 @@ export class WorkspaceManager {
       description: row.description || undefined,
       folderPath: row.folder_path || undefined,
       active: Boolean(row.active),
+      activeSnapshotId: row.active_snapshot_id || undefined,
       tags: row.tags ? JSON.parse(row.tags) : undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -265,12 +291,17 @@ export class WorkspaceManager {
   /**
    * Get all snapshots for a specific workspace
    */
-  getWorkspaceSnapshots(workspaceId: string): WorkspaceSnapshot[] {
-    const stmt = db.prepare(`
+  getWorkspaceSnapshots(workspaceId: string, limit?: number): WorkspaceSnapshot[] {
+    let query = `
       SELECT * FROM workspace_snapshots
       WHERE workspace_id = ?
       ORDER BY updated_at DESC
-    `)
+    `
+    if (limit !== undefined && limit > 0) {
+      query += ` LIMIT ${limit}`
+    }
+
+    const stmt = db.prepare(query)
     const rows = stmt.all(workspaceId) as any[]
 
     return rows.map(row => ({
@@ -344,8 +375,8 @@ export class WorkspaceManager {
     }>
     scannedPath?: string
   }> {
-    // Get running services
-    const runningServices = this.serviceManager.getRunningServices().map(service => ({
+    // Get running services for this workspace only
+    const runningServices = this.serviceManager.getRunningServicesForWorkspace(workspaceId).map(service => ({
       serviceId: service.id,
       serviceName: service.name,
     }))
@@ -626,6 +657,391 @@ export class WorkspaceManager {
   }
 
   /**
+   * Clear the active snapshot from a workspace
+   * This is useful when the user has made changes that diverge from the snapshot
+   */
+  clearActiveSnapshot(workspaceId: string): boolean {
+    const workspace = this.getWorkspace(workspaceId)
+    if (!workspace) return false
+
+    const now = new Date().toISOString()
+    const stmt = db.prepare('UPDATE workspaces SET active_snapshot_id = NULL, updated_at = ? WHERE id = ?')
+    const result = stmt.run(now, workspaceId)
+
+    return result.changes > 0
+  }
+
+  /**
+   * Check for uncommitted changes across all repositories in a snapshot
+   */
+  async checkUncommittedChanges(snapshotId: string): Promise<Array<{
+    path: string
+    hasChanges: boolean
+    files: {
+      modified: string[]
+      added: string[]
+      deleted: string[]
+      renamed: string[]
+    }
+  }>> {
+    const snapshot = this.getSnapshot(snapshotId)
+    if (!snapshot) {
+      throw new Error('Snapshot not found')
+    }
+
+    const results: Array<{
+      path: string
+      hasChanges: boolean
+      files: {
+        modified: string[]
+        added: string[]
+        deleted: string[]
+        renamed: string[]
+      }
+    }> = []
+
+    for (const repo of snapshot.repositories) {
+      try {
+        if (!fs.existsSync(repo.path)) {
+          continue
+        }
+
+        const git = simpleGit(repo.path)
+        const status = await git.status()
+
+        results.push({
+          path: repo.path,
+          hasChanges: !status.isClean(),
+          files: {
+            modified: status.modified,
+            added: status.created,
+            deleted: status.deleted,
+            renamed: status.renamed.map(r => `${r.from} -> ${r.to}`),
+          },
+        })
+      } catch (error: any) {
+        console.error(`Error checking changes in ${repo.path}:`, error)
+      }
+    }
+
+    return results
+  }
+
+  /**
+   * Stash uncommitted changes in specified repositories
+   */
+  async stashChanges(repoPaths: string[]): Promise<{
+    success: boolean
+    stashed: string[]
+    errors: Array<{ path: string; message: string }>
+  }> {
+    const stashed: string[] = []
+    const errors: Array<{ path: string; message: string }> = []
+
+    for (const repoPath of repoPaths) {
+      try {
+        if (!fs.existsSync(repoPath)) {
+          errors.push({ path: repoPath, message: 'Repository not found' })
+          continue
+        }
+
+        const git = simpleGit(repoPath)
+        const status = await git.status()
+
+        // Only stash if there are changes
+        if (!status.isClean()) {
+          await git.stash(['save', '--include-untracked', `Auto-stash before snapshot restore - ${new Date().toISOString()}`])
+          stashed.push(repoPath)
+        }
+      } catch (error: any) {
+        errors.push({ path: repoPath, message: error.message })
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      stashed,
+      errors,
+    }
+  }
+
+  /**
+   * List stashes for repositories
+   */
+  async listStashes(repoPaths: string[]): Promise<{
+    success: boolean
+    stashes: Record<string, Array<{
+      index: number
+      hash: string
+      message: string
+      date: string
+    }>>
+    errors: Array<{ path: string; message: string }>
+  }> {
+    const stashes: Record<string, Array<{
+      index: number
+      hash: string
+      message: string
+      date: string
+    }>> = {}
+    const errors: Array<{ path: string; message: string }> = []
+
+    for (const repoPath of repoPaths) {
+      try {
+        if (!fs.existsSync(repoPath)) {
+          errors.push({ path: repoPath, message: 'Repository not found' })
+          continue
+        }
+
+        const git = simpleGit(repoPath)
+        const stashList = await git.stashList()
+
+        if (stashList.total > 0) {
+          stashes[repoPath] = stashList.all.map((stash, index) => ({
+            index,
+            hash: stash.hash,
+            message: stash.message,
+            date: stash.date,
+          }))
+        }
+      } catch (error: any) {
+        errors.push({ path: repoPath, message: error.message })
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      stashes,
+      errors,
+    }
+  }
+
+  /**
+   * Apply a stash in a repository
+   */
+  async applyStash(repoPath: string, stashIndex: number = 0, pop: boolean = false): Promise<{
+    success: boolean
+    message: string
+  }> {
+    try {
+      if (!fs.existsSync(repoPath)) {
+        throw new Error('Repository not found')
+      }
+
+      const git = simpleGit(repoPath)
+
+      if (pop) {
+        await git.stash(['pop', `stash@{${stashIndex}}`])
+        return {
+          success: true,
+          message: `Stash ${stashIndex} popped successfully`,
+        }
+      } else {
+        await git.stash(['apply', `stash@{${stashIndex}}`])
+        return {
+          success: true,
+          message: `Stash ${stashIndex} applied successfully`,
+        }
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      }
+    }
+  }
+
+  /**
+   * Drop (delete) a stash in a repository
+   */
+  async dropStash(repoPath: string, stashIndex: number = 0): Promise<{
+    success: boolean
+    message: string
+  }> {
+    try {
+      if (!fs.existsSync(repoPath)) {
+        throw new Error('Repository not found')
+      }
+
+      const git = simpleGit(repoPath)
+      await git.stash(['drop', `stash@{${stashIndex}}`])
+
+      return {
+        success: true,
+        message: `Stash ${stashIndex} dropped successfully`,
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      }
+    }
+  }
+
+  /**
+   * Get details of a specific stash (files changed)
+   */
+  async getStashDetails(repoPath: string, stashIndex: number = 0): Promise<{
+    success: boolean
+    files: Array<{
+      file: string
+      insertions: number
+      deletions: number
+      changes: number
+      isUntracked?: boolean
+    }>
+    summary: {
+      totalFiles: number
+      totalInsertions: number
+      totalDeletions: number
+      untrackedFiles: number
+    }
+    diff?: string
+  }> {
+    try {
+      if (!fs.existsSync(repoPath)) {
+        throw new Error('Repository not found')
+      }
+
+      const git = simpleGit(repoPath)
+
+      // Get stash stats
+      const statsOutput = await git.raw(['stash', 'show', '--stat', `stash@{${stashIndex}}`])
+
+      // Parse the stats output
+      const lines = statsOutput.trim().split('\n')
+      const files: Array<{
+        file: string
+        insertions: number
+        deletions: number
+        changes: number
+        isUntracked?: boolean
+      }> = []
+
+      let totalInsertions = 0
+      let totalDeletions = 0
+
+      // Parse each line (except the summary line)
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trim()
+        if (!line) continue
+
+        // Format: " filename | 10 +++++-----"
+        const match = line.match(/(.+?)\s+\|\s+(\d+)\s+([+-]+)/)
+        if (match) {
+          const filename = match[1].trim()
+          const changes = parseInt(match[2], 10)
+          const symbols = match[3]
+          const insertions = (symbols.match(/\+/g) || []).length
+          const deletions = (symbols.match(/-/g) || []).length
+
+          files.push({
+            file: filename,
+            insertions,
+            deletions,
+            changes,
+            isUntracked: false,
+          })
+
+          totalInsertions += insertions
+          totalDeletions += deletions
+        }
+      }
+
+      // Check for untracked files in stash (stash^3 tree if it exists)
+      let untrackedCount = 0
+      try {
+        const untrackedOutput = await git.raw(['ls-tree', '-r', '--name-only', `stash@{${stashIndex}}^3`])
+        const untrackedFiles = untrackedOutput.trim().split('\n').filter(f => f)
+
+        for (const file of untrackedFiles) {
+          files.push({
+            file: `${file} (untracked)`,
+            insertions: 0,
+            deletions: 0,
+            changes: 0,
+            isUntracked: true,
+          })
+          untrackedCount++
+        }
+      } catch (error) {
+        // No untracked files in this stash (stash^3 doesn't exist)
+      }
+
+      // Get the diff (optional, can be large)
+      const diffOutput = await git.raw(['stash', 'show', '-p', `stash@{${stashIndex}}`])
+
+      return {
+        success: true,
+        files,
+        summary: {
+          totalFiles: files.length,
+          totalInsertions,
+          totalDeletions,
+          untrackedFiles: untrackedCount,
+        },
+        diff: diffOutput,
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        files: [],
+        summary: {
+          totalFiles: 0,
+          totalInsertions: 0,
+          totalDeletions: 0,
+          untrackedFiles: 0,
+        },
+      }
+    }
+  }
+
+  /**
+   * Commit uncommitted changes in specified repositories
+   */
+  async commitChanges(
+    repoPaths: string[],
+    commitMessage: string
+  ): Promise<{
+    success: boolean
+    committed: string[]
+    errors: Array<{ path: string; message: string }>
+  }> {
+    const committed: string[] = []
+    const errors: Array<{ path: string; message: string }> = []
+
+    for (const repoPath of repoPaths) {
+      try {
+        if (!fs.existsSync(repoPath)) {
+          errors.push({ path: repoPath, message: 'Repository not found' })
+          continue
+        }
+
+        const git = simpleGit(repoPath)
+        const status = await git.status()
+
+        // Only commit if there are changes
+        if (!status.isClean()) {
+          // Add all changes
+          await git.add('.')
+
+          // Commit with the provided message
+          await git.commit(commitMessage)
+          committed.push(repoPath)
+        }
+      } catch (error: any) {
+        errors.push({ path: repoPath, message: error.message })
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      committed,
+      errors,
+    }
+  }
+
+  /**
    * Restore a workspace snapshot
    */
   async restoreSnapshot(snapshotId: string): Promise<{
@@ -684,6 +1100,16 @@ export class WorkspaceManager {
       } catch (error: any) {
         errors.push(`Failed to start service ${service.serviceName}: ${error.message}`)
       }
+    }
+
+    // 4. Set this snapshot as active in the workspace (if restore was successful or partial)
+    try {
+      const now = new Date().toISOString()
+      db.prepare('UPDATE workspaces SET active_snapshot_id = ?, updated_at = ? WHERE id = ?')
+        .run(snapshotId, now, snapshot.workspaceId)
+    } catch (error: any) {
+      console.error('Failed to set active snapshot:', error)
+      // Don't fail the restore if we can't set the active snapshot
     }
 
     return {
@@ -842,8 +1268,14 @@ export class WorkspaceManager {
   importSnapshot(jsonData: string, newName?: string): WorkspaceSnapshot {
     const data = JSON.parse(jsonData)
 
-    const id = `workspace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const name = newName || data.name || 'Imported Workspace'
+    const id = `snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const name = newName || data.name || 'Imported Snapshot'
+
+    // Get active workspace or use workspaceId from data
+    const workspaceId = data.workspaceId || this.getActiveWorkspace()?.id
+    if (!workspaceId) {
+      throw new Error('No active workspace found. Please activate a workspace first.')
+    }
 
     const config = {
       description: data.description,
@@ -852,21 +1284,22 @@ export class WorkspaceManager {
       activeEnvProfile: data.activeEnvProfile,
       tags: data.tags || [],
       autoRestore: false,
-      updatedAt: new Date().toISOString(),
     }
 
     const stmt = db.prepare(`
-      INSERT INTO workspaces (id, name, config)
-      VALUES (?, ?, ?)
+      INSERT INTO workspace_snapshots (id, name, workspace_id, config, created_at, updated_at)
+      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
     `)
 
-    stmt.run(id, name, JSON.stringify(config))
+    stmt.run(id, name, workspaceId, JSON.stringify(config))
 
     return {
       id,
       name,
+      workspaceId,
       ...config,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
   }
 
@@ -874,7 +1307,7 @@ export class WorkspaceManager {
    * Quick snapshot (capture current state with auto-generated name for active workspace)
    */
   async quickSnapshot(): Promise<WorkspaceSnapshot> {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const timestamp = this.generateTimestamp()
     const name = `Quick Snapshot ${timestamp}`
 
     // Get active workspace

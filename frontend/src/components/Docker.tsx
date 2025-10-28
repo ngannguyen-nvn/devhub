@@ -6,8 +6,6 @@ import {
   Trash2,
   RefreshCw,
   Container,
-  FileCode,
-  Download,
   Plus
 } from 'lucide-react'
 import axios from 'axios'
