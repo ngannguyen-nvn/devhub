@@ -689,6 +689,7 @@ export default function Workspaces() {
       return
     }
 
+    setLoading(true)
     try {
       const tags = scanForm.tags
         .split(',')
@@ -723,6 +724,8 @@ export default function Workspaces() {
       )
     } catch (error: any) {
       toast.error(`Failed to scan folder: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -1370,17 +1373,26 @@ export default function Workspaces() {
             <div className="flex gap-2 mt-4 justify-end">
               <button
                 onClick={() => setShowScanForm(false)}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                disabled={loading}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="workspace-scan-cancel-button"
               >
                 Cancel
               </button>
               <button
                 onClick={handleScanFolder}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                disabled={loading}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 data-testid="workspace-scan-submit-button"
               >
-                Scan & Create
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  'Scan & Create'
+                )}
               </button>
             </div>
           </div>
