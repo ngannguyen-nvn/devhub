@@ -291,12 +291,17 @@ export class WorkspaceManager {
   /**
    * Get all snapshots for a specific workspace
    */
-  getWorkspaceSnapshots(workspaceId: string): WorkspaceSnapshot[] {
-    const stmt = db.prepare(`
+  getWorkspaceSnapshots(workspaceId: string, limit?: number): WorkspaceSnapshot[] {
+    let query = `
       SELECT * FROM workspace_snapshots
       WHERE workspace_id = ?
       ORDER BY updated_at DESC
-    `)
+    `
+    if (limit !== undefined && limit > 0) {
+      query += ` LIMIT ${limit}`
+    }
+
+    const stmt = db.prepare(query)
     const rows = stmt.all(workspaceId) as any[]
 
     return rows.map(row => ({

@@ -569,11 +569,13 @@ router.post('/:workspaceId/activate', (req: Request, res: Response) => {
 /**
  * GET /api/workspaces/:workspaceId/snapshots
  * Get all snapshots for a workspace
+ * Query params: limit (optional) - number of most recent snapshots to return
  */
 router.get('/:workspaceId/snapshots', (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params
-    const snapshots = workspaceManager.getWorkspaceSnapshots(workspaceId)
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined
+    const snapshots = workspaceManager.getWorkspaceSnapshots(workspaceId, limit)
     res.json({ success: true, snapshots })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })

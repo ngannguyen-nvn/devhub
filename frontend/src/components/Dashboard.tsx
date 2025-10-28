@@ -127,7 +127,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
     try {
       const [servicesRes, snapshotsRes] = await Promise.all([
         axios.get('/api/services'),
-        axios.get(`/api/workspaces/${activeWorkspace.id}/snapshots`),
+        axios.get(`/api/workspaces/${activeWorkspace.id}/snapshots?limit=5`),
       ])
 
       const services = servicesRes.data.services || []
@@ -139,7 +139,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
       })
 
       const snapshots = snapshotsRes.data.snapshots || []
-      setRecentSnapshots(snapshots.slice(0, 5))
+      setRecentSnapshots(snapshots)
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err)
     } finally {
