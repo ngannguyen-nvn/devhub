@@ -752,6 +752,36 @@ export default function Workspaces() {
       const snapshot = response.data.snapshot
       const repositories = response.data.scanResult?.repositories || []
 
+      // Auto-create services for all scanned repositories
+      let servicesCreated = 0
+      if (repositories.length > 0) {
+        for (const repo of repositories) {
+          try {
+            // Check if service with this repo path already exists
+            const servicesResponse = await axios.get('/api/services')
+            const existingService = servicesResponse.data.services.find((s: any) => s.repoPath === repo.path)
+
+            if (!existingService) {
+              // Analyze the repository to get name, command, and port
+              const analysisResponse = await axios.post('/api/repos/analyze', { repoPath: repo.path })
+              const analysis = analysisResponse.data.analysis
+
+              // Create service with analyzed data
+              await axios.post('/api/services', {
+                name: analysis.name,
+                repoPath: repo.path,
+                command: analysis.command || 'npm start',
+                port: analysis.port || undefined,
+              })
+              servicesCreated++
+            }
+          } catch (serviceError) {
+            console.error(`Failed to auto-create service for ${repo.path}:`, serviceError)
+            // Don't fail the scan if service creation fails
+          }
+        }
+      }
+
       // Import .env files if checkbox is enabled
       if (scanForm.importEnvFiles && repositories.length > 0) {
         await importEnvFilesToWorkspace(snapshot.workspaceId, repositories, scanForm.name)
@@ -765,10 +795,11 @@ export default function Workspaces() {
       // Also refresh global workspace context to update header
       refreshGlobalWorkspaces()
 
-      toast.success(
-        `Snapshot "${scanForm.name}" created! Found ${response.data.scanResult?.count || 0} repositories.`,
-        { duration: 5000 }
-      )
+      const messages = [`Snapshot "${scanForm.name}" created! Found ${response.data.scanResult?.count || 0} repositories.`]
+      if (servicesCreated > 0) {
+        messages.push(`Auto-created ${servicesCreated} service${servicesCreated > 1 ? 's' : ''}.`)
+      }
+      toast.success(messages.join(' '), { duration: 5000 })
     } catch (error: any) {
       toast.error(`Failed to scan folder: ${error.response?.data?.error || error.message}`)
     } finally {
