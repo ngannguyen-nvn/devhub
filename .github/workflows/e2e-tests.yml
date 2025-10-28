@@ -1,7 +1,7 @@
 name: E2E Tests
 
 on:
-  # Manual trigger
+  # Manual trigger only
   workflow_dispatch:
     inputs:
       browser:
@@ -24,12 +24,6 @@ on:
         required: false
         default: false
         type: boolean
-
-  # Automatic triggers (comment out if you want manual-only)
-  push:
-    branches: [main, claude/**]
-  pull_request:
-    branches: [main]
 
 jobs:
   test:
