@@ -371,10 +371,16 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
         return
       }
 
-      // Create one profile per repository + auto-create services
+      // Create one profile per repository + auto-create services (optimized)
       let successCount = 0
       let failCount = 0
       let servicesCreated = 0
+
+      // Fetch existing services ONCE upfront
+      const servicesResponse = await axios.get('/api/services', {
+        params: { workspace_id: workspaceId }
+      })
+      const existingServices = servicesResponse.data.services || []
 
       for (const repo of reposWithEnv) {
         try {
@@ -400,11 +406,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
           // 3. Auto-create service if it doesn't exist
           try {
-            // Check if service with this repo path already exists IN THE TARGET WORKSPACE
-            const servicesResponse = await axios.get('/api/services', {
-              params: { workspace_id: workspaceId }
-            })
-            const existingService = servicesResponse.data.services.find((s: any) => s.repoPath === repo.path)
+            const existingService = existingServices.find((s: any) => s.repoPath === repo.path)
 
             if (!existingService) {
               // Analyze the repository to get name, command, and port
@@ -420,6 +422,8 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 workspace_id: workspaceId,
               })
               servicesCreated++
+              // Add to existing services to avoid duplicates in same batch
+              existingServices.push({ repoPath: repo.path })
             }
           } catch (serviceError) {
             console.error(`Failed to auto-create service for ${repo.path}:`, serviceError)

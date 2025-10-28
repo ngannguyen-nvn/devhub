@@ -649,10 +649,16 @@ export default function Workspaces() {
         return
       }
 
-      // Create one profile per repository + auto-create services
+      // Create one profile per repository + auto-create services (optimized)
       let successCount = 0
       let failCount = 0
       let servicesCreated = 0
+
+      // Fetch existing services ONCE upfront
+      const servicesResponse = await axios.get('/api/services', {
+        params: { workspace_id: workspaceId }
+      })
+      const existingServices = servicesResponse.data.services || []
 
       for (const repo of reposWithEnv) {
         try {
@@ -678,11 +684,7 @@ export default function Workspaces() {
 
           // 3. Auto-create service if it doesn't exist
           try {
-            // Check if service with this repo path already exists IN THE TARGET WORKSPACE
-            const servicesResponse = await axios.get('/api/services', {
-              params: { workspace_id: workspaceId }
-            })
-            const existingService = servicesResponse.data.services.find((s: any) => s.repoPath === repo.path)
+            const existingService = existingServices.find((s: any) => s.repoPath === repo.path)
 
             if (!existingService) {
               // Analyze the repository to get name, command, and port
@@ -698,6 +700,8 @@ export default function Workspaces() {
                 workspace_id: workspaceId,
               })
               servicesCreated++
+              // Add to existing services to avoid duplicates in same batch
+              existingServices.push({ repoPath: repo.path })
             }
           } catch (serviceError) {
             console.error(`Failed to auto-create service for ${repo.path}:`, serviceError)
@@ -756,36 +760,60 @@ export default function Workspaces() {
       const snapshot = response.data.snapshot
       const repositories = response.data.scanResult?.repositories || []
 
-      // Auto-create services for all scanned repositories
+      // Auto-create services for all scanned repositories (optimized batch processing)
       let servicesCreated = 0
       if (repositories.length > 0) {
-        for (const repo of repositories) {
-          try {
-            // Check if service with this repo path already exists IN THE TARGET WORKSPACE
-            const servicesResponse = await axios.get('/api/services', {
-              params: { workspace_id: snapshot.workspaceId }
-            })
-            const existingService = servicesResponse.data.services.find((s: any) => s.repoPath === repo.path)
+        try {
+          // 1. Fetch existing services ONCE (not per repo)
+          const servicesResponse = await axios.get('/api/services', {
+            params: { workspace_id: snapshot.workspaceId }
+          })
+          const existingServices = servicesResponse.data.services || []
 
-            if (!existingService) {
-              // Analyze the repository to get name, command, and port
-              const analysisResponse = await axios.post('/api/repos/analyze', { repoPath: repo.path })
-              const analysis = analysisResponse.data.analysis
+          // 2. Filter repos that don't have services yet
+          const reposToCreate = repositories.filter(repo =>
+            !existingServices.find((s: any) => s.repoPath === repo.path)
+          )
 
-              // Create service with analyzed data in the correct workspace
-              await axios.post('/api/services', {
-                name: analysis.name,
-                repoPath: repo.path,
-                command: analysis.command || 'npm start',
-                port: analysis.port || undefined,
-                workspace_id: snapshot.workspaceId,
-              })
-              servicesCreated++
-            }
-          } catch (serviceError) {
-            console.error(`Failed to auto-create service for ${repo.path}:`, serviceError)
-            // Don't fail the scan if service creation fails
+          if (reposToCreate.length > 0) {
+            // 3. Analyze all repos in parallel
+            const analysisPromises = reposToCreate.map(repo =>
+              axios.post('/api/repos/analyze', { repoPath: repo.path })
+                .then(res => ({ repo, analysis: res.data.analysis }))
+                .catch(err => {
+                  console.error(`Failed to analyze ${repo.path}:`, err)
+                  return null
+                })
+            )
+
+            const analysisResults = await Promise.all(analysisPromises)
+
+            // 4. Create all services in parallel
+            const createPromises = analysisResults
+              .filter(result => result !== null)
+              .map(result =>
+                axios.post('/api/services', {
+                  name: result!.analysis.name,
+                  repoPath: result!.repo.path,
+                  command: result!.analysis.command || 'npm start',
+                  port: result!.analysis.port || undefined,
+                  workspace_id: snapshot.workspaceId,
+                })
+                .then(() => {
+                  servicesCreated++
+                  return true
+                })
+                .catch(err => {
+                  console.error(`Failed to create service for ${result!.repo.path}:`, err)
+                  return false
+                })
+              )
+
+            await Promise.all(createPromises)
           }
+        } catch (error) {
+          console.error('Failed to auto-create services:', error)
+          // Don't fail the scan if service creation fails
         }
       }
 
