@@ -26,7 +26,7 @@ function App() {
 
           {/* Main Content */}
           <div className="p-6">
-            {activeView === 'dashboard' && <Dashboard />}
+            {activeView === 'dashboard' && <Dashboard onViewChange={setActiveView} />}
             {activeView === 'services' && <Services />}
             {activeView === 'workspaces' && <Workspaces />}
             {activeView === 'docker' && <Docker />}

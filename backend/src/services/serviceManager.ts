@@ -60,6 +60,14 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
+   * Get running services for a specific workspace
+   */
+  getRunningServicesForWorkspace(workspaceId: string): RunningService[] {
+    return Array.from(this.runningServices.values())
+      .filter(service => service.workspaceId === workspaceId)
+  }
+
+  /**
    * Get service status
    */
   getServiceStatus(serviceId: string): RunningService | null {

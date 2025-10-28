@@ -1,9 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
-import { GitBranch, RefreshCw, Folder, AlertCircle, Save, CheckSquare, Square } from 'lucide-react'
+import { GitBranch, RefreshCw, Folder, AlertCircle, Save, CheckSquare, Square, Camera, Settings, FileText, Zap, Package, CheckCircle, Clock } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
 import { useWorkspace } from '../contexts/WorkspaceContext'
+
+interface DashboardProps {
+  onViewChange: (view: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki') => void
+}
 
 interface Repository {
   name: string
@@ -19,8 +23,25 @@ interface Repository {
   hasEnvFile: boolean
 }
 
-export default function Dashboard() {
-  const { allWorkspaces, createWorkspace, refreshWorkspaces } = useWorkspace()
+interface ServiceStats {
+  totalServices: number
+  runningServices: number
+  stoppedServices: number
+}
+
+interface Snapshot {
+  id: string
+  name: string
+  description: string
+  workspaceId: string
+  config: any
+  createdAt: string
+  updatedAt: string
+}
+
+export default function Dashboard({ onViewChange }: DashboardProps) {
+  const { allWorkspaces, createWorkspace, refreshWorkspaces, activeWorkspace } = useWorkspace()
+
   const [repos, setRepos] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +51,11 @@ export default function Dashboard() {
   })
   const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
   const scanPathInputRef = useRef<HTMLInputElement>(null)
+
+  // Enhanced Dashboard state
+  const [serviceStats, setServiceStats] = useState<ServiceStats>({ totalServices: 0, runningServices: 0, stoppedServices: 0 })
+  const [recentSnapshots, setRecentSnapshots] = useState<Snapshot[]>([])
+  const [dashboardLoading, setDashboardLoading] = useState(true)
 
   // Save to workspace modal state
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -41,6 +67,69 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false)
   const [importEnvFiles, setImportEnvFiles] = useState(false)
 
+  const fetchDashboardData = async () => {
+    if (!activeWorkspace) {
+      setDashboardLoading(false)
+      return
+    }
+
+    setDashboardLoading(true)
+    try {
+      const [servicesRes, snapshotsRes] = await Promise.all([
+        axios.get('/api/services'),
+        axios.get(`/api/workspaces/${activeWorkspace.id}/snapshots`),
+      ])
+
+      const services = servicesRes.data.services || []
+      const runningCount = services.filter((s: any) => s.status === 'running').length
+      setServiceStats({
+        totalServices: services.length,
+        runningServices: runningCount,
+        stoppedServices: services.length - runningCount,
+      })
+
+      const snapshots = snapshotsRes.data.snapshots || []
+      setRecentSnapshots(snapshots.slice(0, 5))
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err)
+    } finally {
+      setDashboardLoading(false)
+    }
+  }
+
+  const handleQuickSnapshot = async () => {
+    if (!activeWorkspace) {
+      toast.error('No active workspace')
+      return
+    }
+
+    try {
+      const snapshotName = `Quick Snapshot - ${new Date().toLocaleString()}`
+      await axios.post('/api/workspaces/snapshots/quick', {
+        name: snapshotName,
+        workspaceId: activeWorkspace.id,
+      })
+      toast.success('Snapshot captured successfully')
+      fetchDashboardData()
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to capture snapshot'
+      toast.error(errorMsg)
+      console.error(err)
+    }
+  }
+
+  const handleRestoreSnapshot = async (snapshotId: string) => {
+    try {
+      await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
+      toast.success('Snapshot restored successfully')
+      fetchDashboardData()
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to restore snapshot'
+      toast.error(errorMsg)
+      console.error(err)
+    }
+  }
+
   const scanRepositories = async () => {
     setLoading(true)
     setError(null)
@@ -50,7 +139,7 @@ export default function Dashboard() {
       setRepos(repositories)
 
       // Select all repos by default
-      const allPaths = new Set(repositories.map((repo: Repository) => repo.path))
+      const allPaths = new Set<string>(repositories.map((repo: Repository) => repo.path))
       setSelectedRepos(allPaths)
 
       // Save last scanned path to sessionStorage
@@ -234,146 +323,372 @@ export default function Dashboard() {
   }, [showSaveModal, workspaceMode, scanPath])
 
   useEffect(() => {
-    scanRepositories()
-  }, [])
+    fetchDashboardData()
+  }, [activeWorkspace])
 
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Repository Dashboard</h1>
-        <p className="text-gray-600">Manage all your git repositories in one place</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        <p className="text-gray-600">Overview of your workspace and services</p>
       </div>
 
-      <div className="mb-6 flex gap-4">
-        <input
-          ref={scanPathInputRef}
-          type="text"
-          value={scanPath}
-          onChange={(e) => setScanPath(e.target.value)}
-          placeholder="Path to scan (e.g., /home/user)"
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={scanRepositories}
-          disabled={loading}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          {loading ? 'Scanning...' : 'Scan'}
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-          <AlertCircle size={20} />
-          {error}
-        </div>
-      )}
-
-      {repos.length > 0 && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleAllRepos}
-                className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium"
-              >
-                {selectedRepos.size === repos.length ? (
-                  <CheckSquare size={20} />
-                ) : (
-                  <Square size={20} />
+      {/* Active Workspace Section */}
+      {activeWorkspace ? (
+        <>
+          {/* Workspace Overview */}
+          <div className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-6 shadow-lg">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <Package size={28} />
+                  <h2 className="text-2xl font-bold">{activeWorkspace.name}</h2>
+                </div>
+                {activeWorkspace.description && (
+                  <p className="text-blue-100 mb-3">{activeWorkspace.description}</p>
                 )}
-                {selectedRepos.size === repos.length ? 'Deselect All' : 'Select All'}
+                {activeWorkspace.folderPath && (
+                  <p className="text-sm text-blue-100 font-mono">{activeWorkspace.folderPath}</p>
+                )}
+                {activeWorkspace.activeSnapshotId && (
+                  <div className="mt-3 flex items-center gap-2 text-sm bg-green-500 bg-opacity-20 px-3 py-1 rounded-full w-fit">
+                    <CheckCircle size={16} />
+                    <span>Active Snapshot</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => onViewChange('workspaces')}
+                className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+              >
+                Manage Workspace
               </button>
-              <span className="text-blue-700">
-                {selectedRepos.size} of {repos.length} selected
-              </span>
             </div>
-            <button
-              onClick={() => setShowSaveModal(true)}
-              disabled={selectedRepos.size === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Save size={18} />
-              Save to Workspace
-            </button>
+          </div>
+
+          {dashboardLoading ? (
+            <SkeletonLoader count={3} />
+          ) : (
+            <>
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                {/* Services Card */}
+                <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Services</h3>
+                    <Settings className="text-gray-400" size={24} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Total</span>
+                      <span className="text-2xl font-bold text-gray-900">{serviceStats.totalServices}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Running</span>
+                      </div>
+                      <span className="text-lg font-semibold text-green-600">{serviceStats.runningServices}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Stopped</span>
+                      </div>
+                      <span className="text-lg font-semibold text-gray-600">{serviceStats.stoppedServices}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onViewChange('services')}
+                    className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Manage Services
+                  </button>
+                </div>
+
+                {/* Snapshots Card */}
+                <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Snapshots</h3>
+                    <Camera className="text-gray-400" size={24} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Total</span>
+                      <span className="text-2xl font-bold text-gray-900">{recentSnapshots.length}</span>
+                    </div>
+                    {recentSnapshots.length > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Clock className="text-gray-400" size={16} />
+                          <span className="text-sm text-gray-600">Latest</span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {new Date(recentSnapshots[0].createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {recentSnapshots.length === 0 ? (
+                    <button
+                      onClick={handleQuickSnapshot}
+                      className="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Camera size={18} />
+                      Quick Snapshot
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onViewChange('workspaces')}
+                      className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Manage Snapshots
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Actions Card */}
+                <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+                    <Zap className="text-yellow-500" size={24} />
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => onViewChange('env')}
+                      className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-left flex items-center gap-2"
+                    >
+                      <FileText size={18} />
+                      Environment Profiles
+                    </button>
+                    <button
+                      onClick={() => onViewChange('wiki')}
+                      className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-left flex items-center gap-2"
+                    >
+                      <FileText size={18} />
+                      Wiki & Notes
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Snapshots List */}
+              {recentSnapshots.length > 0 && (
+                <div className="mb-6 bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Recent Snapshots</h3>
+                    <button
+                      onClick={() => onViewChange('workspaces')}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View All →
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {recentSnapshots.map((snapshot) => (
+                      <div
+                        key={snapshot.id}
+                        className={`flex items-center justify-between p-4 rounded-lg border ${
+                          activeWorkspace.activeSnapshotId === snapshot.id
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-gray-900">{snapshot.name}</h4>
+                            {activeWorkspace.activeSnapshotId === snapshot.id && (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          {snapshot.description && (
+                            <p className="text-sm text-gray-600 mt-1">{snapshot.description}</p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(snapshot.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        {activeWorkspace.activeSnapshotId !== snapshot.id && (
+                          <button
+                            onClick={() => handleRestoreSnapshot(snapshot.id)}
+                            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                          >
+                            <RefreshCw size={16} />
+                            Restore
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-yellow-600 mt-1" size={24} />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Workspace</h3>
+              <p className="text-gray-700 mb-4">
+                Create or activate a workspace to get started with DevHub.
+              </p>
+              <button
+                onClick={() => onViewChange('workspaces')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Go to Workspaces
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {loading && repos.length === 0 && (
-        <SkeletonLoader count={3} />
-      )}
-
-      {repos.length === 0 && !loading && (
-        <div className="text-center py-16 text-gray-500">
-          <Folder size={48} className="mx-auto mb-4 text-gray-400" />
-          <p>No repositories found. Try scanning a different path.</p>
+      {/* Repository Scanner Section - Always Visible */}
+      <div className="mb-6 bg-white rounded-lg shadow-md border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Repository Scanner</h3>
+          <p className="text-sm text-gray-600 mt-1">Scan for git repositories and save to workspace</p>
         </div>
-      )}
-
-      <div className="grid gap-4">
-        {repos.map((repo) => {
-          const isSelected = selectedRepos.has(repo.path)
-          return (
-            <div
-              key={repo.path}
-              className={`bg-white border rounded-lg p-6 hover:shadow-md transition-all cursor-pointer ${
-                isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
-              }`}
-              onClick={() => toggleRepo(repo.path)}
+        <div className="px-6 py-6">
+          <div className="mb-6 flex gap-4">
+            <input
+              ref={scanPathInputRef}
+              type="text"
+              value={scanPath}
+              onChange={(e) => setScanPath(e.target.value)}
+              placeholder="Path to scan (e.g., /home/user)"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={scanRepositories}
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleRepo(repo.path)
-                    }}
-                    className="mt-1"
-                  >
-                    {isSelected ? (
-                      <CheckSquare size={20} className="text-blue-600" />
-                    ) : (
-                      <Square size={20} className="text-gray-400" />
-                    )}
-                  </button>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-1">{repo.name}</h3>
-                    <p className="text-sm text-gray-500 font-mono">{repo.path}</p>
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              {loading ? 'Scanning...' : 'Scan'}
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+              <AlertCircle size={20} />
+              {error}
+            </div>
+          )}
+
+          {repos.length > 0 && (
+            <>
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={toggleAllRepos}
+                      className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium"
+                    >
+                      {selectedRepos.size === repos.length ? (
+                        <CheckSquare size={20} />
+                      ) : (
+                        <Square size={20} />
+                      )}
+                      {selectedRepos.size === repos.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                    <span className="text-blue-700">
+                      {selectedRepos.size} of {repos.length} selected
+                    </span>
                   </div>
+                  <button
+                    onClick={() => setShowSaveModal(true)}
+                    disabled={selectedRepos.size === 0}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Save size={18} />
+                    Save to Workspace
+                  </button>
                 </div>
-                {repo.hasDockerfile && (
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                    Docker
-                  </span>
-                )}
               </div>
 
-            <div className="flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <GitBranch size={16} className="text-gray-400" />
-                <span className="font-medium">{repo.branch}</span>
+              <div className="grid gap-4">
+                {repos.map((repo) => {
+                  const isSelected = selectedRepos.has(repo.path)
+                  return (
+                    <div
+                      key={repo.path}
+                      className={`bg-white border rounded-lg p-6 hover:shadow-md transition-all cursor-pointer ${
+                        isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                      }`}
+                      onClick={() => toggleRepo(repo.path)}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleRepo(repo.path)
+                            }}
+                            className="mt-1"
+                          >
+                            {isSelected ? (
+                              <CheckSquare size={20} className="text-blue-600" />
+                            ) : (
+                              <Square size={20} className="text-gray-400" />
+                            )}
+                          </button>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-semibold text-gray-900 mb-1">{repo.name}</h3>
+                            <p className="text-sm text-gray-500 font-mono">{repo.path}</p>
+                          </div>
+                        </div>
+                        {repo.hasDockerfile && (
+                          <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                            Docker
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-6 text-sm">
+                        <div className="flex items-center gap-2">
+                          <GitBranch size={16} className="text-gray-400" />
+                          <span className="font-medium">{repo.branch}</span>
+                        </div>
+
+                        {repo.hasChanges && (
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-medium">
+                            Uncommitted changes
+                          </span>
+                        )}
+                      </div>
+
+                      {repo.lastCommit && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <p className="text-sm text-gray-700 mb-1">{repo.lastCommit.message}</p>
+                          <p className="text-xs text-gray-500">
+                            {repo.lastCommit.author} • {new Date(repo.lastCommit.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
+            </>
+          )}
 
-              {repo.hasChanges && (
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-medium">
-                  Uncommitted changes
-                </span>
-              )}
-            </div>
+          {loading && repos.length === 0 && (
+            <SkeletonLoader count={3} />
+          )}
 
-              {repo.lastCommit && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm text-gray-700 mb-1">{repo.lastCommit.message}</p>
-                  <p className="text-xs text-gray-500">
-                    {repo.lastCommit.author} • {new Date(repo.lastCommit.date).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
+          {repos.length === 0 && !loading && (
+            <div className="text-center py-16 text-gray-500">
+              <Folder size={48} className="mx-auto mb-4 text-gray-400" />
+              <p>No repositories found. Try scanning a different path.</p>
             </div>
-          )
-        })}
+          )}
+        </div>
       </div>
 
       {/* Save to Workspace Modal */}

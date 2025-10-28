@@ -126,14 +126,14 @@ router.post('/snapshots/scan', async (req: Request, res: Response) => {
     }
 
     // Scan folder
-    const scanResult = await repoScanner.scanDirectory(path, parseInt(depth as string))
+    const repositories = await repoScanner.scanDirectory(path, parseInt(depth as string))
 
-    if (scanResult.repositories.length === 0) {
+    if (repositories.length === 0) {
       return res.status(400).json({ success: false, error: 'No git repositories found in path' })
     }
 
     // Create snapshot with scanned repositories (workspace auto-created/found)
-    const repoPaths = scanResult.repositories.map(r => r.path)
+    const repoPaths = repositories.map(r => r.path)
     const snapshot = await workspaceManager.createSnapshot(
       name || `Snapshot - ${new Date().toLocaleString()}`,
       description || `Scanned from ${path}`,
@@ -143,7 +143,14 @@ router.post('/snapshots/scan', async (req: Request, res: Response) => {
       path
     )
 
-    res.json({ success: true, snapshot, scanResult })
+    res.json({
+      success: true,
+      snapshot,
+      scanResult: {
+        count: repositories.length,
+        repositories
+      }
+    })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -208,6 +215,160 @@ router.delete('/snapshots/:snapshotId', (req: Request, res: Response) => {
     }
 
     res.json({ success: true })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/workspaces/:workspaceId/clear-snapshot
+ * Clear the active snapshot from a workspace
+ */
+router.post('/:workspaceId/clear-snapshot', (req: Request, res: Response) => {
+  try {
+    const { workspaceId } = req.params
+    const success = workspaceManager.clearActiveSnapshot(workspaceId)
+
+    if (!success) {
+      return res.status(404).json({ success: false, error: 'Workspace not found' })
+    }
+
+    res.json({ success: true, message: 'Active snapshot cleared' })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/workspaces/snapshots/:snapshotId/check-changes
+ * Check for uncommitted changes before restore
+ */
+router.get('/snapshots/:snapshotId/check-changes', async (req: Request, res: Response) => {
+  try {
+    const { snapshotId } = req.params
+    const changes = await workspaceManager.checkUncommittedChanges(snapshotId)
+    res.json({ success: true, changes })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/workspaces/snapshots/:snapshotId/stash-changes
+ * Stash uncommitted changes in snapshot repositories
+ */
+router.post('/snapshots/:snapshotId/stash-changes', async (req: Request, res: Response) => {
+  try {
+    const { snapshotId } = req.params
+    const { repoPaths } = req.body
+
+    if (!repoPaths || !Array.isArray(repoPaths)) {
+      return res.status(400).json({ success: false, error: 'repoPaths array is required' })
+    }
+
+    const result = await workspaceManager.stashChanges(repoPaths)
+    res.json({ success: result.success, ...result })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/workspaces/snapshots/:snapshotId/commit-changes
+ * Commit uncommitted changes in snapshot repositories
+ */
+router.post('/snapshots/:snapshotId/commit-changes', async (req: Request, res: Response) => {
+  try {
+    const { snapshotId } = req.params
+    const { repoPaths, commitMessage } = req.body
+
+    if (!repoPaths || !Array.isArray(repoPaths)) {
+      return res.status(400).json({ success: false, error: 'repoPaths array is required' })
+    }
+
+    if (!commitMessage || typeof commitMessage !== 'string' || !commitMessage.trim()) {
+      return res.status(400).json({ success: false, error: 'commitMessage is required' })
+    }
+
+    const result = await workspaceManager.commitChanges(repoPaths, commitMessage)
+    res.json({ success: result.success, ...result })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/workspaces/snapshots/:snapshotId/list-stashes
+ * List stashes for snapshot repositories
+ */
+router.post('/snapshots/:snapshotId/list-stashes', async (req: Request, res: Response) => {
+  try {
+    const { snapshotId } = req.params
+    const { repoPaths } = req.body
+
+    if (!repoPaths || !Array.isArray(repoPaths)) {
+      return res.status(400).json({ success: false, error: 'repoPaths array is required' })
+    }
+
+    const result = await workspaceManager.listStashes(repoPaths)
+    res.json({ success: result.success, ...result })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/workspaces/stash/apply
+ * Apply or pop a stash in a repository
+ */
+router.post('/stash/apply', async (req: Request, res: Response) => {
+  try {
+    const { repoPath, stashIndex = 0, pop = false } = req.body
+
+    if (!repoPath || typeof repoPath !== 'string') {
+      return res.status(400).json({ success: false, error: 'repoPath is required' })
+    }
+
+    const result = await workspaceManager.applyStash(repoPath, stashIndex, pop)
+    res.json(result)
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/workspaces/stash/drop
+ * Drop (delete) a stash in a repository
+ */
+router.post('/stash/drop', async (req: Request, res: Response) => {
+  try {
+    const { repoPath, stashIndex = 0 } = req.body
+
+    if (!repoPath || typeof repoPath !== 'string') {
+      return res.status(400).json({ success: false, error: 'repoPath is required' })
+    }
+
+    const result = await workspaceManager.dropStash(repoPath, stashIndex)
+    res.json(result)
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/workspaces/stash/details
+ * Get detailed file changes for a stash
+ */
+router.get('/stash/details', async (req: Request, res: Response) => {
+  try {
+    const { repoPath, stashIndex = '0' } = req.query
+
+    if (!repoPath || typeof repoPath !== 'string') {
+      return res.status(400).json({ success: false, error: 'repoPath is required' })
+    }
+
+    const result = await workspaceManager.getStashDetails(repoPath, parseInt(stashIndex as string))
+    res.json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -466,14 +627,14 @@ router.post('/:workspaceId/scan', async (req: Request, res: Response) => {
     }
 
     // Scan folder
-    const scanResult = await repoScanner.scanDirectory(path, parseInt(depth as string))
+    const repositories = await repoScanner.scanDirectory(path, parseInt(depth as string))
 
-    if (scanResult.repositories.length === 0) {
+    if (repositories.length === 0) {
       return res.status(400).json({ success: false, error: 'No git repositories found in path' })
     }
 
     // Create snapshot with scanned repositories
-    const repoPaths = scanResult.repositories.map(r => r.path)
+    const repoPaths = repositories.map(r => r.path)
     const snapshot = await workspaceManager.createSnapshot(
       name || `Snapshot - ${new Date().toLocaleString()}`,
       description || `Scanned from ${path}`,
@@ -484,7 +645,14 @@ router.post('/:workspaceId/scan', async (req: Request, res: Response) => {
       workspaceId
     )
 
-    res.json({ success: true, snapshot, scanResult })
+    res.json({
+      success: true,
+      snapshot,
+      scanResult: {
+        count: repositories.length,
+        repositories
+      }
+    })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
