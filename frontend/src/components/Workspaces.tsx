@@ -728,6 +728,8 @@ export default function Workspaces() {
 
       // Refresh workspaces to show the new/updated workspace
       fetchWorkspaces()
+      // Also refresh global workspace context to update header
+      refreshGlobalWorkspaces()
 
       toast.success(
         `Snapshot "${scanForm.name}" created! Found ${response.data.scanResult?.count || 0} repositories.`,
