@@ -545,7 +545,8 @@ export class WorkspaceManager {
     activeEnvProfile?: string,
     tags?: string[],
     scannedPath?: string,
-    workspaceId?: string
+    workspaceId?: string,
+    autoImportEnv: boolean = false
   ): Promise<WorkspaceSnapshot> {
     const id = `snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const now = new Date().toISOString()
@@ -589,6 +590,11 @@ export class WorkspaceManager {
         })
         targetWorkspaceId = defaultWorkspace.id
       }
+    }
+
+    // Auto-import .env files if requested
+    if (autoImportEnv) {
+      await this.autoImportEnvFiles(targetWorkspaceId, repoPaths, name)
     }
 
     // Capture current state for this workspace
@@ -1435,9 +1441,55 @@ export class WorkspaceManager {
   }
 
   /**
+   * Auto-import .env files from repositories
+   */
+  private async autoImportEnvFiles(workspaceId: string, repoPaths: string[], snapshotName: string): Promise<void> {
+    console.log(`Auto-importing .env files from ${repoPaths.length} repositories for snapshot "${snapshotName}"`)
+
+    for (const repoPath of repoPaths) {
+      try {
+        const envFilePath = `${repoPath}/.env`
+
+        // Check if .env file exists
+        if (!fs.existsSync(envFilePath)) {
+          continue
+        }
+
+        // Extract repo name from path
+        const repoName = repoPath.split('/').filter(Boolean).pop() || 'unknown'
+
+        // Create or get profile for this repo
+        let profile = this.envManager.getProfileByName(workspaceId, repoName)
+
+        if (!profile) {
+          // Create new profile with source metadata
+          profile = this.envManager.createProfile(
+            workspaceId,
+            repoName,
+            `Auto-imported from ${repoPath} (${snapshotName})`,
+            {
+              sourceType: 'auto-import',
+              sourceId: workspaceId,
+              sourceName: snapshotName,
+            }
+          )
+          console.log(`Created profile "${repoName}" for auto-import`)
+        }
+
+        // Import .env file
+        const importedCount = this.envManager.importFromEnvFile(envFilePath, profile.id)
+        console.log(`Imported ${importedCount} variables from ${envFilePath} to profile "${repoName}"`)
+      } catch (error: any) {
+        console.error(`Failed to import .env from ${repoPath}:`, error.message)
+        // Continue with other repos even if one fails
+      }
+    }
+  }
+
+  /**
    * Quick snapshot (capture current state with auto-generated name for active workspace)
    */
-  async quickSnapshot(): Promise<WorkspaceSnapshot> {
+  async quickSnapshot(autoImportEnv: boolean = false): Promise<WorkspaceSnapshot> {
     const timestamp = this.generateTimestamp()
     const name = `Quick Snapshot ${timestamp}`
 
@@ -1451,7 +1503,7 @@ export class WorkspaceManager {
     const allServices = this.serviceManager.getAllServices(activeWorkspace.id)
     const repoPaths = [...new Set(allServices.map(s => s.repoPath))]
 
-    return this.createSnapshot(name, 'Auto-generated snapshot', repoPaths, undefined, undefined, undefined, activeWorkspace.id)
+    return this.createSnapshot(name, 'Auto-generated snapshot', repoPaths, undefined, undefined, undefined, activeWorkspace.id, autoImportEnv)
   }
 
   /**

@@ -74,6 +74,7 @@ export default function Workspaces() {
     description: '',
     repoPaths: '',
     tags: '',
+    autoImportEnv: false,
   })
   const [scanForm, setScanForm] = useState({
     path: '',
@@ -108,6 +109,12 @@ export default function Workspaces() {
     snapshotId: null,
     changes: [],
     loading: false,
+  })
+
+  // Quick snapshot dialog state
+  const [quickSnapshotDialog, setQuickSnapshotDialog] = useState({
+    isOpen: false,
+    autoImportEnv: false,
   })
 
   // Fetch workspaces
@@ -265,13 +272,21 @@ export default function Workspaces() {
   }
 
   // Quick snapshot (creates in active workspace)
-  const handleQuickSnapshot = async () => {
+  const handleQuickSnapshot = () => {
+    // Show confirmation dialog
+    setQuickSnapshotDialog({ isOpen: true, autoImportEnv: false })
+  }
+
+  const confirmQuickSnapshot = async () => {
     try {
-      await axios.post('/api/workspaces/snapshots/quick')
+      await axios.post('/api/workspaces/snapshots/quick', {
+        autoImportEnv: quickSnapshotDialog.autoImportEnv,
+      })
       if (selectedWorkspaceId) {
         fetchSnapshots(selectedWorkspaceId)
       }
       toast.success('Quick snapshot created!')
+      setQuickSnapshotDialog({ isOpen: false, autoImportEnv: false })
     } catch (error: any) {
       toast.error(`Failed to create snapshot: ${error.response?.data?.error || error.message}`)
     }
@@ -310,10 +325,11 @@ export default function Workspaces() {
         description: createSnapshotForm.description || undefined,
         repoPaths,
         tags: tags.length > 0 ? tags : undefined,
+        autoImportEnv: createSnapshotForm.autoImportEnv,
       })
 
       setShowCreateSnapshotForm(false)
-      setCreateSnapshotForm({ name: '', description: '', repoPaths: '', tags: '' })
+      setCreateSnapshotForm({ name: '', description: '', repoPaths: '', tags: '', autoImportEnv: false })
       fetchSnapshots(selectedWorkspaceId)
       toast.success(`Snapshot "${createSnapshotForm.name}" created successfully!`)
     } catch (error: any) {
@@ -1156,6 +1172,23 @@ export default function Workspaces() {
                   className="w-full px-3 py-2 border rounded"
                   data-testid="snapshot-tags-input"
                 />
+                <label className="flex items-start gap-3 cursor-pointer p-3 bg-green-50 border border-green-200 rounded">
+                  <input
+                    type="checkbox"
+                    checked={createSnapshotForm.autoImportEnv}
+                    onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, autoImportEnv: e.target.checked })}
+                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    data-testid="snapshot-auto-import-env-checkbox"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      Auto-import .env files before snapshot
+                    </span>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Scan and import all .env files from repositories before capturing workspace state
+                    </p>
+                  </div>
+                </label>
               </div>
               <div className="flex gap-2 mt-3">
                 <button
@@ -1575,6 +1608,50 @@ export default function Workspaces() {
         }
         loading={uncommittedChangesDialog.loading}
       />
+
+      {/* Quick Snapshot Dialog */}
+      {quickSnapshotDialog.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Create Quick Snapshot</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This will create a snapshot of the current workspace state with an auto-generated name.
+            </p>
+
+            <label className="flex items-start gap-3 cursor-pointer p-3 bg-green-50 border border-green-200 rounded mb-4">
+              <input
+                type="checkbox"
+                checked={quickSnapshotDialog.autoImportEnv}
+                onChange={(e) => setQuickSnapshotDialog({ ...quickSnapshotDialog, autoImportEnv: e.target.checked })}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-900">
+                  Auto-import .env files before snapshot
+                </span>
+                <p className="text-xs text-gray-600 mt-1">
+                  Scan and import all .env files from repositories before capturing workspace state
+                </p>
+              </div>
+            </label>
+
+            <div className="flex gap-2">
+              <button
+                onClick={confirmQuickSnapshot}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Create Snapshot
+              </button>
+              <button
+                onClick={() => setQuickSnapshotDialog({ isOpen: false, autoImportEnv: false })}
+                className="flex-1 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm Dialog */}
       <ConfirmDialog
