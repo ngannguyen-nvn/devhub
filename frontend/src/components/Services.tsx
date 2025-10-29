@@ -12,11 +12,11 @@ interface Service {
   repoPath: string
   command: string
   port?: number
-  running?: {
-    pid: number
-    status: 'running' | 'stopped' | 'error'
-    startedAt: string
-  } | null
+  status?: 'running' | 'stopped' | 'error'
+  pid?: number
+  startedAt?: string
+  stoppedAt?: string
+  exitCode?: number
 }
 
 export default function Services() {
@@ -609,7 +609,8 @@ export default function Services() {
           )}
 
           {filteredServices.map((service) => {
-            const isRunning = service.running?.status === 'running'
+            const isRunning = service.status === 'running'
+            const isError = service.status === 'error'
             const isSelected = selectedService === service.id
 
             return (
@@ -629,10 +630,12 @@ export default function Services() {
                         className={`px-2 py-0.5 text-xs rounded-full ${
                           isRunning
                             ? 'bg-green-100 text-green-700'
+                            : isError
+                            ? 'bg-red-100 text-red-700'
                             : 'bg-gray-100 text-gray-600'
                         }`}
                       >
-                        {isRunning ? 'Running' : 'Stopped'}
+                        {isRunning ? 'Running' : isError ? 'Error' : 'Stopped'}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 font-mono">{service.command}</p>
@@ -642,7 +645,17 @@ export default function Services() {
                 <div className="text-xs text-gray-500 mb-3">
                   <p className="truncate">{service.repoPath}</p>
                   {service.port && <p>Port: {service.port}</p>}
-                  {service.running?.pid && <p>PID: {service.running.pid}</p>}
+                  {service.pid && <p>PID: {service.pid}</p>}
+                  {!isRunning && service.exitCode !== undefined && (
+                    <p className={service.exitCode === 0 ? 'text-gray-500' : 'text-red-600'}>
+                      Exit code: {service.exitCode}
+                    </p>
+                  )}
+                  {service.stoppedAt && (
+                    <p className="text-gray-500">
+                      Stopped: {new Date(service.stoppedAt).toLocaleTimeString()}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -707,17 +720,50 @@ export default function Services() {
               Select a service to view logs
             </div>
           ) : (
-            <div className="flex-1 overflow-auto font-mono text-xs text-green-400 space-y-1" data-testid="service-logs-content">
-              {logs.length === 0 ? (
-                <p className="text-gray-500">No logs available</p>
-              ) : (
-                logs.map((log, i) => (
-                  <div key={i} className="whitespace-pre-wrap break-all">
-                    {log}
-                  </div>
-                ))
-              )}
-            </div>
+            <>
+              {/* Service Status Info */}
+              {(() => {
+                const service = services.find(s => s.id === selectedService)
+                if (service && (service.status === 'stopped' || service.status === 'error')) {
+                  return (
+                    <div className={`mb-3 p-2 rounded text-xs ${
+                      service.status === 'error' ? 'bg-red-900/50 text-red-200' : 'bg-gray-800 text-gray-300'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <AlertCircle size={14} />
+                        <span className="font-semibold">
+                          Service {service.status === 'error' ? 'crashed' : 'stopped'}
+                        </span>
+                      </div>
+                      {service.exitCode !== undefined && (
+                        <div className="mt-1">Exit code: {service.exitCode}</div>
+                      )}
+                      {service.stoppedAt && (
+                        <div className="mt-1">
+                          Stopped at: {new Date(service.stoppedAt).toLocaleString()}
+                        </div>
+                      )}
+                      <div className="mt-2 text-gray-400">
+                        Logs from last run are preserved below
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              })()}
+
+              <div className="flex-1 overflow-auto font-mono text-xs text-green-400 space-y-1" data-testid="service-logs-content">
+                {logs.length === 0 ? (
+                  <p className="text-gray-500">No logs available</p>
+                ) : (
+                  logs.map((log, i) => (
+                    <div key={i} className="whitespace-pre-wrap break-all">
+                      {log}
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -330,6 +330,15 @@ See [WORKSPACE_FEATURE.md](./WORKSPACE_FEATURE.md) for detailed documentation.
 
 ## 🔮 Future Features (Post-MVP)
 
+### Service Manager Enhancements
+- **External terminal delegation** - Option to run services in native terminal windows (xterm, gnome-terminal, Terminal.app, etc.)
+  - Benefits: Full terminal features, copy-paste, scrollback, native feel
+  - Challenges: Cross-platform support (Mac/Linux/Windows), terminal detection
+  - Use case: Developers who prefer seeing services in separate terminal windows
+  - Implementation: Child process spawning with platform-specific terminal commands
+  - Related: Option 2 from log preservation feature discussion
+
+### Platform & Integrations
 - **Cloud sync** - Sync configs across machines
 - **Team collaboration** - Share workspaces
 - **CI/CD integration** - Deploy from DevHub
