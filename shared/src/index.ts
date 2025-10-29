@@ -28,6 +28,14 @@ export interface Service {
   command: string
   status: 'running' | 'stopped' | 'error'
   pid?: number
+  // v2.0 additions
+  healthStatus?: 'healthy' | 'unhealthy' | 'degraded' | 'unknown'
+  lastHealthCheck?: string
+  healthCheckFailures?: number
+  autoRestart?: boolean
+  maxRestarts?: number
+  restartCount?: number
+  backoffStrategy?: 'immediate' | 'exponential' | 'fixed'
 }
 
 // Workspace entity (parent)
@@ -205,4 +213,107 @@ export interface NoteLink {
   fromNoteId: string
   toNoteId: string
   toNoteTitle: string
+}
+
+// v2.0 Orchestration Features
+
+// Service Dependencies
+export interface ServiceDependency {
+  id: string
+  serviceId: string
+  dependsOnServiceId: string
+  waitForHealth: boolean
+  startupDelay: number
+  createdAt: string
+}
+
+// Health Checks
+export interface HealthCheck {
+  id: string
+  serviceId: string
+  type: 'http' | 'tcp' | 'command'
+  // HTTP check
+  endpoint?: string
+  expectedStatus?: number
+  expectedBody?: string
+  // TCP check
+  port?: number
+  // Command check
+  command?: string
+  // Common
+  interval: number
+  timeout: number
+  retries: number
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// Log Persistence
+export interface ServiceLogSession {
+  id: string
+  serviceId: string
+  startedAt: string
+  stoppedAt?: string
+  exitCode?: number
+  exitReason?: string
+  logsCount: number
+  createdAt: string
+}
+
+export interface ServiceLog {
+  id: number
+  sessionId: string
+  serviceId: string
+  timestamp: string
+  level: 'info' | 'warn' | 'error' | 'debug'
+  message: string
+}
+
+// Service Templates
+export interface ServiceTemplate {
+  id: string
+  name: string
+  description?: string
+  icon?: string
+  language: 'nodejs' | 'python' | 'go' | 'ruby' | 'java' | 'rust' | 'php' | 'dotnet'
+  framework?: string
+  defaultCommand: string
+  defaultPort?: number
+  defaultEnvVars?: Record<string, string>
+  healthCheckConfig?: Partial<HealthCheck>
+  detectFiles: string[]
+  isBuiltin: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// Service Events (for timeline)
+export interface ServiceEvent {
+  id: number
+  serviceId: string
+  eventType: 'started' | 'stopped' | 'crashed' | 'restarted' | 'health_change'
+  timestamp: string
+  metadata?: Record<string, any>
+}
+
+// Service Groups
+export interface ServiceGroup {
+  id: string
+  workspaceId: string
+  name: string
+  description?: string
+  color: string
+  icon: string
+  createdAt: string
+  updatedAt: string
+  // Computed
+  serviceIds?: string[]
+}
+
+export interface ServiceGroupMember {
+  id: string
+  groupId: string
+  serviceId: string
+  position: number
 }

@@ -72,4 +72,16 @@ console.log('✅ Database initialized at', dbPath)
 const migrationRunner = new MigrationRunner(db)
 migrationRunner.runMigrations()
 
+// Singleton accessor for database
+export class DatabaseInstance {
+  private static instance: Database.Database
+
+  static getInstance(): Database.Database {
+    if (!DatabaseInstance.instance) {
+      DatabaseInstance.instance = db
+    }
+    return DatabaseInstance.instance
+  }
+}
+
 export default db
