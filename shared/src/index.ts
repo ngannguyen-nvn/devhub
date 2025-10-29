@@ -87,11 +87,8 @@ export interface WorkspaceSnapshot {
 
   // Environment state
   activeEnvProfile?: string
-  envVariables?: Record<string, {
-    entityName: string
-    entityType: 'service' | 'profile'
-    variables: Record<string, string>
-  }> // entityKey -> { entityName, entityType, variables }
+  // Note: Environment variables now stored as profiles in DB (not in snapshot JSON)
+  // Profiles linked to snapshot via source_id field
 
   // Service logs
   serviceLogs?: Record<string, string[]> // serviceId -> logs array
@@ -159,7 +156,7 @@ export interface EnvProfile {
   workspaceId: string // Foreign key to workspace
   name: string
   description?: string
-  sourceType?: 'auto-import' | 'snapshot-restore' | 'manual'
+  sourceType?: 'auto-import' | 'snapshot-restore' | 'snapshot' | 'manual'
   sourceId?: string // Reference to source (snapshot_id or scan identifier)
   sourceName?: string // Human-readable source name for grouping (e.g., "Scan - 29/10/2025, 20:07:50" or "Quick Snapshot")
   createdAt: string

@@ -138,7 +138,7 @@ export class EnvManager {
     name: string,
     description?: string,
     metadata?: {
-      sourceType?: 'auto-import' | 'snapshot-restore' | 'manual'
+      sourceType?: 'auto-import' | 'snapshot-restore' | 'snapshot' | 'manual'
       sourceId?: string
       sourceName?: string
     }

@@ -382,7 +382,8 @@ router.get('/stash/details', async (req: Request, res: Response) => {
 router.post('/snapshots/:snapshotId/restore', async (req: Request, res: Response) => {
   try {
     const { snapshotId } = req.params
-    const result = await workspaceManager.restoreSnapshot(snapshotId)
+    const { applyEnvToFiles = false } = req.body
+    const result = await workspaceManager.restoreSnapshot(snapshotId, applyEnvToFiles)
     res.json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
