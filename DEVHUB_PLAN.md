@@ -331,6 +331,13 @@ See [WORKSPACE_FEATURE.md](./WORKSPACE_FEATURE.md) for detailed documentation.
 ## 🔮 Future Features (Post-MVP)
 
 ### Service Manager Enhancements
+- **Persist logs across app restarts** - Save service logs to database for historical review
+  - Benefits: Review logs from services that crashed yesterday, survive backend restarts
+  - Implementation: Add `service_logs` table with `service_id`, `logs` (JSON), `stopped_at`, `exit_code`
+  - Load recent logs from database on app start
+  - Keep log history per service (e.g., last 10 runs or last 7 days)
+  - Current: Logs preserved until service restarts, but lost on backend restart
+
 - **External terminal delegation** - Option to run services in native terminal windows (xterm, gnome-terminal, Terminal.app, etc.)
   - Benefits: Full terminal features, copy-paste, scrollback, native feel
   - Challenges: Cross-platform support (Mac/Linux/Windows), terminal detection
