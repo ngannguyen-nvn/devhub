@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import * as migration001 from './migrations/001_workspace_hierarchy'
 import * as migration002 from './migrations/002_workspace_scoping'
 import * as migration003 from './migrations/003_active_snapshot_tracking'
+import migration004 from './migrations/004_profile_source_metadata'
 
 interface Migration {
   id: number
@@ -28,6 +29,12 @@ const migrations: Migration[] = [
     name: 'active_snapshot_tracking',
     up: migration003.up,
     down: migration003.down,
+  },
+  {
+    id: 4,
+    name: 'profile_source_metadata',
+    up: migration004.up,
+    down: migration004.down,
   },
 ]
 

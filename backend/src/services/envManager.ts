@@ -78,6 +78,9 @@ export class EnvManager {
       workspaceId: row.workspace_id,
       name: row.name,
       description: row.description,
+      sourceType: row.source_type,
+      sourceId: row.source_id,
+      sourceName: row.source_name,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }))
@@ -97,6 +100,9 @@ export class EnvManager {
       workspaceId: row.workspace_id,
       name: row.name,
       description: row.description,
+      sourceType: row.source_type,
+      sourceId: row.source_id,
+      sourceName: row.source_name,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -116,6 +122,9 @@ export class EnvManager {
       workspaceId: row.workspace_id,
       name: row.name,
       description: row.description,
+      sourceType: row.source_type,
+      sourceId: row.source_id,
+      sourceName: row.source_name,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -124,7 +133,16 @@ export class EnvManager {
   /**
    * Create a new profile in a workspace
    */
-  createProfile(workspaceId: string, name: string, description?: string): EnvProfile {
+  createProfile(
+    workspaceId: string,
+    name: string,
+    description?: string,
+    metadata?: {
+      sourceType?: 'auto-import' | 'snapshot-restore' | 'manual'
+      sourceId?: string
+      sourceName?: string
+    }
+  ): EnvProfile {
     const id = `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     // Verify workspace exists
@@ -134,11 +152,19 @@ export class EnvManager {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO env_profiles (id, workspace_id, name, description)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO env_profiles (id, workspace_id, name, description, source_type, source_id, source_name)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
 
-    stmt.run(id, workspaceId, name, description || null)
+    stmt.run(
+      id,
+      workspaceId,
+      name,
+      description || null,
+      metadata?.sourceType || 'manual',
+      metadata?.sourceId || null,
+      metadata?.sourceName || null
+    )
 
     return {
       id,

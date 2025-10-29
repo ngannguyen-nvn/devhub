@@ -155,6 +155,9 @@ export interface EnvProfile {
   workspaceId: string // Foreign key to workspace
   name: string
   description?: string
+  sourceType?: 'auto-import' | 'snapshot-restore' | 'manual'
+  sourceId?: string // Reference to source (snapshot_id or scan identifier)
+  sourceName?: string // Human-readable source name for grouping (e.g., "Scan - 29/10/2025, 20:07:50" or "Quick Snapshot")
   createdAt: string
   updatedAt: string
 }
