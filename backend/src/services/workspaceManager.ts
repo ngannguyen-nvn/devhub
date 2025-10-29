@@ -1151,8 +1151,6 @@ export class WorkspaceManager {
             const entityType = entityData.entityType
             const vars = entityData.variables
 
-            console.log(`Restoring ${Object.keys(vars).length} variables for ${entityType} "${entityName}" from snapshot "${snapshot.name}"`)
-
             // Check if profile already exists for this snapshot + service
             let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
 
@@ -1168,9 +1166,6 @@ export class WorkspaceManager {
                   sourceName: snapshot.name,
                 }
               )
-              console.log(`Created env profile "${profileName}" from snapshot "${snapshot.name}"`)
-            } else {
-              console.log(`Using existing env profile "${profileName}" for snapshot variables`)
             }
 
             // Restore variables for this service/profile
@@ -1199,8 +1194,6 @@ export class WorkspaceManager {
             errors.push(`Failed to restore variables for entity ${entityKey}: ${entityError.message}`)
           }
         }
-
-        console.log(`Restored ${envVarsRestored} environment variables across ${Object.keys(snapshot.envVariables).length} profiles`)
       } catch (error: any) {
         errors.push(`Failed to restore environment variables: ${error.message}`)
         console.error('Error restoring environment variables:', error)
@@ -1444,8 +1437,6 @@ export class WorkspaceManager {
    * Auto-import .env files from repositories
    */
   private async autoImportEnvFiles(workspaceId: string, repoPaths: string[], snapshotName: string): Promise<void> {
-    console.log(`Auto-importing .env files from ${repoPaths.length} repositories for snapshot "${snapshotName}"`)
-
     for (const repoPath of repoPaths) {
       try {
         const envFilePath = `${repoPath}/.env`
@@ -1473,12 +1464,10 @@ export class WorkspaceManager {
               sourceName: snapshotName,
             }
           )
-          console.log(`Created profile "${repoName}" for auto-import`)
         }
 
         // Import .env file
-        const importedCount = this.envManager.importFromEnvFile(envFilePath, profile.id)
-        console.log(`Imported ${importedCount} variables from ${envFilePath} to profile "${repoName}"`)
+        this.envManager.importFromEnvFile(envFilePath, profile.id)
       } catch (error: any) {
         console.error(`Failed to import .env from ${repoPath}:`, error.message)
         // Continue with other repos even if one fails
