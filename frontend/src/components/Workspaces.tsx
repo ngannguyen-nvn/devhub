@@ -649,23 +649,59 @@ export default function Workspaces() {
         return
       }
 
-      // Create one profile per repository + auto-create services (optimized)
+      // Create one profile per repository + auto-create services (batch optimized)
       let successCount = 0
       let failCount = 0
       let servicesCreated = 0
 
-      // Fetch existing services ONCE upfront
+      // 1. Fetch existing services ONCE upfront
       const servicesResponse = await axios.get('/api/services', {
         params: { workspace_id: workspaceId }
       })
       const existingServices = servicesResponse.data.services || []
 
+      // 2. Batch create services for all repos that don't have services yet
+      const reposNeedingServices = reposWithEnv.filter(repo =>
+        !existingServices.find((s: any) => s.repoPath === repo.path)
+      )
+
+      if (reposNeedingServices.length > 0) {
+        try {
+          // Batch analyze all repos
+          const analyzeBatchResponse = await axios.post('/api/repos/analyze-batch', {
+            repoPaths: reposNeedingServices.map(repo => repo.path)
+          })
+
+          // Prepare services from successful analyses
+          const successfulAnalyses = analyzeBatchResponse.data.results.filter((r: any) => r.success)
+          const servicesToCreate = successfulAnalyses.map((result: any) => ({
+            name: result.analysis.name,
+            repoPath: result.repoPath,
+            command: result.analysis.command || 'npm start',
+            port: result.analysis.port || undefined,
+          }))
+
+          // Batch create services
+          if (servicesToCreate.length > 0) {
+            const batchCreateResponse = await axios.post('/api/services/batch', {
+              services: servicesToCreate,
+              workspace_id: workspaceId,
+            })
+            servicesCreated = batchCreateResponse.data.summary.created
+          }
+        } catch (serviceError) {
+          console.error('Failed to batch create services:', serviceError)
+          // Don't fail the whole import if service creation fails
+        }
+      }
+
+      // 3. Create env profiles and import .env files (must be sequential due to dependencies)
       for (const repo of reposWithEnv) {
         try {
           // Use repo name as profile name (e.g., "admin-api")
           const profileName = repo.name
 
-          // 1. Create environment profile
+          // Create environment profile
           const createProfileResponse = await axios.post('/api/env/profiles', {
             name: profileName,
             description: `Auto-imported from ${repo.path} (${snapshotName})`,
@@ -674,39 +710,13 @@ export default function Workspaces() {
 
           const profileId = createProfileResponse.data.profile.id
 
-          // 2. Import .env file to this profile
+          // Import .env file to this profile
           const envFilePath = `${repo.path}/.env`
           await axios.post(`/api/env/profiles/${profileId}/import`, {
             filePath: envFilePath,
             serviceId: null, // Not tied to a specific service
             workspace_id: workspaceId, // Override active workspace check
           })
-
-          // 3. Auto-create service if it doesn't exist
-          try {
-            const existingService = existingServices.find((s: any) => s.repoPath === repo.path)
-
-            if (!existingService) {
-              // Analyze the repository to get name, command, and port
-              const analysisResponse = await axios.post('/api/repos/analyze', { repoPath: repo.path })
-              const analysis = analysisResponse.data.analysis
-
-              // Create service with analyzed data in the correct workspace
-              await axios.post('/api/services', {
-                name: analysis.name,
-                repoPath: repo.path,
-                command: analysis.command || 'npm start',
-                port: analysis.port || undefined,
-                workspace_id: workspaceId,
-              })
-              servicesCreated++
-              // Add to existing services to avoid duplicates in same batch
-              existingServices.push({ repoPath: repo.path })
-            }
-          } catch (serviceError) {
-            console.error(`Failed to auto-create service for ${repo.path}:`, serviceError)
-            // Don't fail the whole import if service creation fails
-          }
 
           successCount++
         } catch (error) {
@@ -776,40 +786,29 @@ export default function Workspaces() {
           )
 
           if (reposToCreate.length > 0) {
-            // 3. Analyze all repos in parallel
-            const analysisPromises = reposToCreate.map(repo =>
-              axios.post('/api/repos/analyze', { repoPath: repo.path })
-                .then(res => ({ repo, analysis: res.data.analysis }))
-                .catch(err => {
-                  console.error(`Failed to analyze ${repo.path}:`, err)
-                  return null
-                })
-            )
+            // 3. Batch analyze all repos in a single API call
+            const analyzeBatchResponse = await axios.post('/api/repos/analyze-batch', {
+              repoPaths: reposToCreate.map(repo => repo.path)
+            })
 
-            const analysisResults = await Promise.all(analysisPromises)
+            // 4. Prepare services data from successful analyses
+            const successfulAnalyses = analyzeBatchResponse.data.results.filter((r: any) => r.success)
+            const servicesToCreate = successfulAnalyses.map((result: any) => ({
+              name: result.analysis.name,
+              repoPath: result.repoPath,
+              command: result.analysis.command || 'npm start',
+              port: result.analysis.port || undefined,
+            }))
 
-            // 4. Create all services in parallel
-            const createPromises = analysisResults
-              .filter(result => result !== null)
-              .map(result =>
-                axios.post('/api/services', {
-                  name: result!.analysis.name,
-                  repoPath: result!.repo.path,
-                  command: result!.analysis.command || 'npm start',
-                  port: result!.analysis.port || undefined,
-                  workspace_id: snapshot.workspaceId,
-                })
-                .then(() => {
-                  servicesCreated++
-                  return true
-                })
-                .catch(err => {
-                  console.error(`Failed to create service for ${result!.repo.path}:`, err)
-                  return false
-                })
-              )
+            // 5. Batch create all services in a single API call
+            if (servicesToCreate.length > 0) {
+              const batchCreateResponse = await axios.post('/api/services/batch', {
+                services: servicesToCreate,
+                workspace_id: snapshot.workspaceId,
+              })
 
-            await Promise.all(createPromises)
+              servicesCreated = batchCreateResponse.data.summary.created
+            }
           }
         } catch (error) {
           console.error('Failed to auto-create services:', error)
