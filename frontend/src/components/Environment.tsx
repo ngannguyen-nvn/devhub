@@ -143,6 +143,14 @@ export default function Environment() {
     fetchProfiles()
   }, [activeWorkspace]) // Refresh when workspace changes
 
+  // Auto-refresh profiles every 5 seconds to pick up changes from snapshot restores
+  useEffect(() => {
+    if (!activeWorkspace) return
+
+    const interval = setInterval(fetchProfiles, 5000)
+    return () => clearInterval(interval)
+  }, [activeWorkspace])
+
   useEffect(() => {
     if (selectedProfile) {
       fetchVariables(selectedProfile)
