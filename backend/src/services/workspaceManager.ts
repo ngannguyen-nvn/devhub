@@ -353,6 +353,20 @@ export class WorkspaceManager {
   }
 
   /**
+   * Extract base name from profile/service name that may have snapshot suffix
+   * Example: "admin-api (Quick Snapshot 2025-10-29 20:39:14)" -> "admin-api"
+   */
+  private extractBaseName(name: string): string {
+    // Match pattern: "name (anything)" and extract just "name"
+    const match = name.match(/^(.+?)\s*\([^)]+\)$/)
+    if (match) {
+      // Recursively extract in case of nested suffixes
+      return this.extractBaseName(match[1].trim())
+    }
+    return name
+  }
+
+  /**
    * Capture current workspace state for a specific workspace
    */
   async captureCurrentState(workspaceId: string, repoPaths: string[], scannedPath?: string): Promise<{
@@ -460,8 +474,10 @@ export class WorkspaceManager {
 
         if (Object.keys(serviceEnv).length > 0) {
           // Use service NAME as key, store metadata
+          // Extract base name to avoid nested snapshot suffixes
+          const baseName = this.extractBaseName(service.name)
           envVariables[service.name] = {
-            entityName: service.name,
+            entityName: baseName,
             entityType: 'service',
             variables: serviceEnv,
           }
@@ -477,9 +493,11 @@ export class WorkspaceManager {
             profileEnv[variable.key] = variable.value
           }
           // Store under profile NAME to keep them separate
+          // Extract base name to avoid nested snapshot suffixes
           if (Object.keys(profileEnv).length > 0) {
+            const baseName = this.extractBaseName(profile.name)
             envVariables[profile.name] = {
-              entityName: profile.name,
+              entityName: baseName,
               entityType: 'profile',
               variables: profileEnv,
             }
