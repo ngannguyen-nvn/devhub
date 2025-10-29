@@ -11,6 +11,7 @@ import dependencyRoutes from './routes/dependencies'
 import healthCheckRoutes from './routes/healthChecks'
 import portRoutes from './routes/ports'
 import templateRoutes from './routes/templates'
+import logRoutes from './routes/logs'
 import './db' // Initialize database
 
 dotenv.config()
@@ -33,6 +34,7 @@ app.use('/api/dependencies', dependencyRoutes)
 app.use('/api/health-checks', healthCheckRoutes)
 app.use('/api/ports', portRoutes)
 app.use('/api/templates', templateRoutes)
+app.use('/api/logs', logRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
