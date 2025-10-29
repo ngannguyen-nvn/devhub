@@ -106,7 +106,8 @@ router.post('/snapshots', async (req: Request, res: Response) => {
  */
 router.post('/snapshots/quick', async (req: Request, res: Response) => {
   try {
-    const snapshot = await workspaceManager.quickSnapshot()
+    const { autoImportEnv = false } = req.body
+    const snapshot = await workspaceManager.quickSnapshot(autoImportEnv)
     res.json({ success: true, snapshot })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
@@ -381,7 +382,8 @@ router.get('/stash/details', async (req: Request, res: Response) => {
 router.post('/snapshots/:snapshotId/restore', async (req: Request, res: Response) => {
   try {
     const { snapshotId } = req.params
-    const result = await workspaceManager.restoreSnapshot(snapshotId)
+    const { applyEnvToFiles = false } = req.body
+    const result = await workspaceManager.restoreSnapshot(snapshotId, applyEnvToFiles)
     res.json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
@@ -589,7 +591,7 @@ router.get('/:workspaceId/snapshots', (req: Request, res: Response) => {
 router.post('/:workspaceId/snapshots', async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params
-    const { name, description, repoPaths, activeEnvProfile, tags, scannedPath } = req.body
+    const { name, description, repoPaths, activeEnvProfile, tags, scannedPath, autoImportEnv = false } = req.body
 
     if (!name) {
       return res.status(400).json({ success: false, error: 'Name is required' })
@@ -606,7 +608,8 @@ router.post('/:workspaceId/snapshots', async (req: Request, res: Response) => {
       activeEnvProfile,
       tags,
       scannedPath,
-      workspaceId
+      workspaceId,
+      autoImportEnv
     )
 
     res.json({ success: true, snapshot })

@@ -423,11 +423,14 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
           // Use repo name as profile name (e.g., "admin-api")
           const profileName = repo.name
 
-          // Create environment profile
+          // Create environment profile with source metadata
           const createProfileResponse = await axios.post('/api/env/profiles', {
             name: profileName,
             description: `Auto-imported from ${repo.path} (${snapshotName})`,
             workspace_id: workspaceId,
+            sourceType: 'auto-import',
+            sourceId: workspaceId, // Use workspace ID as source identifier
+            sourceName: snapshotName, // e.g., "Scan - 29/10/2025, 20:07:50"
           })
 
           const profileId = createProfileResponse.data.profile.id

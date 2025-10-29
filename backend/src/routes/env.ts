@@ -72,14 +72,22 @@ router.get('/profiles/:profileId', async (req: Request, res: Response) => {
  */
 router.post('/profiles', async (req: Request, res: Response) => {
   try {
-    const { name, description } = req.body
+    const { name, description, sourceType, sourceId, sourceName } = req.body
 
     if (!name) {
       return res.status(400).json({ success: false, error: 'Name is required' })
     }
 
     const workspaceId = await getWorkspaceId(req)
-    const profile = envManager.createProfile(workspaceId, name, description)
+
+    // Build metadata object if source fields are provided
+    const metadata = (sourceType || sourceId || sourceName) ? {
+      sourceType,
+      sourceId,
+      sourceName,
+    } : undefined
+
+    const profile = envManager.createProfile(workspaceId, name, description, metadata)
     res.json({ success: true, profile })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })

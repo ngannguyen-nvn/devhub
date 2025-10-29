@@ -9,9 +9,11 @@ export interface Service extends Omit<SharedService, 'status' | 'pid'> {
 }
 
 export interface RunningService extends Service {
-  pid: number
+  pid?: number
   status: 'running' | 'stopped' | 'error'
   startedAt: Date
+  stoppedAt?: Date
+  exitCode?: number
   logs: string[]
 }
 
@@ -163,9 +165,15 @@ export class ServiceManager extends EventEmitter {
    * Start a service
    */
   async startService(serviceId: string): Promise<void> {
-    // Check if already running
-    if (this.runningServices.has(serviceId)) {
+    // Check if already running (check for active process, not just entry in map)
+    const existingService = this.runningServices.get(serviceId)
+    if (existingService && existingService.status === 'running' && existingService.pid) {
       throw new Error('Service is already running')
+    }
+
+    // If service was previously stopped, clear old logs and state
+    if (existingService) {
+      this.runningServices.delete(serviceId)
     }
 
     // Get service config
@@ -233,8 +241,14 @@ export class ServiceManager extends EventEmitter {
     childProcess.on('exit', (code) => {
       console.log(`Service ${service.name} exited with code ${code}`)
       runningService.status = code === 0 ? 'stopped' : 'error'
+      runningService.stoppedAt = new Date()
+      runningService.exitCode = code || undefined
+      runningService.pid = undefined // Clear PID since process is gone
+
+      // Keep logs and service info, only remove from active processes
       this.processes.delete(serviceId)
-      this.runningServices.delete(serviceId)
+      // DON'T delete from runningServices - keep logs visible
+
       this.emit('exit', { serviceId, code })
     })
 
@@ -272,6 +286,8 @@ export class ServiceManager extends EventEmitter {
     const runningService = this.runningServices.get(serviceId)
     if (runningService) {
       runningService.status = 'stopped'
+      runningService.stoppedAt = new Date()
+      // Exit handler will set exitCode when process actually exits
     }
   }
 

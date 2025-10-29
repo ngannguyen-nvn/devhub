@@ -353,9 +353,30 @@ export class WorkspaceManager {
   }
 
   /**
-   * Capture current workspace state for a specific workspace
+   * Extract base name from profile/service name that may have snapshot suffix
+   * Example: "admin-api (Quick Snapshot 2025-10-29 20:39:14)" -> "admin-api"
    */
-  async captureCurrentState(workspaceId: string, repoPaths: string[], scannedPath?: string): Promise<{
+  private extractBaseName(name: string): string {
+    // Match pattern: "name (anything)" and extract just "name"
+    const match = name.match(/^(.+?)\s*\([^)]+\)$/)
+    if (match) {
+      // Recursively extract in case of nested suffixes
+      return this.extractBaseName(match[1].trim())
+    }
+    return name
+  }
+
+  /**
+   * Capture current workspace state for a specific workspace
+   * Creates snapshot profiles in DB instead of returning JSON
+   */
+  async captureCurrentState(
+    workspaceId: string,
+    repoPaths: string[],
+    snapshotId: string,
+    snapshotName: string,
+    scannedPath?: string
+  ): Promise<{
     runningServices: Array<{ serviceId: string; serviceName: string }>
     repositories: Array<{ path: string; branch: string; hasChanges: boolean }>
     dockerContainers?: Array<{
@@ -365,7 +386,6 @@ export class WorkspaceManager {
       state: string
       ports: Array<{ privatePort: number; publicPort?: number }>
     }>
-    envVariables?: Record<string, Record<string, string>>
     serviceLogs?: Record<string, string[]>
     wikiNotes?: Array<{
       id: string
@@ -431,18 +451,17 @@ export class WorkspaceManager {
       dockerContainers = []
     }
 
-    // Get environment variables for all profiles and services in this workspace
-    const envVariables: Record<string, Record<string, string>> = {}
+    // Create snapshot profiles in DB (instead of storing as JSON)
     try {
       const allServices = this.serviceManager.getAllServices(workspaceId)
-      const profiles = this.envManager.getAllProfiles(workspaceId)
+      const existingProfiles = this.envManager.getAllProfiles(workspaceId)
 
-      // Capture service-specific variables
+      // Capture service-specific variables as new profiles
       for (const service of allServices) {
         const serviceEnv: Record<string, string> = {}
 
-        // Get variables from all profiles for this service
-        for (const profile of profiles) {
+        // Get variables from all existing profiles for this service
+        for (const profile of existingProfiles) {
           const variables = this.envManager.getVariables(profile.id, service.id)
           for (const variable of variables) {
             serviceEnv[variable.key] = variable.value
@@ -450,26 +469,72 @@ export class WorkspaceManager {
         }
 
         if (Object.keys(serviceEnv).length > 0) {
-          envVariables[service.id] = serviceEnv
+          // Extract clean base name (remove any previous snapshot suffixes)
+          const baseName = this.extractBaseName(service.name)
+
+          // Create profile for this snapshot
+          const snapshotProfile = this.envManager.createProfile(
+            workspaceId,
+            baseName,  // Clean name!
+            `Snapshot: ${snapshotName}`,
+            {
+              sourceType: 'snapshot',
+              sourceId: snapshotId,  // Link to snapshot
+              sourceName: snapshotName,  // For UI grouping
+            }
+          )
+
+          // Create variables in the new profile
+          for (const [key, value] of Object.entries(serviceEnv)) {
+            this.envManager.createVariable({
+              key,
+              value,
+              profileId: snapshotProfile.id,
+              serviceId: undefined,
+              isSecret: false,
+            })
+          }
         }
       }
 
       // Also capture profile-level variables (not tied to specific services)
-      for (const profile of profiles) {
+      for (const profile of existingProfiles) {
+        // Skip profiles that belong to snapshots (to avoid duplicating snapshot profiles)
+        if (profile.sourceType === 'snapshot') {
+          continue
+        }
+
         const profileVars = this.envManager.getVariables(profile.id) // No serviceId = get global vars
         if (profileVars.length > 0) {
-          const profileEnv: Record<string, string> = {}
+          // Extract clean base name
+          const baseName = this.extractBaseName(profile.name)
+
+          // Create profile for this snapshot
+          const snapshotProfile = this.envManager.createProfile(
+            workspaceId,
+            baseName,  // Clean name!
+            `Snapshot: ${snapshotName}`,
+            {
+              sourceType: 'snapshot',
+              sourceId: snapshotId,  // Link to snapshot
+              sourceName: snapshotName,  // For UI grouping
+            }
+          )
+
+          // Create variables in the new profile
           for (const variable of profileVars) {
-            profileEnv[variable.key] = variable.value
-          }
-          // Store under profile ID to keep them separate
-          if (Object.keys(profileEnv).length > 0) {
-            envVariables[profile.id] = profileEnv
+            this.envManager.createVariable({
+              key: variable.key,
+              value: variable.value,
+              profileId: snapshotProfile.id,
+              serviceId: undefined,
+              isSecret: variable.isSecret,
+            })
           }
         }
       }
     } catch (error) {
-      console.error('Error capturing environment variables:', error)
+      console.error('Error creating snapshot profiles:', error)
     }
 
     // Get service logs
@@ -509,7 +574,6 @@ export class WorkspaceManager {
       runningServices,
       repositories: repositories.filter(r => r !== null) as any[],
       dockerContainers,
-      envVariables,
       serviceLogs,
       wikiNotes,
       scannedPath,
@@ -527,7 +591,8 @@ export class WorkspaceManager {
     activeEnvProfile?: string,
     tags?: string[],
     scannedPath?: string,
-    workspaceId?: string
+    workspaceId?: string,
+    autoImportEnv: boolean = false
   ): Promise<WorkspaceSnapshot> {
     const id = `snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const now = new Date().toISOString()
@@ -573,15 +638,19 @@ export class WorkspaceManager {
       }
     }
 
-    // Capture current state for this workspace
-    const state = await this.captureCurrentState(targetWorkspaceId, repoPaths, scannedPath)
+    // Auto-import .env files if requested
+    if (autoImportEnv) {
+      await this.autoImportEnvFiles(targetWorkspaceId, repoPaths, name)
+    }
+
+    // Capture current state for this workspace (creates snapshot profiles in DB)
+    const state = await this.captureCurrentState(targetWorkspaceId, repoPaths, id, name, scannedPath)
 
     const config = {
       description,
       runningServices: state.runningServices,
       repositories: state.repositories,
       dockerContainers: state.dockerContainers,
-      envVariables: state.envVariables,
       serviceLogs: state.serviceLogs,
       wikiNotes: state.wikiNotes,
       activeEnvProfile,
@@ -633,7 +702,6 @@ export class WorkspaceManager {
       runningServices: current.runningServices,
       repositories: current.repositories,
       dockerContainers: current.dockerContainers,
-      envVariables: current.envVariables,
       serviceLogs: current.serviceLogs,
       wikiNotes: current.wikiNotes,
       activeEnvProfile: current.activeEnvProfile,
@@ -1064,11 +1132,11 @@ export class WorkspaceManager {
   /**
    * Restore a workspace snapshot
    */
-  async restoreSnapshot(snapshotId: string): Promise<{
+  async restoreSnapshot(snapshotId: string, applyEnvToFiles: boolean = false): Promise<{
     success: boolean
     servicesStarted: number
     branchesSwitched: number
-    envVarsRestored: number
+    envFilesWritten: number
     errors: string[]
   }> {
     const snapshot = this.getSnapshot(snapshotId)
@@ -1079,7 +1147,7 @@ export class WorkspaceManager {
     const errors: string[] = []
     let servicesStarted = 0
     let branchesSwitched = 0
-    let envVarsRestored = 0
+    let envFilesWritten = 0
 
     // 1. Stop all currently running services
     this.serviceManager.stopAll()
@@ -1114,55 +1182,39 @@ export class WorkspaceManager {
       }
     }
 
-    // 3. Restore environment variables
-    if (snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0) {
+    // 3. Optionally apply environment variables to .env files
+    if (applyEnvToFiles) {
       try {
-        // Create a profile for the restored env vars
-        const profileName = `Snapshot: ${snapshot.name}`
+        // Get all profiles for this snapshot
+        const snapshotProfiles = this.envManager.getAllProfiles(snapshot.workspaceId)
+          .filter(p => p.sourceId === snapshot.id)
 
-        // Check if a restore profile already exists for this snapshot
-        let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
+        // Export each profile to its corresponding .env file
+        for (const profile of snapshotProfiles) {
+          try {
+            // Find the repository path for this profile
+            const repo = snapshot.repositories.find(r => {
+              const repoName = r.path.split('/').filter(Boolean).pop()
+              return repoName === profile.name
+            })
 
-        if (!profile) {
-          // Create new profile
-          profile = this.envManager.createProfile(
-            snapshot.workspaceId,
-            profileName,
-            `Environment variables restored from snapshot "${snapshot.name}"`
-          )
-          console.log(`Created env profile "${profileName}" for restored variables`)
-        } else {
-          console.log(`Using existing env profile "${profileName}" for restored variables`)
-        }
-
-        // Restore variables for each service
-        for (const [serviceId, vars] of Object.entries(snapshot.envVariables)) {
-          for (const [key, value] of Object.entries(vars)) {
-            // Check if variable already exists
-            const existingVars = this.envManager.getVariables(profile.id, serviceId)
-            const existingVar = existingVars.find(v => v.key === key)
-
-            if (existingVar) {
-              // Update existing variable
-              this.envManager.updateVariable(existingVar.id, { value })
-            } else {
-              // Create new variable
-              this.envManager.createVariable({
-                key,
-                value,
-                profileId: profile.id,
-                serviceId,
-                isSecret: false, // Assume non-secret for restored vars
-              })
+            if (!repo) {
+              continue // Skip if no matching repo found
             }
-            envVarsRestored++
+
+            const envFilePath = `${repo.path}/.env`
+
+            // Export profile variables to .env file
+            this.envManager.exportToEnvFile(profile.id, envFilePath)
+            envFilesWritten++
+          } catch (profileError: any) {
+            console.error(`Failed to export profile ${profile.name} to .env:`, profileError.message)
+            errors.push(`Failed to export profile ${profile.name}: ${profileError.message}`)
           }
         }
-
-        console.log(`Restored ${envVarsRestored} environment variables to profile "${profileName}"`)
       } catch (error: any) {
-        errors.push(`Failed to restore environment variables: ${error.message}`)
-        console.error('Error restoring environment variables:', error)
+        errors.push(`Failed to apply environment variables: ${error.message}`)
+        console.error('Error applying environment variables:', error)
       }
     }
 
@@ -1190,7 +1242,7 @@ export class WorkspaceManager {
       success: errors.length === 0,
       servicesStarted,
       branchesSwitched,
-      envVarsRestored,
+      envFilesWritten,
       errors,
     }
   }
@@ -1285,33 +1337,38 @@ export class WorkspaceManager {
       }
     }
 
-    // 4. Restore environment variables
-    if (options.restoreEnvVars && snapshot.envVariables) {
-      // Note: This is a simplified version
-      // In a real implementation, you might want to create a new profile
-      // or update an existing one with the snapshot's env vars
+    // 4. Optionally apply environment variables to .env files
+    if (options.restoreEnvVars) {
       try {
-        const profileName = `${snapshot.name} - Restored ${new Date().toISOString()}`
-        const profile = this.envManager.createProfile(
-          snapshot.workspaceId,
-          profileName,
-          `Restored from snapshot: ${snapshot.name}`
-        )
+        // Get all profiles for this snapshot
+        const snapshotProfiles = this.envManager.getAllProfiles(snapshot.workspaceId)
+          .filter(p => p.sourceId === snapshot.id)
 
-        for (const [serviceId, vars] of Object.entries(snapshot.envVariables)) {
-          for (const [key, value] of Object.entries(vars)) {
-            this.envManager.createVariable({
-              key,
-              value,
-              profileId: profile.id,
-              serviceId,
-              isSecret: false, // You might want to determine this from the variable name
+        // Export each profile to its corresponding .env file
+        for (const profile of snapshotProfiles) {
+          try {
+            // Find the repository path for this profile
+            const repo = snapshot.repositories.find(r => {
+              const repoName = r.path.split('/').filter(Boolean).pop()
+              return repoName === profile.name
             })
+
+            if (!repo) {
+              continue // Skip if no matching repo found
+            }
+
+            const envFilePath = `${repo.path}/.env`
+
+            // Export profile variables to .env file
+            this.envManager.exportToEnvFile(profile.id, envFilePath)
             envVarsApplied++
+          } catch (profileError: any) {
+            console.error(`Failed to export profile ${profile.name} to .env:`, profileError.message)
+            errors.push(`Failed to export profile ${profile.name}: ${profileError.message}`)
           }
         }
       } catch (error: any) {
-        errors.push(`Failed to restore environment variables: ${error.message}`)
+        errors.push(`Failed to apply environment variables: ${error.message}`)
       }
     }
 
@@ -1379,9 +1436,51 @@ export class WorkspaceManager {
   }
 
   /**
+   * Auto-import .env files from repositories
+   */
+  private async autoImportEnvFiles(workspaceId: string, repoPaths: string[], snapshotName: string): Promise<void> {
+    for (const repoPath of repoPaths) {
+      try {
+        const envFilePath = `${repoPath}/.env`
+
+        // Check if .env file exists
+        if (!fs.existsSync(envFilePath)) {
+          continue
+        }
+
+        // Extract repo name from path
+        const repoName = repoPath.split('/').filter(Boolean).pop() || 'unknown'
+
+        // Create or get profile for this repo
+        let profile = this.envManager.getProfileByName(workspaceId, repoName)
+
+        if (!profile) {
+          // Create new profile with source metadata
+          profile = this.envManager.createProfile(
+            workspaceId,
+            repoName,
+            `Auto-imported from ${repoPath} (${snapshotName})`,
+            {
+              sourceType: 'auto-import',
+              sourceId: workspaceId,
+              sourceName: snapshotName,
+            }
+          )
+        }
+
+        // Import .env file
+        this.envManager.importFromEnvFile(envFilePath, profile.id)
+      } catch (error: any) {
+        console.error(`Failed to import .env from ${repoPath}:`, error.message)
+        // Continue with other repos even if one fails
+      }
+    }
+  }
+
+  /**
    * Quick snapshot (capture current state with auto-generated name for active workspace)
    */
-  async quickSnapshot(): Promise<WorkspaceSnapshot> {
+  async quickSnapshot(autoImportEnv: boolean = false): Promise<WorkspaceSnapshot> {
     const timestamp = this.generateTimestamp()
     const name = `Quick Snapshot ${timestamp}`
 
@@ -1395,7 +1494,7 @@ export class WorkspaceManager {
     const allServices = this.serviceManager.getAllServices(activeWorkspace.id)
     const repoPaths = [...new Set(allServices.map(s => s.repoPath))]
 
-    return this.createSnapshot(name, 'Auto-generated snapshot', repoPaths, undefined, undefined, undefined, activeWorkspace.id)
+    return this.createSnapshot(name, 'Auto-generated snapshot', repoPaths, undefined, undefined, undefined, activeWorkspace.id, autoImportEnv)
   }
 
   /**
