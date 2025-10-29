@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Lock,
   Unlock,
@@ -16,6 +16,11 @@ import {
   X,
   Check,
   Zap,
+  ChevronDown,
+  ChevronRight,
+  FolderOpen,
+  Archive,
+  FileText,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -27,6 +32,9 @@ interface EnvProfile {
   id: string
   name: string
   description?: string
+  sourceType?: 'auto-import' | 'snapshot-restore' | 'manual'
+  sourceId?: string
+  sourceName?: string
   createdAt: string
   updatedAt: string
 }
@@ -62,6 +70,7 @@ export default function Environment() {
   const [syncing, setSyncing] = useState(false)
   const [serviceSearchTerm, setServiceSearchTerm] = useState('')
   const [showAllServices, setShowAllServices] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
@@ -389,6 +398,51 @@ export default function Environment() {
     )
   })
 
+  // Group profiles by source for hierarchical display
+  const groupedProfiles = filteredProfiles.reduce((groups, profile) => {
+    // Use sourceName as the group key, or default to source type or "Manual"
+    const groupKey = profile.sourceName ||
+                     (profile.sourceType === 'auto-import' ? 'Auto-imported' :
+                      profile.sourceType === 'snapshot-restore' ? 'Snapshot Restored' :
+                      'Manual Profiles')
+
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
+        name: groupKey,
+        sourceType: profile.sourceType || 'manual',
+        profiles: []
+      }
+    }
+
+    groups[groupKey].profiles.push(profile)
+    return groups
+  }, {} as Record<string, { name: string; sourceType: string; profiles: EnvProfile[] }>)
+
+  // Convert to array and sort (manual first, then by name)
+  const sortedGroups = Object.values(groupedProfiles).sort((a, b) => {
+    if (a.sourceType === 'manual' && b.sourceType !== 'manual') return -1
+    if (a.sourceType !== 'manual' && b.sourceType === 'manual') return 1
+    return a.name.localeCompare(b.name)
+  })
+
+  // Auto-expand all groups on mount
+  useEffect(() => {
+    if (sortedGroups.length > 0 && expandedGroups.size === 0) {
+      const allGroupNames = sortedGroups.map(g => g.name)
+      setExpandedGroups(new Set(allGroupNames))
+    }
+  }, [sortedGroups.length])
+
+  const toggleGroup = (groupName: string) => {
+    const newExpanded = new Set(expandedGroups)
+    if (newExpanded.has(groupName)) {
+      newExpanded.delete(groupName)
+    } else {
+      newExpanded.add(groupName)
+    }
+    setExpandedGroups(newExpanded)
+  }
+
   // Filter variables based on search term
   const filteredVariables = variables.filter(variable => {
     if (!variableSearchTerm.trim()) return true
@@ -546,8 +600,8 @@ export default function Environment() {
             </div>
           )}
 
-          {/* Profiles List */}
-          <div data-testid="env-profile-list" className="space-y-2">
+          {/* Profiles List - Hierarchical Grouping */}
+          <div data-testid="env-profile-list" className="space-y-3">
             {profiles.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm">
                 No profiles. Create one to get started.
@@ -563,51 +617,88 @@ export default function Environment() {
                 </button>
               </div>
             ) : (
-              filteredProfiles.map(profile => (
-                <div
-                  key={profile.id}
-                  data-testid={`env-profile-item-${profile.id}`}
-                  onClick={() => setSelectedProfile(profile.id)}
-                  className={`p-3 rounded cursor-pointer border ${
-                    selectedProfile === profile.id
-                      ? 'bg-blue-50 border-blue-500'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{profile.name}</h3>
-                      {profile.description && (
-                        <p className="text-sm text-gray-600">{profile.description}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1">
-                      <button
-                        data-testid={`env-copy-profile-button-${profile.id}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleCopyProfile(profile.id)
-                        }}
-                        className="p-1 text-blue-600 hover:text-blue-800"
-                        title="Copy Profile"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button
-                        data-testid={`env-delete-profile-button-${profile.id}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteProfile(profile.id)
-                        }}
-                        className="p-1 text-red-600 hover:text-red-800"
-                        title="Delete Profile"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              sortedGroups.map(group => {
+                const isExpanded = expandedGroups.has(group.name)
+                const groupIcon = group.sourceType === 'auto-import' ? FolderOpen :
+                                 group.sourceType === 'snapshot-restore' ? Archive :
+                                 FileText
+
+                return (
+                  <div key={group.name} className="border border-gray-200 rounded-lg overflow-hidden">
+                    {/* Group Header */}
+                    <button
+                      onClick={() => toggleGroup(group.name)}
+                      className="w-full flex items-center justify-between p-3 bg-gray-100 hover:bg-gray-150 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                        )}
+                        {React.createElement(groupIcon, { className: "w-4 h-4 text-gray-700" })}
+                        <span className="font-semibold text-sm text-gray-900">{group.name}</span>
+                        <span className="text-xs text-gray-500 ml-1">
+                          ({group.profiles.length} profile{group.profiles.length !== 1 ? 's' : ''})
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* Group Profiles */}
+                    {isExpanded && (
+                      <div className="divide-y divide-gray-200">
+                        {group.profiles.map(profile => (
+                          <div
+                            key={profile.id}
+                            data-testid={`env-profile-item-${profile.id}`}
+                            onClick={() => setSelectedProfile(profile.id)}
+                            className={`p-3 cursor-pointer transition-colors ${
+                              selectedProfile === profile.id
+                                ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                                : 'bg-white hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h3 className={`font-semibold text-sm ${selectedProfile === profile.id ? 'text-blue-900' : 'text-gray-900'}`}>
+                                  {profile.name}
+                                </h3>
+                                {profile.description && (
+                                  <p className="text-xs text-gray-600 mt-1">{profile.description}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-1 ml-2">
+                                <button
+                                  data-testid={`env-copy-profile-button-${profile.id}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleCopyProfile(profile.id)
+                                  }}
+                                  className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded"
+                                  title="Copy Profile"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  data-testid={`env-delete-profile-button-${profile.id}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteProfile(profile.id)
+                                  }}
+                                  className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+                                  title="Delete Profile"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
