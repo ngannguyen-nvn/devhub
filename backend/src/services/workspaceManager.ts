@@ -1114,54 +1114,74 @@ export class WorkspaceManager {
       }
     }
 
-    // 3. Restore environment variables
+    // 3. Restore environment variables - create one profile per service (hierarchical structure)
     if (snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0) {
       try {
-        // Create a profile for the restored env vars
-        const profileName = `Snapshot: ${snapshot.name}`
+        // Get all current services in workspace to map IDs to names
+        const allServices = this.serviceManager.getAllServices(snapshot.workspaceId)
+        const serviceMap = new Map(allServices.map(s => [s.id, s.name]))
 
-        // Check if a restore profile already exists for this snapshot
-        let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
-
-        if (!profile) {
-          // Create new profile
-          profile = this.envManager.createProfile(
-            snapshot.workspaceId,
-            profileName,
-            `Environment variables restored from snapshot "${snapshot.name}"`
-          )
-          console.log(`Created env profile "${profileName}" for restored variables`)
-        } else {
-          console.log(`Using existing env profile "${profileName}" for restored variables`)
-        }
-
-        // Restore variables for each service
-        for (const [serviceId, vars] of Object.entries(snapshot.envVariables)) {
-          for (const [key, value] of Object.entries(vars)) {
-            // Check if variable already exists
-            const existingVars = this.envManager.getVariables(profile.id, serviceId)
-            const existingVar = existingVars.find(v => v.key === key)
-
-            if (existingVar) {
-              // Update existing variable
-              this.envManager.updateVariable(existingVar.id, { value })
+        // Create one profile per service/entity in the snapshot
+        for (const [entityId, vars] of Object.entries(snapshot.envVariables)) {
+          try {
+            // Determine profile name
+            let profileName: string
+            if (serviceMap.has(entityId)) {
+              // It's a current service - use its name
+              profileName = serviceMap.get(entityId)!
             } else {
-              // Create new variable
-              // Note: Pass null for serviceId since the service from snapshot might not exist anymore
-              // Variables are restored to the profile and can be applied to services later
-              this.envManager.createVariable({
-                key,
-                value,
-                profileId: profile.id,
-                serviceId: null, // Don't tie to specific service during restore
-                isSecret: false, // Assume non-secret for restored vars
-              })
+              // Unknown entity (deleted service or profile) - use ID fragment
+              profileName = `Unknown-${entityId.substring(0, 8)}`
             }
-            envVarsRestored++
+
+            // Check if profile already exists for this snapshot + service
+            let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
+
+            if (!profile) {
+              // Create new profile with source metadata
+              profile = this.envManager.createProfile(
+                snapshot.workspaceId,
+                profileName,
+                `Restored from snapshot "${snapshot.name}"`,
+                {
+                  sourceType: 'snapshot-restore',
+                  sourceId: snapshot.id,
+                  sourceName: snapshot.name,
+                }
+              )
+              console.log(`Created env profile "${profileName}" from snapshot "${snapshot.name}"`)
+            } else {
+              console.log(`Using existing env profile "${profileName}" for snapshot variables`)
+            }
+
+            // Restore variables for this service
+            for (const [key, value] of Object.entries(vars)) {
+              // Check if variable already exists
+              const existingVars = this.envManager.getVariables(profile.id, null)
+              const existingVar = existingVars.find(v => v.key === key)
+
+              if (existingVar) {
+                // Update existing variable
+                this.envManager.updateVariable(existingVar.id, { value })
+              } else {
+                // Create new variable
+                this.envManager.createVariable({
+                  key,
+                  value,
+                  profileId: profile.id,
+                  serviceId: null, // Not tied to specific service
+                  isSecret: false, // Assume non-secret for restored vars
+                })
+              }
+              envVarsRestored++
+            }
+          } catch (entityError: any) {
+            console.error(`Failed to restore variables for entity ${entityId}:`, entityError)
+            errors.push(`Failed to restore variables for entity ${entityId}: ${entityError.message}`)
           }
         }
 
-        console.log(`Restored ${envVarsRestored} environment variables to profile "${profileName}"`)
+        console.log(`Restored ${envVarsRestored} environment variables across ${Object.keys(snapshot.envVariables).length} profiles`)
       } catch (error: any) {
         errors.push(`Failed to restore environment variables: ${error.message}`)
         console.error('Error restoring environment variables:', error)
