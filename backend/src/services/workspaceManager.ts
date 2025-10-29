@@ -365,7 +365,11 @@ export class WorkspaceManager {
       state: string
       ports: Array<{ privatePort: number; publicPort?: number }>
     }>
-    envVariables?: Record<string, Record<string, string>>
+    envVariables?: Record<string, {
+      entityName: string
+      entityType: 'service' | 'profile'
+      variables: Record<string, string>
+    }>
     serviceLogs?: Record<string, string[]>
     wikiNotes?: Array<{
       id: string
@@ -432,7 +436,12 @@ export class WorkspaceManager {
     }
 
     // Get environment variables for all profiles and services in this workspace
-    const envVariables: Record<string, Record<string, string>> = {}
+    // Store by service/profile NAME (not ID) so we can restore properly
+    const envVariables: Record<string, {
+      entityName: string
+      entityType: 'service' | 'profile'
+      variables: Record<string, string>
+    }> = {}
     try {
       const allServices = this.serviceManager.getAllServices(workspaceId)
       const profiles = this.envManager.getAllProfiles(workspaceId)
@@ -450,7 +459,12 @@ export class WorkspaceManager {
         }
 
         if (Object.keys(serviceEnv).length > 0) {
-          envVariables[service.id] = serviceEnv
+          // Use service NAME as key, store metadata
+          envVariables[service.name] = {
+            entityName: service.name,
+            entityType: 'service',
+            variables: serviceEnv,
+          }
         }
       }
 
@@ -462,9 +476,13 @@ export class WorkspaceManager {
           for (const variable of profileVars) {
             profileEnv[variable.key] = variable.value
           }
-          // Store under profile ID to keep them separate
+          // Store under profile NAME to keep them separate
           if (Object.keys(profileEnv).length > 0) {
-            envVariables[profile.id] = profileEnv
+            envVariables[profile.name] = {
+              entityName: profile.name,
+              entityType: 'profile',
+              variables: profileEnv,
+            }
           }
         }
       }
@@ -1117,22 +1135,15 @@ export class WorkspaceManager {
     // 3. Restore environment variables - create one profile per service (hierarchical structure)
     if (snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0) {
       try {
-        // Get all current services in workspace to map IDs to names
-        const allServices = this.serviceManager.getAllServices(snapshot.workspaceId)
-        const serviceMap = new Map(allServices.map(s => [s.id, s.name]))
-
         // Create one profile per service/entity in the snapshot
-        for (const [entityId, vars] of Object.entries(snapshot.envVariables)) {
+        for (const [entityKey, entityData] of Object.entries(snapshot.envVariables)) {
           try {
-            // Determine profile name
-            let profileName: string
-            if (serviceMap.has(entityId)) {
-              // It's a current service - use its name
-              profileName = serviceMap.get(entityId)!
-            } else {
-              // Unknown entity (deleted service or profile) - use ID fragment
-              profileName = `Unknown-${entityId.substring(0, 8)}`
-            }
+            // Use entity name from snapshot data (not ephemeral ID)
+            const profileName = entityData.entityName
+            const entityType = entityData.entityType
+            const vars = entityData.variables
+
+            console.log(`Restoring ${Object.keys(vars).length} variables for ${entityType} "${profileName}"`)
 
             // Check if profile already exists for this snapshot + service
             let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
@@ -1142,7 +1153,7 @@ export class WorkspaceManager {
               profile = this.envManager.createProfile(
                 snapshot.workspaceId,
                 profileName,
-                `Restored from snapshot "${snapshot.name}"`,
+                `Restored from snapshot "${snapshot.name}" (${entityType})`,
                 {
                   sourceType: 'snapshot-restore',
                   sourceId: snapshot.id,
@@ -1154,10 +1165,10 @@ export class WorkspaceManager {
               console.log(`Using existing env profile "${profileName}" for snapshot variables`)
             }
 
-            // Restore variables for this service
+            // Restore variables for this service/profile
             for (const [key, value] of Object.entries(vars)) {
               // Check if variable already exists
-              const existingVars = this.envManager.getVariables(profile.id, null)
+              const existingVars = this.envManager.getVariables(profile.id, undefined)
               const existingVar = existingVars.find(v => v.key === key)
 
               if (existingVar) {
@@ -1169,15 +1180,15 @@ export class WorkspaceManager {
                   key,
                   value,
                   profileId: profile.id,
-                  serviceId: null, // Not tied to specific service
+                  serviceId: undefined, // Not tied to specific service
                   isSecret: false, // Assume non-secret for restored vars
                 })
               }
               envVarsRestored++
             }
           } catch (entityError: any) {
-            console.error(`Failed to restore variables for entity ${entityId}:`, entityError)
-            errors.push(`Failed to restore variables for entity ${entityId}: ${entityError.message}`)
+            console.error(`Failed to restore variables for entity ${entityKey}:`, entityError)
+            errors.push(`Failed to restore variables for entity ${entityKey}: ${entityError.message}`)
           }
         }
 
@@ -1309,27 +1320,46 @@ export class WorkspaceManager {
 
     // 4. Restore environment variables
     if (options.restoreEnvVars && snapshot.envVariables) {
-      // Note: This is a simplified version
-      // In a real implementation, you might want to create a new profile
-      // or update an existing one with the snapshot's env vars
       try {
-        const profileName = `${snapshot.name} - Restored ${new Date().toISOString()}`
-        const profile = this.envManager.createProfile(
-          snapshot.workspaceId,
-          profileName,
-          `Restored from snapshot: ${snapshot.name}`
-        )
+        // Create one profile per service/entity in the snapshot
+        for (const [entityKey, entityData] of Object.entries(snapshot.envVariables)) {
+          try {
+            // Use entity name from snapshot data (not ephemeral ID)
+            const profileName = entityData.entityName
+            const entityType = entityData.entityType
+            const vars = entityData.variables
 
-        for (const [serviceId, vars] of Object.entries(snapshot.envVariables)) {
-          for (const [key, value] of Object.entries(vars)) {
-            this.envManager.createVariable({
-              key,
-              value,
-              profileId: profile.id,
-              serviceId,
-              isSecret: false, // You might want to determine this from the variable name
-            })
-            envVarsApplied++
+            // Check if profile already exists
+            let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
+
+            if (!profile) {
+              // Create new profile with source metadata
+              profile = this.envManager.createProfile(
+                snapshot.workspaceId,
+                profileName,
+                `Restored from snapshot "${snapshot.name}" (${entityType})`,
+                {
+                  sourceType: 'snapshot-restore',
+                  sourceId: snapshot.id,
+                  sourceName: snapshot.name,
+                }
+              )
+            }
+
+            // Restore variables
+            for (const [key, value] of Object.entries(vars)) {
+              this.envManager.createVariable({
+                key,
+                value,
+                profileId: profile.id,
+                serviceId: undefined,
+                isSecret: false, // Assume non-secret for restored vars
+              })
+              envVarsApplied++
+            }
+          } catch (entityError: any) {
+            console.error(`Failed to restore variables for entity ${entityKey}:`, entityError)
+            errors.push(`Failed to restore variables for entity ${entityKey}: ${entityError.message}`)
           }
         }
       } catch (error: any) {

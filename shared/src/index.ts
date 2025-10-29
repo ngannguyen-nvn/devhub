@@ -87,7 +87,11 @@ export interface WorkspaceSnapshot {
 
   // Environment state
   activeEnvProfile?: string
-  envVariables?: Record<string, Record<string, string>> // serviceId -> { key: value }
+  envVariables?: Record<string, {
+    entityName: string
+    entityType: 'service' | 'profile'
+    variables: Record<string, string>
+  }> // entityKey -> { entityName, entityType, variables }
 
   // Service logs
   serviceLogs?: Record<string, string[]> // serviceId -> logs array
