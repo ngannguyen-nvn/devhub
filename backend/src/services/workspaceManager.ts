@@ -1139,11 +1139,13 @@ export class WorkspaceManager {
         for (const [entityKey, entityData] of Object.entries(snapshot.envVariables)) {
           try {
             // Use entity name from snapshot data (not ephemeral ID)
-            const profileName = entityData.entityName
+            // Make profile name unique per snapshot to avoid conflicts
+            const entityName = entityData.entityName
+            const profileName = `${entityName} (${snapshot.name})`
             const entityType = entityData.entityType
             const vars = entityData.variables
 
-            console.log(`Restoring ${Object.keys(vars).length} variables for ${entityType} "${profileName}"`)
+            console.log(`Restoring ${Object.keys(vars).length} variables for ${entityType} "${entityName}" from snapshot "${snapshot.name}"`)
 
             // Check if profile already exists for this snapshot + service
             let profile = this.envManager.getProfileByName(snapshot.workspaceId, profileName)
@@ -1325,7 +1327,9 @@ export class WorkspaceManager {
         for (const [entityKey, entityData] of Object.entries(snapshot.envVariables)) {
           try {
             // Use entity name from snapshot data (not ephemeral ID)
-            const profileName = entityData.entityName
+            // Make profile name unique per snapshot to avoid conflicts
+            const entityName = entityData.entityName
+            const profileName = `${entityName} (${snapshot.name})`
             const entityType = entityData.entityType
             const vars = entityData.variables
 
