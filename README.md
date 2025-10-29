@@ -36,7 +36,7 @@ Make sure you have these installed:
 ```bash
 git clone https://github.com/ngannguyen-nvn/devhub.git
 cd devhub
-git checkout claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK
+git checkout claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK  # Current tested branch
 ```
 
 ### Step 2: Install Dependencies
