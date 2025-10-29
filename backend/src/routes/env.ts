@@ -435,4 +435,50 @@ router.post('/read-env', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * Sync profile variables to a service's .env file
+ */
+router.post('/profiles/:profileId/sync-to-service', async (req: Request, res: Response) => {
+  try {
+    const { profileId } = req.params
+    const { serviceId } = req.body
+
+    if (!serviceId) {
+      return res.status(400).json({ success: false, error: 'serviceId is required' })
+    }
+
+    // Verify profile belongs to accessible workspace
+    const profile = envManager.getProfile(profileId)
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Profile not found' })
+    }
+
+    const workspaceId = await getWorkspaceId(req)
+    if (profile.workspaceId !== workspaceId) {
+      return res.status(404).json({ success: false, error: 'Profile not found in this workspace' })
+    }
+
+    // Get service details
+    const db = require('../db').default
+    const service = db.prepare('SELECT * FROM services WHERE id = ? AND workspace_id = ?').get(serviceId, workspaceId)
+
+    if (!service) {
+      return res.status(404).json({ success: false, error: 'Service not found' })
+    }
+
+    // Sync to service's .env file
+    const filePath = `${service.repo_path}/.env`
+    const synced = envManager.exportToEnvFile(profileId, filePath)
+
+    res.json({
+      success: true,
+      synced,
+      filePath,
+      serviceName: service.name,
+    })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 export default router

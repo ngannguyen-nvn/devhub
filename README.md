@@ -11,11 +11,12 @@ DevHub is a powerful desktop application that helps developers manage their loca
 DevHub solves the chaos of managing multiple microservices locally:
 
 - **Repository Dashboard**: See all your git repos, branches, and changes in one place
-- **Service Manager**: Start/stop services with one click and view real-time logs
+- **Service Manager**: Start/stop services with one click, view real-time logs, and search across all services
 - **Docker Integration**: Build images, manage containers, and generate docker-compose files
-- **Environment Manager**: Secure environment variables with AES-256 encryption and profiles
+- **Environment Manager**: Secure environment variables with AES-256 encryption, inline editing, copy/sync to files, and smart search
 - **Wiki/Notes**: Markdown-based documentation with full-text search and bidirectional linking
 - **Hierarchical Workspaces**: Organize and manage development environments with workspace → snapshot hierarchy
+- **Performance Optimized**: Batch API endpoints handle 40+ repos in seconds (97% fewer API calls)
 
 ---
 
@@ -35,7 +36,7 @@ Make sure you have these installed:
 ```bash
 git clone https://github.com/ngannguyen-nvn/devhub.git
 cd devhub
-git checkout claude/review-workspace-implementation-011CUWCRV4ibC76y9ZFg3Hef
+git checkout claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK
 ```
 
 ### Step 2: Install Dependencies
@@ -182,7 +183,29 @@ If you have a Node.js project, try this:
 - Each service has its own log viewer
 - Try stopping and restarting services
 
-#### 2.7 Import Services from Workspace
+#### 2.7 Search Services
+
+**What it does:** Quickly find services by name, path, command, or port.
+
+**How to test:**
+
+1. Add multiple services (or import from workspace)
+2. Look for the **search bar** at the top of the service list
+3. Type to search:
+   - **By name**: `api`
+   - **By path**: `/home/user/backend`
+   - **By command**: `npm start`
+   - **By port**: `3000`
+4. Results filter in real-time
+5. Result count shows: "X service(s)"
+6. Click **"Clear"** (X icon) to reset
+
+**Benefits:**
+- Fast filtering with real-time results
+- Search across multiple fields simultaneously
+- Helpful when managing 10+ services
+
+#### 2.8 Import Services from Workspace
 
 **What it does:** Automatically import services from repositories in the active workspace with auto-detected configuration.
 
@@ -321,7 +344,97 @@ If you have a Node.js project, try this:
 3. Copy the generated .env format
 4. Save to a file or use in your project
 
-#### 4.5 Apply Profile to Service
+#### 4.5 Search Profiles and Variables
+
+**What it does:** Quickly find profiles and variables by name, description, key, or value.
+
+**How to test:**
+
+1. Create multiple profiles with variables
+2. **Search profiles**:
+   - Use search bar above profile list
+   - Type profile name or description
+   - Results filter in real-time
+3. **Search variables**:
+   - Select a profile with many variables
+   - Use search bar above variable list
+   - Type key, value, or description
+   - Results filter in real-time
+
+**Benefits:**
+- Find variables quickly in large profiles
+- Locate profiles by description or name
+- Real-time filtering for instant results
+
+#### 4.6 Copy Variable in KEY=VALUE Format
+
+**What it does:** Copy variables in standard .env format with one click.
+
+**How to test:**
+
+1. Select a profile with variables
+2. Look for the **Copy** button next to each variable
+3. Click the copy button
+4. Paste anywhere (e.g., terminal, .env file)
+5. Format is: `KEY=value` (e.g., `DATABASE_URL=postgresql://...`)
+6. Toast notification confirms: "Copied: KEY=..."
+
+**Benefits:**
+- Quick copy-paste to terminal or files
+- Standard .env format
+- No manual formatting needed
+
+#### 4.7 Edit Variable Values
+
+**What it does:** Update variable values inline without recreating them.
+
+**How to test:**
+
+1. Select a profile with variables
+2. Click the **Edit** button (pencil icon) next to a variable
+3. Inline edit form appears with current values
+4. Update any field:
+   - **Key**: Change variable name
+   - **Value**: Update value (decrypted if secret)
+   - **Description**: Add or update description
+   - **Is Secret**: Toggle encryption
+5. Click **Save** (checkmark icon) or **Cancel** (X icon)
+6. Variable updates immediately
+
+**Benefits:**
+- No need to delete and recreate variables
+- Edit multiple fields at once
+- Secrets are decrypted for editing
+
+#### 4.8 Sync Variables to Service .env Files
+
+**What it does:** Write profile variables directly to service .env files on disk.
+
+**How to test:**
+
+1. Create a profile with variables (e.g., `DATABASE_URL`, `API_KEY`, `PORT`)
+2. Click **"Sync to Service"** button
+3. **Smart matching**: DevHub automatically selects the matching service
+   - Matches by name (profile name → service name)
+   - Example: Profile "admin-api" → Service "admin-api"
+4. **Review match**: Default service shown, or expand to see all services
+5. **Search services** (if expanded): Type to filter services
+6. Click **"Sync"**
+7. Variables are written to `{service.repoPath}/.env`
+
+**What happens:**
+- Existing .env file is backed up (if exists)
+- All profile variables written in KEY=VALUE format
+- Secrets are decrypted before writing
+- Toast confirms: "Synced X variables to service"
+
+**Benefits:**
+- Update service .env files without manual editing
+- Smart matching saves time
+- Backup created for safety
+- One-click sync for entire profile
+
+#### 4.9 Apply Profile to Service
 
 1. Select a profile
 2. In the right panel, see "Apply to Service" section
@@ -329,7 +442,7 @@ If you have a Node.js project, try this:
 4. Click **"Apply"**
 5. Environment variables are now available to that service when it runs
 
-#### 4.6 Auto-Import from Dashboard (Recommended)
+#### 4.10 Auto-Import from Dashboard (Recommended)
 
 **What it does:** When saving repositories to a workspace from Dashboard, you can automatically import .env files with per-repository isolation.
 
@@ -758,10 +871,13 @@ npm install
 
 ### Repository API
 - `GET /api/repos/scan?path=/home/user&depth=3` - Scan for repositories
+- `POST /api/repos/analyze` - Analyze a repository (detect name, command, port)
+- `POST /api/repos/analyze-batch` - **Batch analyze multiple repositories** (performance optimized)
 
 ### Services API
 - `GET /api/services` - List all services
 - `POST /api/services` - Create a service
+- `POST /api/services/batch` - **Batch create multiple services** (performance optimized)
 - `GET /api/services/:id` - Get service details
 - `PUT /api/services/:id` - Update service
 - `DELETE /api/services/:id` - Delete service
@@ -833,7 +949,7 @@ npm install
 - `GET /api/notes/:id/links` - Get linked notes
 - `GET /api/notes/:id/backlinks` - Get backlinks
 
-**Total: 59 API endpoints** (Workspace system expanded with hierarchical management)
+**Total: 63 API endpoints** (Including batch processing endpoints for performance)
 
 See feature-specific documentation for detailed API usage:
 - [DOCKER_FEATURE.md](./DOCKER_FEATURE.md)
@@ -855,19 +971,25 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
   - "Save to Workspace" with selected repos
   - Auto-populate workspace names from folder paths
   - SessionStorage for last scan path
-  - Optional .env import when saving to workspace
+  - Optional .env import when saving to workspace (auto-creates services + profiles)
   - Auto-activate newly created workspaces
 - Service manager with process control
+  - **Search functionality** - Find services by name, path, command, or port
   - **"Import from Workspace"** - Batch import services with auto-detection
   - Auto-detect service name, start command, and port from package.json/.env
   - Duplicate service detection with "Already added" badges
+  - Auto-service creation during folder scanning (opt-in)
   - Increased auto-refresh intervals (10s services, 5s logs)
 - Real-time logs viewer
 - SQLite persistence
 - **Docker integration** - Build images, manage containers, generate docker-compose
 - **Environment variables manager** - Secure storage with AES-256 encryption
+  - **Search functionality** - Find profiles and variables by name, description, key, or value
+  - **Copy variables in KEY=VALUE format** - One-click copy for terminal/files
+  - **Inline editing** - Update variable values without recreating
+  - **Sync to service .env files** - Write profile variables directly to disk with smart matching
   - **Per-repository profiles** - One profile per repo for complete isolation
-  - Profile naming: `"{SnapshotName} - {RepoName}"`
+  - Profile naming: Clean service names (e.g., "admin-api" not "Scan - timestamp - admin-api")
   - Auto-import .env files from Dashboard (opt-in)
   - No variable conflicts between repos
   - Snapshot-prefixed profiles for clear organization
@@ -880,6 +1002,11 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
   - 3-level navigation UI with breadcrumb & workspace switcher
   - Cascade deletion (workspace → snapshots → all resources)
   - Active workspace pattern
+- **Performance optimizations** - Batch API endpoints
+  - **POST /api/repos/analyze-batch** - Analyze multiple repos in one call
+  - **POST /api/services/batch** - Create multiple services in one call
+  - **97% reduction in API calls** for 40 repos (from 120+ to 3-5 calls)
+  - Dramatically faster scanning and service creation
 
 ### 📅 Planned (v2.0)
 

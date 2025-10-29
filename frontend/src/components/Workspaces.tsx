@@ -649,18 +649,62 @@ export default function Workspaces() {
         return
       }
 
-      // Create one profile per repository
+      // Create one profile per repository + auto-create services (batch optimized)
       let successCount = 0
       let failCount = 0
+      let servicesCreated = 0
 
+      // 1. Fetch existing services ONCE upfront
+      const servicesResponse = await axios.get('/api/services', {
+        params: { workspace_id: workspaceId }
+      })
+      const existingServices = servicesResponse.data.services || []
+
+      // 2. Batch create services for all repos that don't have services yet
+      const reposNeedingServices = reposWithEnv.filter(repo =>
+        !existingServices.find((s: any) => s.repoPath === repo.path)
+      )
+
+      if (reposNeedingServices.length > 0) {
+        try {
+          // Batch analyze all repos
+          const analyzeBatchResponse = await axios.post('/api/repos/analyze-batch', {
+            repoPaths: reposNeedingServices.map(repo => repo.path)
+          })
+
+          // Prepare services from successful analyses
+          const successfulAnalyses = analyzeBatchResponse.data.results.filter((r: any) => r.success)
+          const servicesToCreate = successfulAnalyses.map((result: any) => ({
+            name: result.analysis.name,
+            repoPath: result.repoPath,
+            command: result.analysis.command || 'npm start',
+            port: result.analysis.port || undefined,
+          }))
+
+          // Batch create services
+          if (servicesToCreate.length > 0) {
+            const batchCreateResponse = await axios.post('/api/services/batch', {
+              services: servicesToCreate,
+              workspace_id: workspaceId,
+            })
+            servicesCreated = batchCreateResponse.data.summary.created
+          }
+        } catch (serviceError) {
+          console.error('Failed to batch create services:', serviceError)
+          // Don't fail the whole import if service creation fails
+        }
+      }
+
+      // 3. Create env profiles and import .env files (must be sequential due to dependencies)
       for (const repo of reposWithEnv) {
         try {
-          // Create profile with format: "{SnapshotName} - {RepoName}"
-          const profileName = `${snapshotName} - ${repo.name}`
+          // Use repo name as profile name (e.g., "admin-api")
+          const profileName = repo.name
 
+          // Create environment profile
           const createProfileResponse = await axios.post('/api/env/profiles', {
             name: profileName,
-            description: `Auto-imported from ${repo.path}`,
+            description: `Auto-imported from ${repo.path} (${snapshotName})`,
             workspace_id: workspaceId,
           })
 
@@ -671,6 +715,7 @@ export default function Workspaces() {
           await axios.post(`/api/env/profiles/${profileId}/import`, {
             filePath: envFilePath,
             serviceId: null, // Not tied to a specific service
+            workspace_id: workspaceId, // Override active workspace check
           })
 
           successCount++
@@ -682,6 +727,9 @@ export default function Workspaces() {
 
       if (successCount > 0) {
         toast.success(`Created ${successCount} environment profile${successCount > 1 ? 's' : ''} from .env files`)
+      }
+      if (servicesCreated > 0) {
+        toast.success(`Auto-created ${servicesCreated} service${servicesCreated > 1 ? 's' : ''}`)
       }
       if (failCount > 0) {
         toast.error(`Failed to import ${failCount} .env file${failCount > 1 ? 's' : ''}`)
@@ -722,6 +770,52 @@ export default function Workspaces() {
       const snapshot = response.data.snapshot
       const repositories = response.data.scanResult?.repositories || []
 
+      // Auto-create services for all scanned repositories (optimized batch processing)
+      let servicesCreated = 0
+      if (repositories.length > 0) {
+        try {
+          // 1. Fetch existing services ONCE (not per repo)
+          const servicesResponse = await axios.get('/api/services', {
+            params: { workspace_id: snapshot.workspaceId }
+          })
+          const existingServices = servicesResponse.data.services || []
+
+          // 2. Filter repos that don't have services yet
+          const reposToCreate = repositories.filter(repo =>
+            !existingServices.find((s: any) => s.repoPath === repo.path)
+          )
+
+          if (reposToCreate.length > 0) {
+            // 3. Batch analyze all repos in a single API call
+            const analyzeBatchResponse = await axios.post('/api/repos/analyze-batch', {
+              repoPaths: reposToCreate.map(repo => repo.path)
+            })
+
+            // 4. Prepare services data from successful analyses
+            const successfulAnalyses = analyzeBatchResponse.data.results.filter((r: any) => r.success)
+            const servicesToCreate = successfulAnalyses.map((result: any) => ({
+              name: result.analysis.name,
+              repoPath: result.repoPath,
+              command: result.analysis.command || 'npm start',
+              port: result.analysis.port || undefined,
+            }))
+
+            // 5. Batch create all services in a single API call
+            if (servicesToCreate.length > 0) {
+              const batchCreateResponse = await axios.post('/api/services/batch', {
+                services: servicesToCreate,
+                workspace_id: snapshot.workspaceId,
+              })
+
+              servicesCreated = batchCreateResponse.data.summary.created
+            }
+          }
+        } catch (error) {
+          console.error('Failed to auto-create services:', error)
+          // Don't fail the scan if service creation fails
+        }
+      }
+
       // Import .env files if checkbox is enabled
       if (scanForm.importEnvFiles && repositories.length > 0) {
         await importEnvFilesToWorkspace(snapshot.workspaceId, repositories, scanForm.name)
@@ -735,10 +829,11 @@ export default function Workspaces() {
       // Also refresh global workspace context to update header
       refreshGlobalWorkspaces()
 
-      toast.success(
-        `Snapshot "${scanForm.name}" created! Found ${response.data.scanResult?.count || 0} repositories.`,
-        { duration: 5000 }
-      )
+      const messages = [`Snapshot "${scanForm.name}" created! Found ${response.data.scanResult?.count || 0} repositories.`]
+      if (servicesCreated > 0) {
+        messages.push(`Auto-created ${servicesCreated} service${servicesCreated > 1 ? 's' : ''}.`)
+      }
+      toast.success(messages.join(' '), { duration: 5000 })
     } catch (error: any) {
       toast.error(`Failed to scan folder: ${error.response?.data?.error || error.message}`)
     } finally {

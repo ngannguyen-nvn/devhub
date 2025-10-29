@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon } from 'lucide-react'
+import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon, Search } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
@@ -26,6 +26,7 @@ export default function Services() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [logs, setLogs] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -283,6 +284,19 @@ export default function Services() {
     }
   }
 
+  // Filter services based on search term
+  const filteredServices = services.filter(service => {
+    if (!searchTerm.trim()) return true
+
+    const search = searchTerm.toLowerCase()
+    return (
+      service.name.toLowerCase().includes(search) ||
+      service.repoPath.toLowerCase().includes(search) ||
+      service.command.toLowerCase().includes(search) ||
+      (service.port && service.port.toString().includes(search))
+    )
+  })
+
   return (
     <div className="h-full flex flex-col">
       {/* No Workspace Warning */}
@@ -537,6 +551,28 @@ export default function Services() {
         </div>
       )}
 
+      {/* Search Bar */}
+      {services.length > 0 && (
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search services by name, path, command, or port..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="service-search-input"
+            />
+          </div>
+          {searchTerm && (
+            <p className="text-sm text-gray-600 mt-2">
+              Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{searchTerm}"
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Services Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-auto">
         {/* Services List */}
@@ -559,7 +595,20 @@ export default function Services() {
             </div>
           )}
 
-          {services.map((service) => {
+          {filteredServices.length === 0 && services.length > 0 && !loading && (
+            <div className="text-center py-12 text-gray-500">
+              <Terminal size={48} className="mx-auto mb-4 text-gray-400" />
+              <p>No services match your search</p>
+              <button
+                onClick={() => setSearchTerm('')}
+                className="mt-4 text-blue-600 hover:underline"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+
+          {filteredServices.map((service) => {
             const isRunning = service.running?.status === 'running'
             const isSelected = selectedService === service.id
 

@@ -273,5 +273,95 @@ router.get('/:id/logs', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * POST /api/services/batch
+ * Create multiple services in a single request
+ */
+router.post('/batch', async (req: Request, res: Response) => {
+  try {
+    const { services } = req.body
+
+    if (!Array.isArray(services)) {
+      return res.status(400).json({ error: 'services must be an array' })
+    }
+
+    if (services.length === 0) {
+      return res.status(400).json({ error: 'services array cannot be empty' })
+    }
+
+    // Get workspace ID (can be overridden in body or uses active workspace)
+    const workspaceId = await getWorkspaceId(req)
+
+    // Get existing services to check for duplicates
+    const existingServices = serviceManager.getAllServices(workspaceId)
+    const existingRepoPaths = new Set(existingServices.map(s => s.repoPath))
+
+    const results = {
+      created: [] as any[],
+      skipped: [] as any[],
+      failed: [] as any[],
+    }
+
+    // Process all services
+    for (const serviceData of services) {
+      try {
+        // Validate required fields
+        if (!serviceData.name || !serviceData.repoPath || !serviceData.command) {
+          results.failed.push({
+            service: serviceData,
+            error: 'Missing required fields (name, repoPath, command)',
+          })
+          continue
+        }
+
+        // Check for duplicate
+        if (existingRepoPaths.has(serviceData.repoPath)) {
+          results.skipped.push({
+            repoPath: serviceData.repoPath,
+            name: serviceData.name,
+            reason: 'Service with this repoPath already exists',
+          })
+          continue
+        }
+
+        // Create service
+        const service = serviceManager.createService(workspaceId, {
+          name: serviceData.name,
+          repoPath: serviceData.repoPath,
+          command: serviceData.command,
+          port: serviceData.port || undefined,
+          envVars: serviceData.envVars || undefined,
+        })
+
+        results.created.push(service)
+        // Add to existing paths to prevent duplicates within this batch
+        existingRepoPaths.add(serviceData.repoPath)
+      } catch (error) {
+        results.failed.push({
+          service: serviceData,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+    }
+
+    res.json({
+      success: true,
+      results,
+      summary: {
+        total: services.length,
+        created: results.created.length,
+        skipped: results.skipped.length,
+        failed: results.failed.length,
+      },
+    })
+  } catch (error) {
+    console.error('Error in batch service creation:', error)
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
 export default router
 export { serviceManager }

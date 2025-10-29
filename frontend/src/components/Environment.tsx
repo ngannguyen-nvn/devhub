@@ -11,6 +11,11 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  Search,
+  Edit,
+  X,
+  Check,
+  Zap,
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -48,11 +53,25 @@ export default function Environment() {
   const [showAddVariableForm, setShowAddVariableForm] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
   const [showExportForm, setShowExportForm] = useState(false)
+  const [showSyncModal, setShowSyncModal] = useState(false)
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
+  const [profileSearchTerm, setProfileSearchTerm] = useState('')
+  const [variableSearchTerm, setVariableSearchTerm] = useState('')
+  const [editingVariableId, setEditingVariableId] = useState<string | null>(null)
+  const [services, setServices] = useState<any[]>([])
+  const [syncing, setSyncing] = useState(false)
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('')
+  const [showAllServices, setShowAllServices] = useState(false)
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
   const [variableForm, setVariableForm] = useState({
+    key: '',
+    value: '',
+    isSecret: false,
+    description: '',
+  })
+  const [editVariableForm, setEditVariableForm] = useState({
     key: '',
     value: '',
     isSecret: false,
@@ -200,17 +219,39 @@ export default function Environment() {
     }
   }
 
-  // const handleUpdateVariable = async (variableId: string, updates: Partial<EnvVariable>) => {
-  //   try {
-  //     await axios.put(`/api/env/variables/${variableId}`, updates)
-  //     if (selectedProfile) {
-  //       fetchVariables(selectedProfile)
-  //     }
-  //     toast.success('Variable updated successfully')
-  //   } catch (error: any) {
-  //     toast.error(`Failed to update variable: ${error.response?.data?.error || error.message}`)
-  //   }
-  // }
+  const handleEditVariable = (variable: EnvVariable) => {
+    setEditingVariableId(variable.id)
+    setEditVariableForm({
+      key: variable.key,
+      value: variable.value,
+      isSecret: variable.isSecret,
+      description: variable.description || '',
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingVariableId(null)
+    setEditVariableForm({ key: '', value: '', isSecret: false, description: '' })
+  }
+
+  const handleUpdateVariable = async () => {
+    if (!editingVariableId || !editVariableForm.key.trim()) {
+      toast.error('Key is required')
+      return
+    }
+
+    try {
+      await axios.put(`/api/env/variables/${editingVariableId}`, editVariableForm)
+      if (selectedProfile) {
+        fetchVariables(selectedProfile)
+      }
+      setEditingVariableId(null)
+      setEditVariableForm({ key: '', value: '', isSecret: false, description: '' })
+      toast.success('Variable updated successfully')
+    } catch (error: any) {
+      toast.error(`Failed to update variable: ${error.response?.data?.error || error.message}`)
+    }
+  }
 
   const handleDeleteVariable = (variableId: string) => {
     const variable = variables.find(v => v.id === variableId)
@@ -288,6 +329,118 @@ export default function Environment() {
     return '•'.repeat(Math.min(value.length, 20))
   }
 
+  const handleCopyVariable = async (variable: EnvVariable) => {
+    try {
+      const copyText = `${variable.key}=${variable.value}`
+      await navigator.clipboard.writeText(copyText)
+      toast.success(`Copied: ${variable.key}=...`)
+    } catch (error) {
+      toast.error('Failed to copy to clipboard')
+    }
+  }
+
+  const fetchServices = async () => {
+    try {
+      const response = await axios.get('/api/services')
+      setServices(response.data.services || [])
+    } catch (error) {
+      console.error('Error fetching services:', error)
+      toast.error('Failed to load services')
+    }
+  }
+
+  const handleOpenSyncModal = () => {
+    fetchServices()
+    setServiceSearchTerm('')
+    setShowAllServices(false)
+    setShowSyncModal(true)
+  }
+
+  const handleSyncToService = async (serviceId: string) => {
+    if (!selectedProfile) {
+      toast.error('No profile selected')
+      return
+    }
+
+    setSyncing(true)
+    try {
+      const response = await axios.post(`/api/env/profiles/${selectedProfile}/sync-to-service`, {
+        serviceId,
+      })
+
+      toast.success(`Synced ${response.data.synced} variables to ${response.data.serviceName}`)
+      toast.success(`File: ${response.data.filePath}`)
+      setShowSyncModal(false)
+    } catch (error: any) {
+      toast.error(`Failed to sync: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  // Filter profiles based on search term
+  const filteredProfiles = profiles.filter(profile => {
+    if (!profileSearchTerm.trim()) return true
+
+    const search = profileSearchTerm.toLowerCase()
+    return (
+      profile.name.toLowerCase().includes(search) ||
+      (profile.description && profile.description.toLowerCase().includes(search))
+    )
+  })
+
+  // Filter variables based on search term
+  const filteredVariables = variables.filter(variable => {
+    if (!variableSearchTerm.trim()) return true
+
+    const search = variableSearchTerm.toLowerCase()
+    return (
+      variable.key.toLowerCase().includes(search) ||
+      variable.value.toLowerCase().includes(search) ||
+      (variable.description && variable.description.toLowerCase().includes(search))
+    )
+  })
+
+  // Get the selected profile name
+  const currentProfile = profiles.find(p => p.id === selectedProfile)
+  const currentProfileName = currentProfile?.name.toLowerCase() || ''
+
+  // Find service that matches the profile name
+  // Support formats like "Scan - 28/10/2025, 09:00:35 - admin-api" → match "admin-api"
+  const matchingService = services.find(s => {
+    const serviceName = s.name.toLowerCase()
+
+    // Exact match
+    if (serviceName === currentProfileName) return true
+
+    // Profile name ends with " - {service-name}" pattern
+    if (currentProfileName.includes(' - ')) {
+      const lastPart = currentProfileName.split(' - ').pop() || ''
+      if (lastPart === serviceName) return true
+    }
+
+    // Profile name contains service name
+    if (currentProfileName.includes(serviceName)) return true
+
+    return false
+  })
+
+  // Filter services based on search term
+  const filteredServices = services.filter(service => {
+    if (!serviceSearchTerm.trim()) return true
+
+    const search = serviceSearchTerm.toLowerCase()
+    return (
+      service.name.toLowerCase().includes(search) ||
+      service.repoPath.toLowerCase().includes(search)
+    )
+  }).sort((a, b) => a.name.localeCompare(b.name))
+
+  // Services to display: matching service only, or all filtered services
+  const servicesToShow = (!showAllServices && !serviceSearchTerm && matchingService)
+    ? [matchingService]
+    : filteredServices
+
   return (
     <div>
       {/* No Workspace Warning */}
@@ -338,6 +491,23 @@ export default function Environment() {
             </button>
           </div>
 
+          {/* Profile Search */}
+          {profiles.length > 0 && (
+            <div className="mb-3">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  value={profileSearchTerm}
+                  onChange={(e) => setProfileSearchTerm(e.target.value)}
+                  placeholder="Search profiles..."
+                  className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="env-profile-search-input"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Add Profile Form */}
           {showAddProfileForm && (
             <div data-testid="env-profile-form" className="mb-4 p-3 bg-gray-50 rounded">
@@ -382,8 +552,18 @@ export default function Environment() {
               <div className="text-center py-8 text-gray-500 text-sm">
                 No profiles. Create one to get started.
               </div>
+            ) : filteredProfiles.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                No profiles match your search.
+                <button
+                  onClick={() => setProfileSearchTerm('')}
+                  className="block mx-auto mt-2 text-blue-600 hover:underline text-sm"
+                >
+                  Clear search
+                </button>
+              </div>
             ) : (
-              profiles.map(profile => (
+              filteredProfiles.map(profile => (
                 <div
                   key={profile.id}
                   data-testid={`env-profile-item-${profile.id}`}
@@ -456,6 +636,14 @@ export default function Environment() {
                     Export
                   </button>
                   <button
+                    data-testid="env-sync-button"
+                    onClick={handleOpenSyncModal}
+                    className="flex items-center gap-1 px-3 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Sync to Service
+                  </button>
+                  <button
                     data-testid="env-add-variable-button"
                     onClick={() => setShowAddVariableForm(true)}
                     className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
@@ -465,6 +653,28 @@ export default function Environment() {
                   </button>
                 </div>
               </div>
+
+              {/* Variable Search */}
+              {variables.length > 0 && (
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="text"
+                      value={variableSearchTerm}
+                      onChange={(e) => setVariableSearchTerm(e.target.value)}
+                      placeholder="Search variables by key, value, or description..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      data-testid="env-variable-search-input"
+                    />
+                  </div>
+                  {variableSearchTerm && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Found {filteredVariables.length} variable{filteredVariables.length !== 1 ? 's' : ''} matching "{variableSearchTerm}"
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Import Form */}
               {showImportForm && (
@@ -524,6 +734,127 @@ export default function Environment() {
                     >
                       Cancel
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Sync to Service Modal */}
+              {showSyncModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] flex flex-col" data-testid="env-sync-modal">
+                    <h2 className="text-xl font-bold mb-2">Sync to Service</h2>
+                    <p className="text-gray-600 mb-4">
+                      Select a service to sync this profile's variables to its .env file.
+                    </p>
+
+                    {services.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Zap size={48} className="mx-auto mb-4 text-gray-400" />
+                        <p>No services found.</p>
+                        <p className="text-sm mt-2">Add services from the Service Manager first.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Show matching service notice */}
+                        {matchingService && !showAllServices && !serviceSearchTerm && (
+                          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-900">
+                              <strong>Recommended:</strong> This profile matches the <strong>{matchingService.name}</strong> service.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Search Input - only show when showing all services or searching */}
+                        {(showAllServices || serviceSearchTerm) && (
+                          <div className="mb-4">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <input
+                                type="text"
+                                value={serviceSearchTerm}
+                                onChange={(e) => setServiceSearchTerm(e.target.value)}
+                                placeholder="Search services by name or path..."
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                data-testid="env-sync-service-search"
+                              />
+                            </div>
+                            {serviceSearchTerm && (
+                              <p className="text-sm text-gray-600 mt-2">
+                                Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{serviceSearchTerm}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Service List */}
+                        <div className="flex-1 overflow-y-auto space-y-2 mb-4" data-testid="env-sync-service-list">
+                          {servicesToShow.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                              <p>No services match your search.</p>
+                              <button
+                                onClick={() => setServiceSearchTerm('')}
+                                className="mt-2 text-blue-600 hover:underline text-sm"
+                              >
+                                Clear search
+                              </button>
+                            </div>
+                          ) : (
+                            servicesToShow.map((service: any) => (
+                          <div
+                            key={service.id}
+                            onClick={() => !syncing && handleSyncToService(service.id)}
+                            className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                              syncing
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'border-gray-200 hover:bg-gray-50 hover:border-blue-500'
+                            }`}
+                            data-testid={`env-sync-service-${service.id}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                                  {service.running?.status === 'running' && (
+                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                      Running
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-500 truncate">{service.repoPath}</p>
+                                <p className="text-xs text-blue-600 mt-1">→ {service.repoPath}/.env</p>
+                              </div>
+                              <Zap className="w-5 h-5 text-orange-600" />
+                            </div>
+                          </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Show All Services button - only show when there's a matching service */}
+                        {matchingService && !showAllServices && !serviceSearchTerm && services.length > 1 && (
+                          <div className="mb-4">
+                            <button
+                              onClick={() => setShowAllServices(true)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
+                              data-testid="env-show-all-services-button"
+                            >
+                              Or choose a different service ({services.length - 1} more)
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setShowSyncModal(false)}
+                        disabled={syncing}
+                        className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
+                        data-testid="env-sync-cancel-button"
+                      >
+                        {syncing ? 'Syncing...' : 'Cancel'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -594,58 +925,154 @@ export default function Environment() {
                 <div className="text-center py-8 text-gray-500">
                   No variables in this profile. Add one to get started.
                 </div>
+              ) : filteredVariables.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No variables match your search.
+                  <button
+                    onClick={() => setVariableSearchTerm('')}
+                    className="block mx-auto mt-2 text-blue-600 hover:underline text-sm"
+                  >
+                    Clear search
+                  </button>
+                </div>
               ) : (
                 <div data-testid="env-variable-list" className="space-y-2">
-                  {variables.map(variable => (
+                  {filteredVariables.map(variable => (
                     <div
                       key={variable.id}
                       data-testid={`env-variable-item-${variable.id}`}
                       className="p-3 bg-gray-50 rounded border border-gray-200"
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            {variable.isSecret ? (
-                              <Lock className="w-4 h-4 text-yellow-600" />
-                            ) : (
-                              <Unlock className="w-4 h-4 text-gray-400" />
-                            )}
-                            <span className="font-mono font-semibold">{variable.key}</span>
+                      {editingVariableId === variable.id ? (
+                        // Edit Mode
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Key</label>
+                            <input
+                              data-testid={`env-edit-variable-key-input-${variable.id}`}
+                              type="text"
+                              value={editVariableForm.key}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, key: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-mono"
+                              placeholder="KEY"
+                            />
                           </div>
-                          <div className="mt-1 flex items-center gap-2">
-                            <code className="text-sm bg-white px-2 py-1 rounded">
-                              {variable.isSecret && !revealedSecrets.has(variable.id)
-                                ? maskValue(variable.value)
-                                : variable.value}
-                            </code>
-                            {variable.isSecret && (
-                              <button
-                                data-testid={`env-toggle-secret-button-${variable.id}`}
-                                onClick={() => toggleRevealSecret(variable.id)}
-                                className="text-blue-600 hover:text-blue-800"
-                                title={revealedSecrets.has(variable.id) ? 'Hide' : 'Reveal'}
-                              >
-                                {revealedSecrets.has(variable.id) ? (
-                                  <EyeOff className="w-4 h-4" />
-                                ) : (
-                                  <Eye className="w-4 h-4" />
-                                )}
-                              </button>
-                            )}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Value</label>
+                            <input
+                              data-testid={`env-edit-variable-value-input-${variable.id}`}
+                              type="text"
+                              value={editVariableForm.value}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, value: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                              placeholder="Value"
+                            />
                           </div>
-                          {variable.description && (
-                            <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
-                          )}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Description (optional)</label>
+                            <input
+                              data-testid={`env-edit-variable-description-input-${variable.id}`}
+                              type="text"
+                              value={editVariableForm.description}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, description: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                              placeholder="Description"
+                            />
+                          </div>
+                          <label className="flex items-center gap-2">
+                            <input
+                              data-testid={`env-edit-variable-secret-checkbox-${variable.id}`}
+                              type="checkbox"
+                              checked={editVariableForm.isSecret}
+                              onChange={(e) => setEditVariableForm({ ...editVariableForm, isSecret: e.target.checked })}
+                            />
+                            <Lock className="w-4 h-4" />
+                            <span className="text-sm">Mark as secret (encrypted)</span>
+                          </label>
+                          <div className="flex gap-2">
+                            <button
+                              data-testid={`env-save-variable-button-${variable.id}`}
+                              onClick={handleUpdateVariable}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                            >
+                              <Check className="w-4 h-4" />
+                              Save
+                            </button>
+                            <button
+                              data-testid={`env-cancel-edit-button-${variable.id}`}
+                              onClick={handleCancelEdit}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                            >
+                              <X className="w-4 h-4" />
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          data-testid={`env-delete-variable-button-${variable.id}`}
-                          onClick={() => handleDeleteVariable(variable.id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      ) : (
+                        // Display Mode
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              {variable.isSecret ? (
+                                <Lock className="w-4 h-4 text-yellow-600" />
+                              ) : (
+                                <Unlock className="w-4 h-4 text-gray-400" />
+                              )}
+                              <span className="font-mono font-semibold">{variable.key}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <code className="text-sm bg-white px-2 py-1 rounded">
+                                {variable.isSecret && !revealedSecrets.has(variable.id)
+                                  ? maskValue(variable.value)
+                                  : variable.value}
+                              </code>
+                              {variable.isSecret && (
+                                <button
+                                  data-testid={`env-toggle-secret-button-${variable.id}`}
+                                  onClick={() => toggleRevealSecret(variable.id)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title={revealedSecrets.has(variable.id) ? 'Hide' : 'Reveal'}
+                                >
+                                  {revealedSecrets.has(variable.id) ? (
+                                    <EyeOff className="w-4 h-4" />
+                                  ) : (
+                                    <Eye className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                            {variable.description && (
+                              <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              data-testid={`env-edit-variable-button-${variable.id}`}
+                              onClick={() => handleEditVariable(variable)}
+                              className="text-gray-600 hover:text-gray-800"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              data-testid={`env-copy-variable-button-${variable.id}`}
+                              onClick={() => handleCopyVariable(variable)}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Copy KEY=VALUE"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            <button
+                              data-testid={`env-delete-variable-button-${variable.id}`}
+                              onClick={() => handleDeleteVariable(variable.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
