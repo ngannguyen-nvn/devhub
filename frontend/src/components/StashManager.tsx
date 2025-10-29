@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { GitBranch, Trash2, RotateCcw, Archive, RefreshCw, ChevronDown, ChevronRight, FileText } from 'lucide-react'
+import { GitBranch, Trash2, RotateCcw, Archive, RefreshCw, ChevronDown, ChevronRight, FileText, Search, X } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
@@ -39,6 +39,7 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set())
   const [expandedStashes, setExpandedStashes] = useState<Set<string>>(new Set())
   const [stashDetails, setStashDetails] = useState<Record<string, StashDetails>>({})
+  const [searchTerm, setSearchTerm] = useState('')
 
   const fetchStashes = async () => {
     setLoading(true)
@@ -167,7 +168,22 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
     }
   }
 
+  // Filter stashes by repo name or path
+  const filteredStashes = Object.entries(stashes).filter(([repoPath]) => {
+    if (!searchTerm.trim()) return true
+    const search = searchTerm.toLowerCase()
+    const repoName = repoPath.split('/').pop() || ''
+    return (
+      repoName.toLowerCase().includes(search) ||
+      repoPath.toLowerCase().includes(search)
+    )
+  }).reduce((acc, [repoPath, repoStashes]) => {
+    acc[repoPath] = repoStashes
+    return acc
+  }, {} as Record<string, Stash[]>)
+
   const totalStashes = Object.values(stashes).reduce((sum, arr) => sum + arr.length, 0)
+  const filteredTotalStashes = Object.values(filteredStashes).reduce((sum, arr) => sum + arr.length, 0)
 
   if (loading && totalStashes === 0) {
     return (
@@ -212,7 +228,9 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Archive className="w-5 h-5" />
           Stash Manager
-          <span className="text-sm font-normal text-gray-500">({totalStashes})</span>
+          <span className="text-sm font-normal text-gray-500">
+            ({searchTerm ? `${filteredTotalStashes} / ${totalStashes}` : totalStashes})
+          </span>
         </h3>
         <button
           onClick={fetchStashes}
@@ -224,8 +242,41 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
         </button>
       </div>
 
-      <div className="space-y-3">
-        {Object.entries(stashes).map(([repoPath, repoStashes]) => {
+      {/* Search Input */}
+      <div className="mb-4 relative">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search repositories..."
+          className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+            title="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {filteredTotalStashes === 0 && searchTerm ? (
+        <div className="text-center py-8 text-gray-500">
+          <Search size={48} className="mx-auto mb-4 text-gray-400" />
+          <p>No stashes match your search</p>
+          <button
+            onClick={() => setSearchTerm('')}
+            className="mt-4 text-blue-600 hover:underline"
+          >
+            Clear search
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {Object.entries(filteredStashes).map(([repoPath, repoStashes]) => {
           const isExpanded = expandedRepos.has(repoPath)
           const repoName = repoPath.split('/').pop() || repoPath
 
@@ -365,7 +416,8 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
             </div>
           )
         })}
-      </div>
+        </div>
+      )}
 
       <div className="mt-4 text-xs text-gray-500 border-t pt-3">
         <p className="mb-1">
