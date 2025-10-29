@@ -151,9 +151,13 @@ export class ServiceManager extends EventEmitter {
    * Delete a service
    */
   deleteService(id: string): boolean {
-    // Stop service if running
+    // Stop service if running (catch error if already stopped)
     if (this.runningServices.has(id)) {
-      this.stopService(id)
+      try {
+        this.stopService(id)
+      } catch (error) {
+        // Service already stopped, ignore error
+      }
     }
 
     const stmt = db.prepare('DELETE FROM services WHERE id = ?')
