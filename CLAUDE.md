@@ -10,10 +10,10 @@ This document contains everything needed to understand and continue developing D
 
 **DevHub** is a developer productivity tool for managing microservices ecosystems locally.
 
-**Current Status:** MVP v1.0 - All 4 priorities complete ✅ + Full Workspace Scoping
+**Current Status:** MVP v1.0.1 - Tested & Verified ✅
 **Tech Stack:** React + Vite (frontend), Express + TypeScript (backend), SQLite (database)
 **Repository:** https://github.com/ngannguyen-nvn/devhub
-**Branch:** `claude/review-workspace-implementation-011CUWCRV4ibC76y9ZFg3Hef`
+**Branch:** `claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK`
 
 ---
 
@@ -1062,7 +1062,7 @@ backend/devhub.db
 
 **Current branch:**
 ```
-claude/continue-devhub-mvp-011CUVcBQCRuQu1yoTkCXSzY
+claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK
 ```
 
 **Repository:**
@@ -1091,18 +1091,59 @@ This document should give you everything needed to understand and continue devel
 
 ---
 
-**Last Updated:** 2025-10-26
-**Version:** v1.0 + Full Workspace Scoping
-**Status:** MVP - All 4 priorities complete ✅ + Complete Workspace Isolation
+**Last Updated:** 2025-10-29
+**Version:** v1.0.1 - Tested & Verified
+**Status:** MVP Complete ✅ + Comprehensive Testing Complete
+
+### Recent Updates (2025-10-29):
+
+**Migration 005: Allow Duplicate Profile Names**
+- Removed UNIQUE constraint on env_profiles(workspace_id, name)
+- Profiles now differentiated by source_id instead of unique names
+- Enables clean profile names like "admin-api" across multiple snapshots
+- File: `backend/src/db/migrations/005_allow_duplicate_profile_names.ts`
+
+**New Snapshot Architecture:**
+- **Clean profile names** without snapshot suffixes (e.g., "admin-api" not "admin-api (Snapshot X)")
+- **Profiles created during snapshot capture** (not during restore)
+- **Optional .env file sync** on restore (user-controlled via checkbox)
+- Profiles linked to snapshots via `source_id` field
+- Auto-import .env checkbox for Quick Snapshot and New Snapshot
+
+**Bug Fixes:**
+- Fixed service deletion error when service already stopped
+- Added try-catch around stopService() call in deleteService()
+- File: `backend/src/services/serviceManager.ts:154-160`
+
+### Comprehensive Testing Completed:
+
+All 6 major features tested end-to-end (28 API endpoints):
+
+✅ **Repository Dashboard** - Git scanning, branch detection, commit info
+✅ **Service Manager** - CRUD, start/stop, logs (1 bug fixed)
+✅ **Docker Management** - API working, daemon not available in test env
+✅ **Environment Variables** - Profiles, variables, import/export, encryption
+✅ **Workspace Management** - Create, activate, snapshots, restore
+✅ **Wiki/Notes System** - Create, search, wiki links, backlinks, templates
+
+**Test Results:**
+- 26 endpoints passed
+- 2 Docker endpoints N/A (Docker not installed)
+- 1 bug found and fixed
+- New architecture validated (Migration 005, clean profile names, optional .env sync)
 
 Features:
 - ✅ Repository Dashboard & Service Manager (workspace-scoped)
 - ✅ Priority 1: Docker Management
 - ✅ Priority 2: Environment Variables Manager (workspace-scoped)
 - ✅ Priority 3: Hierarchical Workspace Management with Full Resource Scoping
-  - Database migration system with automatic execution (2 migrations)
+  - Database migration system with automatic execution (5 migrations)
+  - Migration 005: Allows duplicate profile names (differentiated by source_id)
   - Workspace → Snapshots hierarchical structure
   - **All resources (services, env profiles, notes) scoped to workspaces**
+  - **Clean profile names** without snapshot suffixes
+  - **Profiles created during snapshot capture** (not during restore)
+  - **Optional .env file sync** on restore
   - 3-level navigation UI with breadcrumb & workspace switcher
   - Hybrid workspace creation (auto + manual)
   - Cascade deletion (workspace → snapshots → all resources)

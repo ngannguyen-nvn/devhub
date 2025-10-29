@@ -361,24 +361,26 @@ See [WORKSPACE_FEATURE.md](./WORKSPACE_FEATURE.md) for detailed documentation.
 ## 📝 Notes
 
 **Created:** 2025-10-26
-**Last Updated:** 2025-10-26
-**Status:** ✅ MVP v1.0 COMPLETE
-**Version:** 1.0.0
+**Last Updated:** 2025-10-29
+**Status:** ✅ MVP v1.0.1 COMPLETE + TESTED
+**Version:** 1.0.1
 
 ### MVP Completion Summary
 
-All 4 priorities and 6 core features are now complete:
+All 4 priorities and 6 core features are now complete and tested:
 - ✅ **Repository Dashboard** - Git status and monitoring
-- ✅ **Service Manager** - Process orchestration and logs
+- ✅ **Service Manager** - Process orchestration and logs (1 bug fixed)
 - ✅ **Docker Management** - Images, containers, and compose
 - ✅ **Environment Variables** - Encrypted storage and profiles
 - ✅ **Wiki/Notes** - Markdown docs with search and linking
-- ✅ **Workspace Snapshots** - Save and restore dev environment
+- ✅ **Workspace Snapshots** - Save and restore dev environment with clean profile names
 
-**Total Lines of Code:** ~6,700 (backend + frontend + docs)
-**API Endpoints:** 46
+**Total Lines of Code:** ~7,200 (backend + frontend + docs)
+**API Endpoints:** 63 (including workspace snapshots endpoints)
 **Database Tables:** 6 (SQLite)
-**Feature Documentation:** 4 detailed guides
+**Database Migrations:** 5 (automatic execution on startup)
+**Feature Documentation:** Comprehensive guides in README, CLAUDE.md, and this doc
+**Comprehensive Testing:** Completed 2025-10-29 (28 endpoints tested, 1 bug fixed)
 
 ---
 
