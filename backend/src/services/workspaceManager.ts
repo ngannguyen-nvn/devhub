@@ -1147,11 +1147,13 @@ export class WorkspaceManager {
               this.envManager.updateVariable(existingVar.id, { value })
             } else {
               // Create new variable
+              // Note: Pass null for serviceId since the service from snapshot might not exist anymore
+              // Variables are restored to the profile and can be applied to services later
               this.envManager.createVariable({
                 key,
                 value,
                 profileId: profile.id,
-                serviceId,
+                serviceId: null, // Don't tie to specific service during restore
                 isSecret: false, // Assume non-secret for restored vars
               })
             }
