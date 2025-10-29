@@ -117,6 +117,11 @@ export default function Workspaces() {
     autoImportEnv: false,
   })
 
+  // Restore options state
+  const [restoreOptions, setRestoreOptions] = useState({
+    applyEnvToFiles: false,
+  })
+
   // Fetch workspaces
   const fetchWorkspaces = async () => {
     setLoading(true)
@@ -468,15 +473,17 @@ export default function Workspaces() {
   const performRestore = async (snapshotId: string) => {
     setRestoring(true)
     try {
-      const response = await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`)
+      const response = await axios.post(`/api/workspaces/snapshots/${snapshotId}/restore`, {
+        applyEnvToFiles: restoreOptions.applyEnvToFiles,
+      })
 
       if (response.data.success) {
         const parts = [
           `Started ${response.data.servicesStarted} service(s)`,
           `switched ${response.data.branchesSwitched} branch(es)`,
         ]
-        if (response.data.envVarsRestored > 0) {
-          parts.push(`restored ${response.data.envVarsRestored} env variable(s)`)
+        if (response.data.envFilesWritten > 0) {
+          parts.push(`wrote ${response.data.envFilesWritten} .env file(s)`)
         }
         toast.success(
           `Workspace restored! ${parts.join(', ')}`,
@@ -495,8 +502,8 @@ export default function Workspaces() {
         }
       } else if (response.data.errors && response.data.errors.length > 0) {
         const parts = [`Started ${response.data.servicesStarted} service(s)`]
-        if (response.data.envVarsRestored > 0) {
-          parts.push(`restored ${response.data.envVarsRestored} env variable(s)`)
+        if (response.data.envFilesWritten > 0) {
+          parts.push(`wrote ${response.data.envFilesWritten} .env file(s)`)
         }
         toast.error(
           `Workspace partially restored. ${parts.join(', ')}, but ${response.data.errors.length} error(s) occurred`,
@@ -518,6 +525,8 @@ export default function Workspaces() {
       toast.error(`Failed to restore workspace: ${error.response?.data?.error || error.message}`)
     } finally {
       setRestoring(false)
+      // Reset restore options after restore completes
+      setRestoreOptions({ applyEnvToFiles: false })
     }
   }
 
@@ -1688,7 +1697,27 @@ export default function Workspaces() {
           confirmDialog.type === 'restore' ? 'Restore' : 'Delete'
         }
         variant={confirmDialog.type === 'restore' ? 'warning' : 'danger'}
-      />
+      >
+        {/* Show checkbox for restore type */}
+        {confirmDialog.type === 'restore' && (
+          <label className="flex items-start gap-3 cursor-pointer p-3 bg-green-50 border border-green-200 rounded">
+            <input
+              type="checkbox"
+              checked={restoreOptions.applyEnvToFiles}
+              onChange={(e) => setRestoreOptions({ ...restoreOptions, applyEnvToFiles: e.target.checked })}
+              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-gray-900">
+                Apply environment variables to .env files
+              </span>
+              <p className="text-xs text-gray-600 mt-1">
+                Export snapshot env variables back to .env files in repositories
+              </p>
+            </div>
+          </label>
+        )}
+      </ConfirmDialog>
     </div>
   )
 }

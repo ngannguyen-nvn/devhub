@@ -9,6 +9,7 @@ interface ConfirmDialogProps {
   confirmText?: string
   cancelText?: string
   variant?: 'danger' | 'warning' | 'info'
+  children?: React.ReactNode
 }
 
 export default function ConfirmDialog({
@@ -20,6 +21,7 @@ export default function ConfirmDialog({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   variant = 'warning',
+  children,
 }: ConfirmDialogProps) {
   if (!isOpen) return null
 
@@ -82,6 +84,13 @@ export default function ConfirmDialog({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Children (optional extra content) */}
+        {children && (
+          <div className="px-6 pb-4">
+            {children}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3 px-6 pb-6">
