@@ -10,6 +10,7 @@ import notesRoutes from './routes/notes'
 import healthCheckRoutes from './routes/healthChecks'
 import logRoutes from './routes/logs'
 import groupRoutes from './routes/groups'
+import databaseRoutes from './routes/database'
 import './db' // Initialize database
 
 dotenv.config()
@@ -31,6 +32,7 @@ app.use('/api/notes', notesRoutes)
 app.use('/api/health-checks', healthCheckRoutes)
 app.use('/api/logs', logRoutes)
 app.use('/api/groups', groupRoutes)
+app.use('/api/database', databaseRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

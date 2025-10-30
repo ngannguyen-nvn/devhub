@@ -4,10 +4,11 @@ import {
   Container,
   Lock,
   FileText,
-  Save
+  Save,
+  Database
 } from 'lucide-react'
 
-type ViewType = 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki'
+type ViewType = 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki' | 'database'
 
 interface SidebarProps {
   activeView: ViewType
@@ -22,6 +23,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'docker' as const, label: 'Docker', icon: Container },
     { id: 'env' as const, label: 'Environment', icon: Lock },
     { id: 'wiki' as const, label: 'Wiki', icon: FileText },
+    { id: 'database' as const, label: 'Database', icon: Database },
   ]
 
   return (
