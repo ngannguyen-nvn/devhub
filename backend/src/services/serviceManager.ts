@@ -381,3 +381,5 @@ export class ServiceManager extends EventEmitter {
     }
   }
 }
+
+export const serviceManager = new ServiceManager()

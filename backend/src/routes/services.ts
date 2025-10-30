@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { ServiceManager } from '../services/serviceManager'
+import { serviceManager } from '../services/serviceManager'
 
 const router = Router()
-const serviceManager = new ServiceManager()
 
 /**
  * Middleware to get active workspace ID
