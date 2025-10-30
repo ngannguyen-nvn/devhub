@@ -2,7 +2,9 @@
 
 **One dashboard to rule all your microservices**
 
-DevHub is a powerful desktop application that helps developers manage their local microservices ecosystem. It combines git repository management, service orchestration, Docker management, environment configuration, and documentation in one unified interface.
+DevHub is a powerful desktop application that helps developers manage their local microservices ecosystem. It combines git repository management, intelligent service orchestration, Docker management, environment configuration, and documentation in one unified interface.
+
+**🆕 v2.0 Now Available!** Advanced orchestration features including dependencies, health checks, auto-restart, port management, service templates, log persistence, and service groups.
 
 ---
 
@@ -10,13 +12,24 @@ DevHub is a powerful desktop application that helps developers manage their loca
 
 DevHub solves the chaos of managing multiple microservices locally:
 
+### Core Features (v1.0)
 - **Repository Dashboard**: See all your git repos, branches, and changes in one place
 - **Service Manager**: Start/stop services with one click, view real-time logs, and search across all services
 - **Docker Integration**: Build images, manage containers, and generate docker-compose files
 - **Environment Manager**: Secure environment variables with AES-256 encryption, inline editing, copy/sync to files, and smart search
 - **Wiki/Notes**: Markdown-based documentation with full-text search and bidirectional linking
 - **Hierarchical Workspaces**: Organize and manage development environments with workspace → snapshot hierarchy
-- **Performance Optimized**: Batch API endpoints handle 40+ repos in seconds (97% fewer API calls)
+
+### Advanced Orchestration (v2.0 - NEW!)
+- **Service Dependencies**: Define dependencies, auto-calculate startup order with topological sort
+- **Health Checks**: HTTP/TCP/Command monitoring with automatic status updates
+- **Auto-Restart**: Intelligent restart with exponential backoff on crashes
+- **Port Management**: Detect conflicts and auto-assign available ports
+- **Service Templates**: 17 built-in templates with auto-detection (Node.js, Python, Go, Ruby, Java, Rust, PHP, .NET)
+- **Log Persistence**: Historical log analysis across service restarts
+- **Service Groups**: Organize services for batch operations
+
+**Performance**: Handles 40+ repos in seconds (97% fewer API calls)
 
 ---
 
