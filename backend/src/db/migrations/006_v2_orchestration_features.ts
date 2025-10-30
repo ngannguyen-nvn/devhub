@@ -99,7 +99,7 @@ export default {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT NOT NULL,
         service_id TEXT NOT NULL,
-        timestamp DATETIME NOT NULL,
+        timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         level TEXT DEFAULT 'info',
         message TEXT NOT NULL,
         FOREIGN KEY (session_id) REFERENCES service_log_sessions(id) ON DELETE CASCADE,

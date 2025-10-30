@@ -4,6 +4,20 @@ import { autoRestartManager } from '../services/autoRestartManager'
 const router = express.Router()
 
 /**
+ * GET /api/auto-restart/pending
+ * Get all services with pending restarts
+ * MUST come before /:serviceId to avoid route matching issues
+ */
+router.get('/pending', (req: Request, res: Response) => {
+  try {
+    const pending = autoRestartManager.getPendingRestarts()
+    res.json({ success: true, serviceIds: pending })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
  * GET /api/auto-restart/:serviceId
  * Get auto-restart configuration for a service
  */
@@ -49,10 +63,10 @@ router.put('/:serviceId', (req: Request, res: Response) => {
 })
 
 /**
- * POST /api/auto-restart/:serviceId/reset-count
+ * POST /api/auto-restart/:serviceId/reset
  * Reset restart count for a service
  */
-router.post('/:serviceId/reset-count', (req: Request, res: Response) => {
+router.post('/:serviceId/reset', (req: Request, res: Response) => {
   try {
     const { serviceId } = req.params
     autoRestartManager.resetRestartCount(serviceId)
@@ -71,19 +85,6 @@ router.post('/:serviceId/cancel', (req: Request, res: Response) => {
     const { serviceId } = req.params
     autoRestartManager.cancelRestart(serviceId)
     res.json({ success: true })
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-/**
- * GET /api/auto-restart/pending
- * Get all services with pending restarts
- */
-router.get('/pending/all', (req: Request, res: Response) => {
-  try {
-    const pending = autoRestartManager.getPendingRestarts()
-    res.json({ success: true, pending })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
