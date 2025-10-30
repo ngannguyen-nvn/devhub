@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FileText, Search, Sparkles, FolderOpen } from 'lucide-react'
+import { FileText, Search, Sparkles, FolderOpen, Copy, Check } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
@@ -24,6 +24,7 @@ export default function Templates() {
   const [detectPath, setDetectPath] = useState('')
   const [detectedTemplate, setDetectedTemplate] = useState<Template | null>(null)
   const [detecting, setDetecting] = useState(false)
+  const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTemplates()
@@ -63,6 +64,25 @@ export default function Templates() {
       toast.error('Failed to detect template')
     } finally {
       setDetecting(false)
+    }
+  }
+
+  const handleCopyTemplate = async (template: Template) => {
+    const info = `Command: ${template.defaultCommand}${
+      template.defaultPort ? `\nPort: ${template.defaultPort}` : ''
+    }${
+      template.defaultEnvVars
+        ? `\nEnv Vars: ${Object.entries(template.defaultEnvVars).map(([k, v]) => `${k}=${v}`).join(', ')}`
+        : ''
+    }`
+
+    try {
+      await navigator.clipboard.writeText(info)
+      setCopiedTemplateId(template.id)
+      toast.success('Template details copied!')
+      setTimeout(() => setCopiedTemplateId(null), 2000)
+    } catch (error) {
+      toast.error('Failed to copy')
     }
   }
 
@@ -247,6 +267,23 @@ export default function Templates() {
                   Built-in Template
                 </div>
               )}
+
+              <button
+                onClick={() => handleCopyTemplate(template)}
+                className="mt-4 w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm"
+              >
+                {copiedTemplateId === template.id ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy Details
+                  </>
+                )}
+              </button>
             </div>
           ))}
         </div>

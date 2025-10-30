@@ -180,4 +180,32 @@ router.get('/service/:serviceId/groups', (req: Request, res: Response) => {
   }
 })
 
+/**
+ * POST /api/groups/:groupId/start-all
+ * Start all services in a group
+ */
+router.post('/:groupId/start-all', async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params
+    const result = await groupManager.startAllServices(groupId)
+    res.json({ success: true, ...result })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/groups/:groupId/stop-all
+ * Stop all services in a group
+ */
+router.post('/:groupId/stop-all', (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params
+    const result = groupManager.stopAllServices(groupId)
+    res.json({ success: true, ...result })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 export default router

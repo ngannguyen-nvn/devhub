@@ -1,5 +1,6 @@
 import { DatabaseInstance } from '../db'
 import type { ServiceGroup } from '@devhub/shared'
+import { serviceManager } from './serviceManager'
 
 const db = DatabaseInstance.getInstance()
 
@@ -322,6 +323,52 @@ export class GroupManager {
       runningServices: runningRow?.count || 0,
       healthyServices: healthyRow?.count || 0,
     }
+  }
+
+  /**
+   * Start all services in a group
+   */
+  async startAllServices(groupId: string): Promise<{
+    started: string[]
+    failed: Array<{ serviceId: string, error: string }>
+  }> {
+    const serviceIds = this.getGroupServiceIds(groupId)
+    const started: string[] = []
+    const failed: Array<{ serviceId: string, error: string }> = []
+
+    for (const serviceId of serviceIds) {
+      try {
+        await serviceManager.startService(serviceId)
+        started.push(serviceId)
+      } catch (error: any) {
+        failed.push({ serviceId, error: error.message })
+      }
+    }
+
+    return { started, failed }
+  }
+
+  /**
+   * Stop all services in a group
+   */
+  stopAllServices(groupId: string): {
+    stopped: string[]
+    failed: Array<{ serviceId: string, error: string }>
+  } {
+    const serviceIds = this.getGroupServiceIds(groupId)
+    const stopped: string[] = []
+    const failed: Array<{ serviceId: string, error: string }> = []
+
+    for (const serviceId of serviceIds) {
+      try {
+        serviceManager.stopService(serviceId)
+        stopped.push(serviceId)
+      } catch (error: any) {
+        failed.push({ serviceId, error: error.message })
+      }
+    }
+
+    return { stopped, failed }
   }
 }
 

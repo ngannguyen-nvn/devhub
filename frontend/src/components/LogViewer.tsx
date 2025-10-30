@@ -59,6 +59,17 @@ export default function LogViewer() {
     }
   }, [selectedSessionId, searchTerm, levelFilter])
 
+  // Auto-refresh logs every 3 seconds
+  useEffect(() => {
+    if (!selectedSessionId) return
+
+    const interval = setInterval(() => {
+      fetchLogs(selectedSessionId)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [selectedSessionId, searchTerm, levelFilter])
+
   const fetchServices = async () => {
     try {
       const response = await axios.get('/api/services')

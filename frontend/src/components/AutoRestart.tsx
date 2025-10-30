@@ -49,32 +49,23 @@ export default function AutoRestart() {
       const pendingRes = await axios.get('/api/auto-restart/pending')
       setPendingRestarts(pendingRes.data.serviceIds || [])
 
-      // Fetch restart config for each service
-      const infos: ServiceRestartInfo[] = []
-      for (const service of servicesList) {
-        try {
-          const configRes = await axios.get(`/api/auto-restart/${service.id}`)
-          infos.push({
-            serviceId: service.id,
-            serviceName: service.name,
-            config: configRes.data.config,
-            isPending: pendingRes.data.serviceIds?.includes(service.id) || false,
-          })
-        } catch (error) {
-          // Service might not have config yet
-          infos.push({
-            serviceId: service.id,
-            serviceName: service.name,
-            config: {
-              enabled: false,
-              maxRestarts: 3,
-              restartCount: 0,
-              backoffStrategy: 'exponential',
-            },
-            isPending: false,
-          })
-        }
-      }
+      // Fetch restart configs for all services in one call
+      const serviceIds = servicesList.map((s: any) => s.id).join(',')
+      const configsRes = await axios.get(`/api/auto-restart/bulk?serviceIds=${serviceIds}`)
+      const configs = configsRes.data.configs || {}
+
+      // Build infos array
+      const infos: ServiceRestartInfo[] = servicesList.map((service: any) => ({
+        serviceId: service.id,
+        serviceName: service.name,
+        config: configs[service.id] || {
+          enabled: false,
+          maxRestarts: 3,
+          restartCount: 0,
+          backoffStrategy: 'exponential',
+        },
+        isPending: pendingRes.data.serviceIds?.includes(service.id) || false,
+      }))
 
       setRestartInfos(infos)
     } catch (error) {

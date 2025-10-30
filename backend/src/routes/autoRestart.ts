@@ -18,6 +18,37 @@ router.get('/pending', (req: Request, res: Response) => {
 })
 
 /**
+ * GET /api/auto-restart/bulk
+ * Get auto-restart configurations for multiple services
+ * Query: ?serviceIds=id1,id2,id3
+ */
+router.get('/bulk', (req: Request, res: Response) => {
+  try {
+    const serviceIdsParam = req.query.serviceIds as string
+    if (!serviceIdsParam) {
+      return res.status(400).json({ success: false, error: 'serviceIds query parameter required' })
+    }
+
+    const serviceIds = serviceIdsParam.split(',').filter(id => id.trim())
+    const configs: Record<string, any> = {}
+
+    for (const serviceId of serviceIds) {
+      const config = autoRestartManager.getRestartConfig(serviceId)
+      configs[serviceId] = config || {
+        enabled: false,
+        maxRestarts: 3,
+        restartCount: 0,
+        backoffStrategy: 'exponential',
+      }
+    }
+
+    res.json({ success: true, configs })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
  * GET /api/auto-restart/:serviceId
  * Get auto-restart configuration for a service
  */

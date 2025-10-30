@@ -26,6 +26,8 @@ export default function ServiceGroups() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showManageServices, setShowManageServices] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<ServiceGroup | null>(null)
 
   const [newGroup, setNewGroup] = useState({
     name: '',
@@ -93,6 +95,81 @@ export default function ServiceGroups() {
     } catch (error) {
       toast.error('Failed to delete group')
     }
+  }
+
+  const handleStartAll = async (groupId: string) => {
+    try {
+      const response = await axios.post(`/api/groups/${groupId}/start-all`)
+      const { started, failed } = response.data
+
+      if (started.length > 0) {
+        toast.success(`Started ${started.length} service(s)`)
+      }
+
+      if (failed.length > 0) {
+        toast.error(`Failed to start ${failed.length} service(s)`)
+      }
+
+      fetchServices()
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to start services')
+    }
+  }
+
+  const handleStopAll = async (groupId: string) => {
+    try {
+      const response = await axios.post(`/api/groups/${groupId}/stop-all`)
+      const { stopped, failed } = response.data
+
+      if (stopped.length > 0) {
+        toast.success(`Stopped ${stopped.length} service(s)`)
+      }
+
+      if (failed.length > 0) {
+        toast.error(`Failed to stop ${failed.length} service(s)`)
+      }
+
+      fetchServices()
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to stop services')
+    }
+  }
+
+  const handleManageServices = (group: ServiceGroup) => {
+    setSelectedGroup(group)
+    setShowManageServices(true)
+  }
+
+  const handleAddServiceToGroup = async (serviceId: string) => {
+    if (!selectedGroup) return
+
+    try {
+      await axios.post(`/api/groups/${selectedGroup.id}/services`, { serviceId })
+      toast.success('Service added to group')
+      fetchGroups()
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to add service')
+    }
+  }
+
+  const handleRemoveServiceFromGroup = async (serviceId: string) => {
+    if (!selectedGroup) return
+
+    try {
+      await axios.delete(`/api/groups/${selectedGroup.id}/services/${serviceId}`)
+      toast.success('Service removed from group')
+      fetchGroups()
+      // Update selected group
+      setSelectedGroup(prev =>
+        prev ? { ...prev, serviceIds: prev.serviceIds?.filter(id => id !== serviceId) } : null
+      )
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to remove service')
+    }
+  }
+
+  const isServiceInGroup = (serviceId: string) => {
+    return selectedGroup?.serviceIds?.includes(serviceId) || false
   }
 
   const getServiceName = (serviceId: string) => {
@@ -195,6 +272,72 @@ export default function ServiceGroups() {
         </div>
       )}
 
+      {/* Manage Services Modal */}
+      {showManageServices && selectedGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">
+                Manage Services - {selectedGroup.name}
+              </h2>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {services.length === 0 ? (
+                <p className="text-center text-gray-500">No services available</p>
+              ) : (
+                <div className="space-y-2">
+                  {services.map((service) => {
+                    const inGroup = isServiceInGroup(service.id)
+                    return (
+                      <div
+                        key={service.id}
+                        className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              service.status === 'running' ? 'bg-green-500' : 'bg-gray-300'
+                            }`}
+                          />
+                          <span className="font-medium">{service.name}</span>
+                        </div>
+                        <button
+                          onClick={() =>
+                            inGroup
+                              ? handleRemoveServiceFromGroup(service.id)
+                              : handleAddServiceToGroup(service.id)
+                          }
+                          className={`px-3 py-1.5 text-sm rounded ${
+                            inGroup
+                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                        >
+                          {inGroup ? 'Remove' : 'Add'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowManageServices(false)
+                  setSelectedGroup(null)
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Groups Grid */}
       {loading ? (
         <div className="text-center py-12 text-gray-500">Loading groups...</div>
@@ -239,11 +382,19 @@ export default function ServiceGroups() {
 
               {/* Services List */}
               <div className="px-6 py-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs text-gray-500">
+                    {group.serviceIds?.length || 0} service{(group.serviceIds?.length || 0) !== 1 ? 's' : ''}
+                  </div>
+                  <button
+                    onClick={() => handleManageServices(group)}
+                    className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  >
+                    Manage
+                  </button>
+                </div>
                 {group.serviceIds && group.serviceIds.length > 0 ? (
                   <div className="space-y-2">
-                    <div className="text-xs text-gray-500 mb-2">
-                      {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
-                    </div>
                     {group.serviceIds.slice(0, 3).map((serviceId) => (
                       <div key={serviceId} className="text-sm text-gray-700 flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-gray-300"></div>
@@ -265,6 +416,7 @@ export default function ServiceGroups() {
               {group.serviceIds && group.serviceIds.length > 0 && (
                 <div className="px-6 py-3 border-t border-gray-200 flex gap-2">
                   <button
+                    onClick={() => handleStartAll(group.id)}
                     className="flex-1 px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-1"
                     title="Start all services"
                   >
@@ -272,6 +424,7 @@ export default function ServiceGroups() {
                     Start All
                   </button>
                   <button
+                    onClick={() => handleStopAll(group.id)}
                     className="flex-1 px-3 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center gap-1"
                     title="Stop all services"
                   >
