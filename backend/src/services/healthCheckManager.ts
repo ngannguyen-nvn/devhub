@@ -329,7 +329,7 @@ export class HealthCheckManager {
           health_check_failures = CASE WHEN ? THEN 0 ELSE health_check_failures + 1 END
       WHERE id = ?
     `)
-    stmt.run(healthStatus, healthy, serviceId)
+    stmt.run(healthStatus, healthy ? 1 : 0, serviceId)
   }
 
   /**
