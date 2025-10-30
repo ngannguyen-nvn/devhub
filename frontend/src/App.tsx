@@ -6,18 +6,11 @@ import Workspaces from './components/Workspaces'
 import Docker from './components/Docker'
 import Environment from './components/Environment'
 import Wiki from './components/Wiki'
-import Dependencies from './components/Dependencies'
-import HealthChecks from './components/HealthChecks'
-import PortManagement from './components/PortManagement'
-import Templates from './components/Templates'
-import LogViewer from './components/LogViewer'
-import ServiceGroups from './components/ServiceGroups'
-import AutoRestart from './components/AutoRestart'
 import Sidebar from './components/Sidebar'
 import WorkspaceSwitcher from './components/WorkspaceSwitcher'
 import { WorkspaceProvider } from './contexts/WorkspaceContext'
 
-type ViewType = 'dashboard' | 'services' | 'dependencies' | 'health' | 'ports' | 'templates' | 'logs' | 'groups' | 'restart' | 'workspaces' | 'docker' | 'env' | 'wiki'
+type ViewType = 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki'
 
 function App() {
   const [activeView, setActiveView] = useState<ViewType>('dashboard')
@@ -37,13 +30,6 @@ function App() {
           <div className="p-6">
             {activeView === 'dashboard' && <Dashboard onViewChange={setActiveView} />}
             {activeView === 'services' && <Services />}
-            {activeView === 'dependencies' && <Dependencies />}
-            {activeView === 'health' && <HealthChecks />}
-            {activeView === 'ports' && <PortManagement />}
-            {activeView === 'templates' && <Templates />}
-            {activeView === 'logs' && <LogViewer />}
-            {activeView === 'groups' && <ServiceGroups />}
-            {activeView === 'restart' && <AutoRestart />}
             {activeView === 'workspaces' && <Workspaces />}
             {activeView === 'docker' && <Docker />}
             {activeView === 'env' && <Environment />}

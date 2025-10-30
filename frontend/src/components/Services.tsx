@@ -17,6 +17,8 @@ interface Service {
   startedAt?: string
   stoppedAt?: string
   exitCode?: number
+  healthStatus?: 'healthy' | 'unhealthy' | 'unknown'
+  tags?: string[]
 }
 
 export default function Services() {
@@ -24,9 +26,10 @@ export default function Services() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
-  const [logs, setLogs] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedGroup, setSelectedGroup] = useState<string>('all')
+  const [allLogs, setAllLogs] = useState<Array<{serviceId: string, serviceName: string, log: string, timestamp: string}>>([])
+  const [showCentralLogs, setShowCentralLogs] = useState(true)
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -74,12 +77,34 @@ export default function Services() {
     }
   }
 
-  const fetchLogs = async (serviceId: string) => {
+  const fetchAllLogs = async () => {
+    const runningServices = services.filter(s => s.status === 'running')
+    if (runningServices.length === 0) {
+      setAllLogs([])
+      return
+    }
+
     try {
-      const response = await axios.get(`/api/services/${serviceId}/logs`)
-      setLogs(response.data.logs)
+      const logsPromises = runningServices.map(async service => {
+        try {
+          const response = await axios.get(`/api/services/${service.id}/logs`)
+          return response.data.logs.map((log: string) => ({
+            serviceId: service.id,
+            serviceName: service.name,
+            log,
+            timestamp: new Date().toISOString(),
+          }))
+        } catch (error) {
+          console.error(`Error fetching logs for ${service.name}:`, error)
+          return []
+        }
+      })
+
+      const logsArrays = await Promise.all(logsPromises)
+      const combinedLogs = logsArrays.flat()
+      setAllLogs(combinedLogs)
     } catch (error) {
-      console.error('Error fetching logs:', error)
+      console.error('Error fetching all logs:', error)
     }
   }
 
@@ -90,13 +115,14 @@ export default function Services() {
     return () => clearInterval(interval)
   }, [activeWorkspace]) // Refresh when workspace changes
 
+  // Fetch all logs for central log viewer
   useEffect(() => {
-    if (selectedService) {
-      fetchLogs(selectedService)
-      const interval = setInterval(() => fetchLogs(selectedService), 5000)
+    if (showCentralLogs) {
+      fetchAllLogs()
+      const interval = setInterval(fetchAllLogs, 3000) // Poll every 3 seconds
       return () => clearInterval(interval)
     }
-  }, [selectedService])
+  }, [showCentralLogs, services]) // Re-fetch when services change
 
   const handleAddService = async () => {
     try {
@@ -274,9 +300,6 @@ export default function Services() {
     try {
       await axios.delete(`/api/services/${confirmDialog.serviceId}`)
       fetchServices()
-      if (selectedService === confirmDialog.serviceId) {
-        setSelectedService(null)
-      }
       toast.success(`Service "${confirmDialog.serviceName}" deleted`)
     } catch (error) {
       console.error('Error deleting service:', error)
@@ -284,8 +307,14 @@ export default function Services() {
     }
   }
 
-  // Filter services based on search term
+  // Filter services based on search term and group
   const filteredServices = services.filter(service => {
+    // Filter by group first
+    if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) {
+      return false
+    }
+
+    // Then filter by search term
     if (!searchTerm.trim()) return true
 
     const search = searchTerm.toLowerCase()
@@ -551,9 +580,27 @@ export default function Services() {
         </div>
       )}
 
-      {/* Search Bar */}
+      {/* Group Filter & Search Bar */}
       {services.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 space-y-4">
+          {/* Group Filter */}
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Filter by Group:</label>
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Services ({services.length})</option>
+              {Array.from(new Set(services.flatMap(s => s.tags || []))).map(tag => (
+                <option key={tag} value={tag}>
+                  {tag} ({services.filter(s => s.tags?.includes(tag)).length})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
@@ -566,7 +613,7 @@ export default function Services() {
             />
           </div>
           {searchTerm && (
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600">
               Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{searchTerm}"
             </p>
           )}
@@ -611,15 +658,11 @@ export default function Services() {
           {filteredServices.map((service) => {
             const isRunning = service.status === 'running'
             const isError = service.status === 'error'
-            const isSelected = selectedService === service.id
 
             return (
               <div
                 key={service.id}
-                onClick={() => setSelectedService(service.id)}
-                className={`bg-white border rounded-lg p-4 cursor-pointer transition-all ${
-                  isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:shadow-sm'
-                }`}
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all"
                 data-testid={`service-item-${service.id}`}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -637,6 +680,36 @@ export default function Services() {
                       >
                         {isRunning ? 'Running' : isError ? 'Error' : 'Stopped'}
                       </span>
+                      {/* Health Status Badge */}
+                      {isRunning && service.healthStatus && (
+                        <span
+                          className={`text-xs ${
+                            service.healthStatus === 'healthy'
+                              ? '🟢'
+                              : service.healthStatus === 'unhealthy'
+                              ? '🔴'
+                              : '🟡'
+                          }`}
+                          title={`Health: ${service.healthStatus}`}
+                        >
+                          {service.healthStatus === 'healthy' ? '🟢' : service.healthStatus === 'unhealthy' ? '🔴' : '🟡'}
+                        </span>
+                      )}
+                      {/* Tags */}
+                      {service.tags && service.tags.length > 0 && (
+                        <div className="flex gap-1">
+                          {service.tags.slice(0, 2).map((tag, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-xs rounded">
+                              {tag}
+                            </span>
+                          ))}
+                          {service.tags.length > 2 && (
+                            <span className="px-1.5 py-0.5 bg-gray-50 text-gray-600 text-xs rounded">
+                              +{service.tags.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600 font-mono">{service.command}</p>
                   </div>
@@ -700,70 +773,53 @@ export default function Services() {
           })}
         </div>
 
-        {/* Logs Viewer */}
+        {/* Central Logs Viewer */}
         <div className="bg-gray-900 rounded-lg p-4 overflow-hidden flex flex-col" data-testid="service-logs-viewer">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-semibold">Service Logs</h3>
-            {selectedService && (
+            <div className="flex items-center gap-3">
+              <h3 className="text-white font-semibold">Central Log Viewer</h3>
+              <span className="text-gray-400 text-xs">
+                ({services.filter(s => s.status === 'running').length} services running)
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => fetchLogs(selectedService)}
+                onClick={() => setShowCentralLogs(!showCentralLogs)}
+                className={`px-3 py-1 rounded text-xs ${
+                  showCentralLogs
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-700 text-gray-300'
+                }`}
+              >
+                {showCentralLogs ? 'Live' : 'Paused'}
+              </button>
+              <button
+                onClick={fetchAllLogs}
                 className="text-gray-400 hover:text-white"
                 data-testid="service-logs-refresh-button"
               >
                 <RefreshCw size={16} />
               </button>
-            )}
+            </div>
           </div>
 
-          {!selectedService ? (
+          {services.filter(s => s.status === 'running').length === 0 ? (
             <div className="flex-1 flex items-center justify-center text-gray-500">
-              Select a service to view logs
+              No services are currently running
             </div>
           ) : (
-            <>
-              {/* Service Status Info */}
-              {(() => {
-                const service = services.find(s => s.id === selectedService)
-                if (service && (service.status === 'stopped' || service.status === 'error')) {
-                  return (
-                    <div className={`mb-3 p-2 rounded text-xs ${
-                      service.status === 'error' ? 'bg-red-900/50 text-red-200' : 'bg-gray-800 text-gray-300'
-                    }`}>
-                      <div className="flex items-center gap-2">
-                        <AlertCircle size={14} />
-                        <span className="font-semibold">
-                          Service {service.status === 'error' ? 'crashed' : 'stopped'}
-                        </span>
-                      </div>
-                      {service.exitCode !== undefined && (
-                        <div className="mt-1">Exit code: {service.exitCode}</div>
-                      )}
-                      {service.stoppedAt && (
-                        <div className="mt-1">
-                          Stopped at: {new Date(service.stoppedAt).toLocaleString()}
-                        </div>
-                      )}
-                      <div className="mt-2 text-gray-400">
-                        Logs from last run are preserved below
-                      </div>
-                    </div>
-                  )
-                }
-                return null
-              })()}
-
-              <div className="flex-1 overflow-auto font-mono text-xs text-green-400 space-y-1" data-testid="service-logs-content">
-                {logs.length === 0 ? (
-                  <p className="text-gray-500">No logs available</p>
-                ) : (
-                  logs.map((log, i) => (
-                    <div key={i} className="whitespace-pre-wrap break-all">
-                      {log}
-                    </div>
-                  ))
-                )}
-              </div>
-            </>
+            <div className="flex-1 overflow-auto font-mono text-xs space-y-1" data-testid="service-logs-content">
+              {allLogs.length === 0 ? (
+                <p className="text-gray-500">Waiting for logs...</p>
+              ) : (
+                allLogs.map((logEntry, i) => (
+                  <div key={i} className="whitespace-pre-wrap break-all">
+                    <span className="text-blue-400 font-semibold">[{logEntry.serviceName}]</span>{' '}
+                    <span className="text-green-400">{logEntry.log}</span>
+                  </div>
+                ))
+              )}
+            </div>
           )}
         </div>
       </div>

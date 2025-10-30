@@ -7,13 +7,9 @@ import dockerRoutes from './routes/docker'
 import envRoutes from './routes/env'
 import workspaceRoutes from './routes/workspaces'
 import notesRoutes from './routes/notes'
-import dependencyRoutes from './routes/dependencies'
 import healthCheckRoutes from './routes/healthChecks'
-import portRoutes from './routes/ports'
-import templateRoutes from './routes/templates'
 import logRoutes from './routes/logs'
 import groupRoutes from './routes/groups'
-import autoRestartRoutes from './routes/autoRestart'
 import './db' // Initialize database
 
 dotenv.config()
@@ -32,13 +28,9 @@ app.use('/api/docker', dockerRoutes)
 app.use('/api/env', envRoutes)
 app.use('/api/workspaces', workspaceRoutes)
 app.use('/api/notes', notesRoutes)
-app.use('/api/dependencies', dependencyRoutes)
 app.use('/api/health-checks', healthCheckRoutes)
-app.use('/api/ports', portRoutes)
-app.use('/api/templates', templateRoutes)
 app.use('/api/logs', logRoutes)
 app.use('/api/groups', groupRoutes)
-app.use('/api/auto-restart', autoRestartRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

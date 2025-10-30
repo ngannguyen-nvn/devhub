@@ -4,17 +4,10 @@ import {
   Container,
   Lock,
   FileText,
-  Save,
-  GitBranch,
-  Activity,
-  Plug,
-  FileCode,
-  ScrollText,
-  FolderKanban,
-  RotateCcw
+  Save
 } from 'lucide-react'
 
-type ViewType = 'dashboard' | 'services' | 'dependencies' | 'health' | 'ports' | 'templates' | 'logs' | 'groups' | 'restart' | 'workspaces' | 'docker' | 'env' | 'wiki'
+type ViewType = 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki'
 
 interface SidebarProps {
   activeView: ViewType
@@ -25,13 +18,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const navItems = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'services' as const, label: 'Services', icon: Server },
-    { id: 'dependencies' as const, label: 'Dependencies', icon: GitBranch, badge: 'v2.0' },
-    { id: 'health' as const, label: 'Health Checks', icon: Activity, badge: 'v2.0' },
-    { id: 'ports' as const, label: 'Port Management', icon: Plug, badge: 'v2.0' },
-    { id: 'templates' as const, label: 'Templates', icon: FileCode, badge: 'v2.0' },
-    { id: 'logs' as const, label: 'Log Viewer', icon: ScrollText, badge: 'v2.0' },
-    { id: 'groups' as const, label: 'Service Groups', icon: FolderKanban, badge: 'v2.0' },
-    { id: 'restart' as const, label: 'Auto-Restart', icon: RotateCcw, badge: 'v2.0' },
     { id: 'workspaces' as const, label: 'Workspaces', icon: Save },
     { id: 'docker' as const, label: 'Docker', icon: Container },
     { id: 'env' as const, label: 'Environment', icon: Lock },
@@ -65,19 +51,14 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             >
               <Icon size={20} />
               <span className="flex-1 text-left">{item.label}</span>
-              {item.badge && (
-                <span className="px-1.5 py-0.5 bg-green-500 text-white text-xs font-semibold rounded">
-                  {item.badge}
-                </span>
-              )}
             </button>
           )
         })}
       </nav>
 
       <div className="p-4 border-t border-gray-800">
-        <p className="text-gray-500 text-xs">DevHub v2.0.0</p>
-        <p className="text-gray-500 text-xs mt-1">7 New Features</p>
+        <p className="text-gray-500 text-xs">DevHub v1.0</p>
+        <p className="text-gray-500 text-xs mt-1">Streamlined</p>
       </div>
     </div>
   )
