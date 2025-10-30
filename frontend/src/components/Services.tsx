@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon, Search } from 'lucide-react'
+import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon, Search, Tags, X } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
@@ -57,6 +57,13 @@ export default function Services() {
   const [workspaceRepos, setWorkspaceRepos] = useState<Array<{ path: string; name: string }>>([])
   const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
   const [importing, setImporting] = useState(false)
+
+  // Group management state
+  const [groups, setGroups] = useState<Array<{id: string, name: string, description?: string, color?: string, icon?: string, serviceIds: string[]}>>([])
+  const [showGroupsModal, setShowGroupsModal] = useState(false)
+  const [showAssignGroupModal, setShowAssignGroupModal] = useState(false)
+  const [selectedServiceForGroups, setSelectedServiceForGroups] = useState<Service | null>(null)
+  const [newGroup, setNewGroup] = useState({ name: '', description: '', color: '#3B82F6' })
 
   const fetchServices = async () => {
     if (!activeWorkspace) {
@@ -119,8 +126,71 @@ export default function Services() {
     }
   }
 
+  const fetchGroups = async () => {
+    if (!activeWorkspace) return
+
+    try {
+      const response = await axios.get(`/api/groups/${activeWorkspace.id}`)
+      setGroups(response.data.groups)
+    } catch (error) {
+      console.error('Error fetching groups:', error)
+    }
+  }
+
+  const handleCreateGroup = async () => {
+    if (!activeWorkspace || !newGroup.name.trim()) {
+      toast.error('Group name is required')
+      return
+    }
+
+    try {
+      await axios.post('/api/groups', {
+        workspaceId: activeWorkspace.id,
+        name: newGroup.name,
+        description: newGroup.description,
+        color: newGroup.color,
+      })
+      toast.success(`Group "${newGroup.name}" created`)
+      setNewGroup({ name: '', description: '', color: '#3B82F6' })
+      fetchGroups()
+    } catch (error) {
+      console.error('Error creating group:', error)
+      toast.error('Failed to create group')
+    }
+  }
+
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    try {
+      await axios.delete(`/api/groups/${groupId}`)
+      toast.success(`Group "${groupName}" deleted`)
+      fetchGroups()
+      fetchServices() // Refresh to update tags
+    } catch (error) {
+      console.error('Error deleting group:', error)
+      toast.error('Failed to delete group')
+    }
+  }
+
+  const handleToggleServiceGroup = async (groupId: string, serviceId: string, isCurrentlyIn: boolean) => {
+    try {
+      if (isCurrentlyIn) {
+        await axios.delete(`/api/groups/${groupId}/services/${serviceId}`)
+        toast.success('Service removed from group')
+      } else {
+        await axios.post(`/api/groups/${groupId}/services`, { serviceId })
+        toast.success('Service added to group')
+      }
+      fetchGroups()
+      fetchServices() // Refresh to update tags
+    } catch (error) {
+      console.error('Error toggling service group:', error)
+      toast.error('Failed to update service group')
+    }
+  }
+
   useEffect(() => {
     fetchServices()
+    fetchGroups()
     // Auto-refresh every 10 seconds
     const interval = setInterval(fetchServices, 10000)
     return () => clearInterval(interval)
@@ -377,6 +447,14 @@ export default function Services() {
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             Refresh
+          </button>
+          <button
+            onClick={() => setShowGroupsModal(true)}
+            disabled={!activeWorkspace}
+            className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Tags size={18} />
+            Manage Groups
           </button>
           <button
             onClick={openImportModal}
@@ -778,6 +856,17 @@ export default function Services() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
+                      setSelectedServiceForGroups(service)
+                      setShowAssignGroupModal(true)
+                    }}
+                    className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded text-sm hover:bg-purple-100 flex items-center gap-2"
+                    title="Assign to groups"
+                  >
+                    <Tags size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
                       handleDeleteService(service.id)
                     }}
                     className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 flex items-center gap-2"
@@ -886,6 +975,176 @@ export default function Services() {
           </div>
         </div>
       </div>
+
+      {/* Manage Groups Modal */}
+      {showGroupsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Manage Groups</h2>
+              <button
+                onClick={() => setShowGroupsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Create New Group */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold mb-3">Create New Group</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Group Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newGroup.name}
+                    onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                    placeholder="e.g., Backend Services"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    value={newGroup.description}
+                    onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                    placeholder="Optional description"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color
+                  </label>
+                  <input
+                    type="color"
+                    value={newGroup.color}
+                    onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
+                    className="h-10 w-20 rounded cursor-pointer"
+                  />
+                </div>
+                <button
+                  onClick={handleCreateGroup}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Create Group
+                </button>
+              </div>
+            </div>
+
+            {/* Existing Groups */}
+            <div>
+              <h3 className="font-semibold mb-3">Existing Groups ({groups.length})</h3>
+              {groups.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No groups created yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {groups.map(group => (
+                    <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
+                        />
+                        <div>
+                          <p className="font-medium">{group.name}</p>
+                          {group.description && (
+                            <p className="text-sm text-gray-500">{group.description}</p>
+                          )}
+                          <p className="text-xs text-gray-400">
+                            {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteGroup(group.id, group.name)}
+                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Groups Modal */}
+      {showAssignGroupModal && selectedServiceForGroups && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Assign to Groups</h2>
+              <button
+                onClick={() => {
+                  setShowAssignGroupModal(false)
+                  setSelectedServiceForGroups(null)
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              Service: <span className="font-semibold">{selectedServiceForGroups.name}</span>
+            </p>
+
+            {groups.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-3">No groups available</p>
+                <button
+                  onClick={() => {
+                    setShowAssignGroupModal(false)
+                    setShowGroupsModal(true)
+                  }}
+                  className="text-purple-600 hover:underline"
+                >
+                  Create a group first
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {groups.map(group => {
+                  const isInGroup = group.serviceIds.includes(selectedServiceForGroups.id)
+                  return (
+                    <button
+                      key={group.id}
+                      onClick={() => handleToggleServiceGroup(group.id, selectedServiceForGroups.id, isInGroup)}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors ${
+                        isInGroup
+                          ? 'border-purple-600 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
+                        />
+                        <span className="font-medium">{group.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isInGroup && (
+                          <CheckSquare size={20} className="text-purple-600" />
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
