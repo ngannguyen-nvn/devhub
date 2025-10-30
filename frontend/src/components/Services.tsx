@@ -676,24 +676,48 @@ export default function Services() {
         </div>
       )}
 
-      {/* Group Filter & Search Bar */}
+      {/* Group Filter Tabs & Search Bar */}
       {services.length > 0 && (
         <div className="mb-6 space-y-4">
-          {/* Group Filter */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700">Filter by Group:</label>
-            <select
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          {/* Group Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <button
+              onClick={() => setSelectedGroup('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedGroup === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              <option value="all">All Services ({services.length})</option>
-              {Array.from(new Set(services.flatMap(s => s.tags || []))).map(tag => (
-                <option key={tag} value={tag}>
-                  {tag} ({services.filter(s => s.tags?.includes(tag)).length})
-                </option>
-              ))}
-            </select>
+              All Services ({services.length})
+            </button>
+            {groups.map(group => {
+              const count = services.filter(s => s.tags?.includes(group.name)).length
+              if (count === 0) return null // Don't show groups with no services
+
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => setSelectedGroup(group.name)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
+                    selectedGroup === group.name
+                      ? 'text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  style={
+                    selectedGroup === group.name
+                      ? { backgroundColor: group.color || '#3B82F6' }
+                      : {}
+                  }
+                >
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: group.color || '#3B82F6' }}
+                  />
+                  {group.name} ({count})
+                </button>
+              )
+            })}
           </div>
 
           {/* Search Bar */}
