@@ -23,6 +23,8 @@ export default function PortManagement() {
   const [stats, setStats] = useState<PortStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [fixing, setFixing] = useState(false)
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
+  const [newPort, setNewPort] = useState<number>(3000)
 
   useEffect(() => {
     fetchConflicts()
@@ -67,6 +69,34 @@ export default function PortManagement() {
       toast.error('Failed to fix port conflicts')
     } finally {
       setFixing(false)
+    }
+  }
+
+  const handleStartEdit = (conflict: PortConflict) => {
+    setEditingServiceId(conflict.serviceId)
+    setNewPort(conflict.port)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingServiceId(null)
+    setNewPort(3000)
+  }
+
+  const handleSavePort = async (serviceId: string) => {
+    if (newPort < 1 || newPort > 65535) {
+      toast.error('Port must be between 1 and 65535')
+      return
+    }
+
+    try {
+      // Update service port via services API
+      await axios.put(`/api/services/${serviceId}`, { port: newPort })
+      toast.success(`Port updated to ${newPort}`)
+      setEditingServiceId(null)
+      fetchConflicts()
+      fetchStats()
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to update port')
     }
   }
 
@@ -184,26 +214,62 @@ export default function PortManagement() {
           <div className="divide-y divide-gray-200">
             {conflicts.map((conflict, index) => (
               <div key={index} className="px-6 py-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="font-medium text-gray-800">{conflict.serviceName}</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getConflictBadgeColor(conflict.conflict)}`}>
-                        {conflict.conflict.toUpperCase()}
-                      </span>
+                {editingServiceId === conflict.serviceId ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800 mb-2">{conflict.serviceName}</div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600">New Port:</label>
+                        <input
+                          type="number"
+                          value={newPort}
+                          onChange={(e) => setNewPort(parseInt(e.target.value) || 3000)}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          min="1"
+                          max="65535"
+                        />
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      Port {conflict.port}
-                      {conflict.conflict === 'system' && ' is already in use by another process'}
-                      {conflict.conflict === 'service' && conflict.conflictingService &&
-                        ` conflicts with ${conflict.conflictingService}`}
-                      {conflict.conflict === 'both' && ' has both system and service conflicts'}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSavePort(conflict.serviceId)}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Service ID: {conflict.serviceId.substring(0, 12)}...
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-medium text-gray-800">{conflict.serviceName}</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getConflictBadgeColor(conflict.conflict)}`}>
+                          {conflict.conflict.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Port {conflict.port}
+                        {conflict.conflict === 'system' && ' is already in use by another process'}
+                        {conflict.conflict === 'service' && conflict.conflictingService &&
+                          ` conflicts with ${conflict.conflictingService}`}
+                        {conflict.conflict === 'both' && ' has both system and service conflicts'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleStartEdit(conflict)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      Change Port
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
