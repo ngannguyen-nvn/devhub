@@ -35,8 +35,18 @@ interface DockerContainer {
   created: number
 }
 
+interface ComposeService {
+  name: string
+  image?: string
+  build?: { context: string; dockerfile: string }
+  ports?: string[]
+  environment?: Record<string, string>
+  volumes?: string[]
+  dependsOn?: string[]
+}
+
 export default function Docker() {
-  const [activeTab, setActiveTab] = useState<'images' | 'containers'>('images')
+  const [activeTab, setActiveTab] = useState<'images' | 'containers' | 'compose'>('images')
   const [images, setImages] = useState<DockerImage[]>([])
   const [containers, setContainers] = useState<DockerContainer[]>([])
   const [loading, setLoading] = useState(false)
@@ -74,6 +84,19 @@ export default function Docker() {
     type: 'image',
     id: null,
     name: '',
+  })
+
+  // Docker Compose state
+  const [composeServices, setComposeServices] = useState<ComposeService[]>([])
+  const [generatedYaml, setGeneratedYaml] = useState<string>('')
+  const [showAddServiceForm, setShowAddServiceForm] = useState(false)
+  const [newComposeService, setNewComposeService] = useState<ComposeService>({
+    name: '',
+    image: '',
+    ports: [],
+    environment: {},
+    volumes: [],
+    dependsOn: [],
   })
 
   // Check Docker availability
@@ -312,6 +335,85 @@ export default function Docker() {
     }
   }
 
+  // Docker Compose handlers
+  const handleAddComposeService = () => {
+    if (!newComposeService.name) {
+      toast.error('Service name is required')
+      return
+    }
+
+    setComposeServices([...composeServices, { ...newComposeService }])
+    setNewComposeService({
+      name: '',
+      image: '',
+      ports: [],
+      environment: {},
+      volumes: [],
+      dependsOn: [],
+    })
+    setShowAddServiceForm(false)
+    setGeneratedYaml('') // Clear previous YAML
+    toast.success('Service added to compose')
+  }
+
+  const handleRemoveComposeService = (index: number) => {
+    setComposeServices(composeServices.filter((_, i) => i !== index))
+    setGeneratedYaml('') // Clear YAML when services change
+    toast.success('Service removed from compose')
+  }
+
+  const handleGenerateCompose = async () => {
+    if (composeServices.length === 0) {
+      toast.error('Add at least one service to generate compose file')
+      return
+    }
+
+    try {
+      const response = await axios.post('/api/docker/compose/generate', {
+        services: composeServices,
+      })
+      setGeneratedYaml(response.data.yaml)
+      toast.success('Docker Compose YAML generated')
+    } catch (error: any) {
+      toast.error(`Failed to generate compose: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
+  const handleDownloadCompose = () => {
+    if (!generatedYaml) {
+      toast.error('Generate YAML first')
+      return
+    }
+
+    const blob = new Blob([generatedYaml], { type: 'text/yaml' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'docker-compose.yml')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    toast.success('Compose file downloaded')
+  }
+
+  const handleImportCompose = async (file: File) => {
+    try {
+      const text = await file.text()
+      setGeneratedYaml(text)
+      toast.success('Compose file imported successfully')
+      // You could also parse the YAML and populate composeServices here
+    } catch (error: any) {
+      toast.error(`Failed to import file: ${error.message}`)
+    }
+  }
+
+  const handleClearCompose = () => {
+    setComposeServices([])
+    setGeneratedYaml('')
+    toast.success('Compose configuration cleared')
+  }
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B'
     const k = 1024
@@ -388,6 +490,18 @@ export default function Docker() {
         >
           <Container className="w-4 h-4 inline mr-2" />
           Containers ({containers.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('compose')}
+          className={`px-4 py-2 font-medium ${
+            activeTab === 'compose'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+          data-testid="docker-compose-tab"
+        >
+          <Package className="w-4 h-4 inline mr-2" />
+          Compose
         </button>
       </div>
 
@@ -709,6 +823,209 @@ export default function Docker() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Compose Tab */}
+      {activeTab === 'compose' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: Services Configuration */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Services</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddServiceForm(!showAddServiceForm)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Service
+                </button>
+                {composeServices.length > 0 && (
+                  <button
+                    onClick={handleClearCompose}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Add Service Form */}
+            {showAddServiceForm && (
+              <div className="bg-white p-6 rounded-lg shadow-md mb-4">
+                <h3 className="text-lg font-bold mb-4">Add Service to Compose</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Service Name *</label>
+                    <input
+                      type="text"
+                      value={newComposeService.name}
+                      onChange={(e) => setNewComposeService({ ...newComposeService, name: e.target.value })}
+                      placeholder="my-service"
+                      className="w-full px-3 py-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Image</label>
+                    <input
+                      type="text"
+                      value={newComposeService.image || ''}
+                      onChange={(e) => setNewComposeService({ ...newComposeService, image: e.target.value })}
+                      placeholder="nginx:latest"
+                      className="w-full px-3 py-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Ports (one per line)</label>
+                    <textarea
+                      value={newComposeService.ports?.join('\n') || ''}
+                      onChange={(e) => setNewComposeService({
+                        ...newComposeService,
+                        ports: e.target.value.split('\n').filter(p => p.trim())
+                      })}
+                      placeholder="8080:80&#10;443:443"
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Environment (KEY=value, one per line)</label>
+                    <textarea
+                      value={Object.entries(newComposeService.environment || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
+                      onChange={(e) => {
+                        const env: Record<string, string> = {}
+                        e.target.value.split('\n').forEach(line => {
+                          const [key, ...valueParts] = line.split('=')
+                          if (key.trim()) env[key.trim()] = valueParts.join('=').trim()
+                        })
+                        setNewComposeService({ ...newComposeService, environment: env })
+                      }}
+                      placeholder="NODE_ENV=production&#10;PORT=3000"
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Volumes (one per line)</label>
+                    <textarea
+                      value={newComposeService.volumes?.join('\n') || ''}
+                      onChange={(e) => setNewComposeService({
+                        ...newComposeService,
+                        volumes: e.target.value.split('\n').filter(v => v.trim())
+                      })}
+                      placeholder="./data:/app/data&#10;./logs:/app/logs"
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded font-mono text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleAddComposeService}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Add Service
+                    </button>
+                    <button
+                      onClick={() => setShowAddServiceForm(false)}
+                      className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Services List */}
+            <div className="space-y-4">
+              {composeServices.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 bg-white rounded-lg">
+                  No services added yet. Click "Add Service" to get started.
+                </div>
+              ) : (
+                composeServices.map((service, index) => (
+                  <div key={index} className="bg-white p-4 rounded-lg shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{service.name}</h3>
+                        <div className="mt-2 text-sm text-gray-600 space-y-1">
+                          {service.image && <div>Image: {service.image}</div>}
+                          {service.ports && service.ports.length > 0 && (
+                            <div>Ports: {service.ports.join(', ')}</div>
+                          )}
+                          {service.volumes && service.volumes.length > 0 && (
+                            <div>Volumes: {service.volumes.length}</div>
+                          )}
+                          {service.environment && Object.keys(service.environment).length > 0 && (
+                            <div>Env Vars: {Object.keys(service.environment).length}</div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveComposeService(index)}
+                        className="text-red-600 hover:text-red-800"
+                        title="Remove"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Right: YAML Preview and Actions */}
+          <div>
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-bold mb-4">Docker Compose YAML</h2>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={handleGenerateCompose}
+                  disabled={composeServices.length === 0}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Generate YAML
+                </button>
+                <button
+                  onClick={handleDownloadCompose}
+                  disabled={!generatedYaml}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Download
+                </button>
+                <label className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 cursor-pointer">
+                  Import File
+                  <input
+                    type="file"
+                    accept=".yml,.yaml"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        handleImportCompose(file)
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* YAML Preview */}
+              <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto">
+                {generatedYaml ? (
+                  <pre className="whitespace-pre-wrap">{generatedYaml}</pre>
+                ) : (
+                  <div className="text-gray-500">
+                    Add services and click "Generate YAML" to preview
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
