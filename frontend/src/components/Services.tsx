@@ -30,6 +30,8 @@ export default function Services() {
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
   const [allLogs, setAllLogs] = useState<Array<{serviceId: string, serviceName: string, log: string, timestamp: string}>>([])
   const [showCentralLogs, setShowCentralLogs] = useState(true)
+  const [activeLogTab, setActiveLogTab] = useState<string>('all') // 'all' or serviceId
+  const [singleServiceLogs, setSingleServiceLogs] = useState<string[]>([]) // For individual service tab
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -108,6 +110,15 @@ export default function Services() {
     }
   }
 
+  const fetchSingleServiceLogs = async (serviceId: string) => {
+    try {
+      const response = await axios.get(`/api/services/${serviceId}/logs`)
+      setSingleServiceLogs(response.data.logs)
+    } catch (error) {
+      console.error('Error fetching logs:', error)
+    }
+  }
+
   useEffect(() => {
     fetchServices()
     // Auto-refresh every 10 seconds
@@ -115,14 +126,21 @@ export default function Services() {
     return () => clearInterval(interval)
   }, [activeWorkspace]) // Refresh when workspace changes
 
-  // Fetch all logs for central log viewer
+  // Fetch logs based on active tab
   useEffect(() => {
-    if (showCentralLogs) {
+    if (!showCentralLogs) return
+
+    if (activeLogTab === 'all') {
       fetchAllLogs()
       const interval = setInterval(fetchAllLogs, 3000) // Poll every 3 seconds
       return () => clearInterval(interval)
+    } else {
+      // Fetch logs for specific service
+      fetchSingleServiceLogs(activeLogTab)
+      const interval = setInterval(() => fetchSingleServiceLogs(activeLogTab), 3000)
+      return () => clearInterval(interval)
     }
-  }, [showCentralLogs, services]) // Re-fetch when services change
+  }, [showCentralLogs, activeLogTab, services]) // Re-fetch when tab or services change
 
   const handleAddService = async () => {
     try {
@@ -773,11 +791,12 @@ export default function Services() {
           })}
         </div>
 
-        {/* Central Logs Viewer */}
-        <div className="bg-gray-900 rounded-lg p-4 overflow-hidden flex flex-col" data-testid="service-logs-viewer">
-          <div className="flex items-center justify-between mb-3">
+        {/* Tabbed Logs Viewer */}
+        <div className="bg-gray-900 rounded-lg overflow-hidden flex flex-col" data-testid="service-logs-viewer">
+          {/* Header with title and controls */}
+          <div className="flex items-center justify-between p-4 pb-0">
             <div className="flex items-center gap-3">
-              <h3 className="text-white font-semibold">Central Log Viewer</h3>
+              <h3 className="text-white font-semibold">Service Logs</h3>
               <span className="text-gray-400 text-xs">
                 ({services.filter(s => s.status === 'running').length} services running)
               </span>
@@ -794,7 +813,7 @@ export default function Services() {
                 {showCentralLogs ? 'Live' : 'Paused'}
               </button>
               <button
-                onClick={fetchAllLogs}
+                onClick={() => activeLogTab === 'all' ? fetchAllLogs() : fetchSingleServiceLogs(activeLogTab)}
                 className="text-gray-400 hover:text-white"
                 data-testid="service-logs-refresh-button"
               >
@@ -803,24 +822,68 @@ export default function Services() {
             </div>
           </div>
 
-          {services.filter(s => s.status === 'running').length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              No services are currently running
-            </div>
-          ) : (
-            <div className="flex-1 overflow-auto font-mono text-xs space-y-1" data-testid="service-logs-content">
-              {allLogs.length === 0 ? (
-                <p className="text-gray-500">Waiting for logs...</p>
-              ) : (
-                allLogs.map((logEntry, i) => (
-                  <div key={i} className="whitespace-pre-wrap break-all">
-                    <span className="text-blue-400 font-semibold">[{logEntry.serviceName}]</span>{' '}
-                    <span className="text-green-400">{logEntry.log}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+          {/* Tabs */}
+          <div className="flex items-center gap-1 px-4 pt-3 pb-2 border-b border-gray-700 overflow-x-auto">
+            <button
+              onClick={() => setActiveLogTab('all')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors whitespace-nowrap ${
+                activeLogTab === 'all'
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              All Services
+            </button>
+            {services.filter(s => s.status === 'running').map(service => (
+              <button
+                key={service.id}
+                onClick={() => setActiveLogTab(service.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors whitespace-nowrap ${
+                  activeLogTab === service.id
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                {service.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Log Content */}
+          <div className="p-4 flex-1 overflow-hidden flex flex-col">
+            {services.filter(s => s.status === 'running').length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                No services are currently running
+              </div>
+            ) : (
+              <div className="flex-1 overflow-auto font-mono text-xs space-y-1" data-testid="service-logs-content">
+                {activeLogTab === 'all' ? (
+                  // Show all services logs with prefix
+                  allLogs.length === 0 ? (
+                    <p className="text-gray-500">Waiting for logs...</p>
+                  ) : (
+                    allLogs.map((logEntry, i) => (
+                      <div key={i} className="whitespace-pre-wrap break-all">
+                        <span className="text-blue-400 font-semibold">[{logEntry.serviceName}]</span>{' '}
+                        <span className="text-green-400">{logEntry.log}</span>
+                      </div>
+                    ))
+                  )
+                ) : (
+                  // Show single service logs without prefix
+                  singleServiceLogs.length === 0 ? (
+                    <p className="text-gray-500">No logs available</p>
+                  ) : (
+                    singleServiceLogs.map((log, i) => (
+                      <div key={i} className="whitespace-pre-wrap break-all text-green-400">
+                        {log}
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
