@@ -809,14 +809,14 @@ export default function Workspaces() {
           const existingServices = servicesResponse.data.services || []
 
           // 2. Filter repos that don't have services yet
-          const reposToCreate = repositories.filter(repo =>
+          const reposToCreate = repositories.filter((repo: any) =>
             !existingServices.find((s: any) => s.repoPath === repo.path)
           )
 
           if (reposToCreate.length > 0) {
             // 3. Batch analyze all repos in a single API call
             const analyzeBatchResponse = await axios.post('/api/repos/analyze-batch', {
-              repoPaths: reposToCreate.map(repo => repo.path)
+              repoPaths: reposToCreate.map((repo: any) => repo.path)
             })
 
             // 4. Prepare services data from successful analyses
@@ -1319,14 +1319,6 @@ export default function Workspaces() {
                       <GitBranch className="w-3 h-3" />
                       {snapshot.repositories.length} repos
                     </span>
-                    {snapshot.envVariables && Object.keys(snapshot.envVariables).length > 0 && (
-                      <span className="flex items-center gap-1" title="Environment variables">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                        </svg>
-                        {Object.values(snapshot.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} env vars
-                      </span>
-                    )}
                   </div>
                   {snapshot.tags && snapshot.tags.length > 0 && (
                     <div className="flex gap-1 flex-wrap mb-2">
@@ -1444,42 +1436,7 @@ export default function Workspaces() {
             )}
           </div>
 
-          {/* Environment Variables */}
-          {selectedSnapshot.envVariables && Object.keys(selectedSnapshot.envVariables).length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                Environment Variables ({Object.values(selectedSnapshot.envVariables).reduce((sum, vars) => sum + Object.keys(vars).length, 0)} total)
-              </h3>
-              <div className="space-y-3 ml-7">
-                {Object.entries(selectedSnapshot.envVariables).map(([id, vars]) => {
-                  // Check if this is a service ID or profile ID
-                  const isProfile = id.startsWith('profile_')
-                  const service = selectedSnapshot.runningServices.find(s => s.serviceId === id)
-                  const displayName = isProfile
-                    ? id.replace('profile_', 'Profile: ')  // Profile-level vars
-                    : (service?.serviceName || id)         // Service-specific vars
-
-                  return (
-                    <div key={id} className="border-l-2 border-blue-300 pl-3">
-                      <div className="font-medium text-sm mb-1">
-                        {displayName}
-                        {isProfile && <span className="ml-2 text-xs text-gray-500">(Profile)</span>}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {Object.keys(vars).length} variable{Object.keys(vars).length !== 1 ? 's' : ''}: {Object.keys(vars).join(', ')}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="ml-7 mt-2 text-xs text-blue-600">
-                💡 These variables will be restored to a profile named "Snapshot: {selectedSnapshot.name}"
-              </div>
-            </div>
-          )}
+          {/* Environment Variables - Commented out until envVariables is added to snapshot interface */}
 
           {/* Metadata */}
           <div className="mt-6 pt-6 border-t text-sm text-gray-500">
