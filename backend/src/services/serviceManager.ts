@@ -44,7 +44,17 @@ export class ServiceManager extends EventEmitter {
    * Get all defined services for a workspace
    */
   getAllServices(workspaceId: string): Service[] {
-    const stmt = db.prepare('SELECT * FROM services WHERE workspace_id = ?')
+    // Get services with health status
+    const stmt = db.prepare(`
+      SELECT
+        s.*,
+        GROUP_CONCAT(sg.name) as group_names
+      FROM services s
+      LEFT JOIN service_group_members sgm ON s.id = sgm.service_id
+      LEFT JOIN service_groups sg ON sgm.group_id = sg.id
+      WHERE s.workspace_id = ?
+      GROUP BY s.id
+    `)
     const rows = stmt.all(workspaceId) as any[]
 
     return rows.map(row => ({
@@ -55,6 +65,10 @@ export class ServiceManager extends EventEmitter {
       command: row.command,
       port: row.port,
       envVars: row.env_vars ? JSON.parse(row.env_vars) : undefined,
+      healthStatus: row.health_status as 'healthy' | 'unhealthy' | 'degraded' | 'unknown' | undefined,
+      lastHealthCheck: row.last_health_check,
+      healthCheckFailures: row.health_check_failures,
+      tags: row.group_names ? row.group_names.split(',').filter((t: string) => t) : [],
     }))
   }
 

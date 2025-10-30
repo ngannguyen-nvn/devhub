@@ -36,6 +36,7 @@ export interface Service {
   maxRestarts?: number
   restartCount?: number
   backoffStrategy?: 'immediate' | 'exponential' | 'fixed'
+  tags?: string[] // Service group tags/labels
 }
 
 // Workspace entity (parent)
