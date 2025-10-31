@@ -313,11 +313,13 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
         console.log('   ✅ Found: wt.exe (Windows Terminal)')
         terminalCommand = 'wt.exe'
         terminalArgs = [
-          'wsl',
+          'wsl.exe',
+          '~',
+          '-e',
           'bash',
           '-c',
-          // Don't use --cd flag, let bash handle directory change
-          `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`
+          // Use explicit cd in bash
+          `cd '${repoPath}' && echo 'Running ${name}' && ${command} || bash`
         ]
       } catch {
         console.log('   ❌ wt.exe not found, trying cmd.exe')
