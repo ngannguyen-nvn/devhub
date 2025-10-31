@@ -305,18 +305,7 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
       ]
     } else if (isWSL) {
       console.log('🪟 Running in WSL - attempting Windows terminal launch')
-
-      // We're in WSL - try to launch Windows terminals
-      // First convert WSL path to Windows path
-      let windowsPath: string
-      try {
-        const { execSync } = require('child_process')
-        windowsPath = execSync(`wslpath -w "${repoPath}"`, { encoding: 'utf8' }).trim()
-        console.log('   WSL path converted:', repoPath, '→', windowsPath)
-      } catch (err) {
-        console.log('   ⚠️  wslpath conversion failed, using original path')
-        windowsPath = repoPath
-      }
+      console.log('   Using WSL path directly (no conversion needed):', repoPath)
 
       // Try Windows Terminal first
       try {
@@ -325,11 +314,10 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
         terminalCommand = 'wt.exe'
         terminalArgs = [
           'wsl',
-          '--cd',
-          repoPath,
           'bash',
           '-c',
-          `echo 'Running ${name}' && ${command}; exec bash`
+          // Don't use --cd flag, let bash handle directory change
+          `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`
         ]
       } catch {
         console.log('   ❌ wt.exe not found, trying cmd.exe')
