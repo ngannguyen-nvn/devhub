@@ -276,6 +276,14 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
         `tell application "Terminal" to do script "cd '${repoPath}' && echo 'Running ${name}' && ${command}"`
       ]
     } else if (platform === 'linux') {
+      // Linux - check if we have a display server first
+      if (!process.env.DISPLAY) {
+        return res.status(400).json({
+          success: false,
+          error: 'No X11 display available. Terminal feature requires a graphical environment or X11 forwarding (set DISPLAY variable).'
+        })
+      }
+
       // Linux - try multiple terminal emulators
       const terminals = [
         {
