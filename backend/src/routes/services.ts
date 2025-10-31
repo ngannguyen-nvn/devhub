@@ -343,7 +343,8 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
             'start',
             'cmd.exe',
             '/k',
-            `wsl --cd ${repoPath} bash -c "echo 'Running ${name}' && ${command}; exec bash"`
+            // Important: Use wsl without --cd, and cd explicitly in bash
+            `wsl bash -c "cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash"`
           ]
         } catch {
           console.log('   ❌ cmd.exe not found')
