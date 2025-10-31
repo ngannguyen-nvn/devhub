@@ -276,25 +276,53 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
         `tell application "Terminal" to do script "cd '${repoPath}' && echo 'Running ${name}' && ${command}"`
       ]
     } else if (platform === 'linux') {
-      // Linux - try gnome-terminal, fallback to xterm
-      // Check if gnome-terminal exists
-      try {
-        require('child_process').execSync('which gnome-terminal', { stdio: 'ignore' })
-        terminalCommand = 'gnome-terminal'
-        terminalArgs = [
-          '--',
-          'bash',
-          '-c',
-          `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`
-        ]
-      } catch {
-        // Fallback to xterm
-        terminalCommand = 'xterm'
-        terminalArgs = [
-          '-hold',
-          '-e',
-          `cd '${repoPath}' && echo 'Running ${name}' && ${command}`
-        ]
+      // Linux - try multiple terminal emulators
+      const terminals = [
+        {
+          name: 'gnome-terminal',
+          check: 'gnome-terminal',
+          args: ['--', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        },
+        {
+          name: 'konsole',
+          check: 'konsole',
+          args: ['-e', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        },
+        {
+          name: 'xfce4-terminal',
+          check: 'xfce4-terminal',
+          args: ['-e', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        },
+        {
+          name: 'xterm',
+          check: 'xterm',
+          args: ['-hold', '-e', `cd '${repoPath}' && echo 'Running ${name}' && ${command}`]
+        },
+        {
+          name: 'x-terminal-emulator',
+          check: 'x-terminal-emulator',
+          args: ['-e', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        }
+      ]
+
+      let foundTerminal = false
+      for (const terminal of terminals) {
+        try {
+          require('child_process').execSync(`which ${terminal.check}`, { stdio: 'ignore' })
+          terminalCommand = terminal.name
+          terminalArgs = terminal.args
+          foundTerminal = true
+          break
+        } catch {
+          // Try next terminal
+        }
+      }
+
+      if (!foundTerminal) {
+        return res.status(400).json({
+          success: false,
+          error: 'No terminal emulator found. Please install gnome-terminal, konsole, xfce4-terminal, or xterm.'
+        })
       }
     } else if (platform === 'win32') {
       // Windows - check for WSL first, fallback to cmd
@@ -346,6 +374,17 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
     const terminal = spawn(terminalCommand, terminalArgs, {
       detached: true,
       stdio: 'ignore'
+    })
+
+    // Handle spawn errors
+    terminal.on('error', (err) => {
+      console.error('Terminal spawn error:', err)
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: `Failed to spawn terminal: ${err.message}`
+        })
+      }
     })
 
     terminal.unref() // Allow the process to run independently
