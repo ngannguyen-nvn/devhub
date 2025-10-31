@@ -318,7 +318,8 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
           '-l',  // Login shell to get clean WSL environment with correct PATH
           '-c',
           // Use explicit cd in bash, -l ensures WSL npm is used not Windows npm
-          `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash -l`
+          // After command exits, bash will exit naturally
+          `cd '${repoPath}' && echo 'Running ${name}' && ${command} || bash -l`
         ]
       } catch {
         console.log('   ❌ wt.exe not found, trying cmd.exe')
@@ -333,7 +334,7 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
             'cmd.exe',
             '/k',
             // Use login shell for clean WSL environment
-            `wsl bash -l -c "cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash -l"`
+            `wsl bash -l -c "cd '${repoPath}' && echo 'Running ${name}' && ${command} || bash -l"`
           ]
         } catch {
           console.log('   ❌ cmd.exe not found')
