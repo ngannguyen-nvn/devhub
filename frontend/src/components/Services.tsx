@@ -376,6 +376,17 @@ export default function Services() {
     }
   }
 
+  const handleOpenTerminal = async (id: string) => {
+    try {
+      const service = services.find(s => s.id === id)
+      await axios.post(`/api/services/${id}/terminal`)
+      toast.success(`Opened "${service?.name || 'Unknown'}" in terminal`)
+    } catch (error: any) {
+      console.error('Error opening terminal:', error)
+      toast.error(error.response?.data?.error || 'Failed to open terminal')
+    }
+  }
+
   const handleStopAll = async () => {
     setConfirmStopAll(false)
 
@@ -960,6 +971,17 @@ export default function Services() {
                       Start
                     </button>
                   )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenTerminal(service.id)
+                    }}
+                    className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-sm hover:bg-blue-100 flex items-center gap-2"
+                    title="Open in terminal"
+                    data-testid={`service-terminal-button-${service.id}`}
+                  >
+                    <Terminal size={14} />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()

@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { serviceManager } from '../services/serviceManager'
+import { spawn } from 'child_process'
+import os from 'os'
 
 const router = Router()
 
@@ -240,6 +242,123 @@ router.post('/:id/stop', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+/**
+ * POST /api/services/:id/terminal
+ * Open service in a new terminal window
+ */
+router.post('/:id/terminal', async (req: Request, res: Response) => {
+  try {
+    // Verify service exists and belongs to a workspace the user has access to
+    const workspaceId = await getWorkspaceId(req)
+    const services = serviceManager.getAllServices(workspaceId)
+    const service = services.find(s => s.id === req.params.id)
+
+    if (!service) {
+      return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
+    }
+
+    const platform = os.platform()
+    const { repoPath, command, name } = service
+
+    let terminalCommand: string
+    let terminalArgs: string[]
+
+    // Detect platform and choose appropriate terminal
+    if (platform === 'darwin') {
+      // macOS - use Terminal.app with osascript
+      terminalCommand = 'osascript'
+      terminalArgs = [
+        '-e',
+        `tell application "Terminal" to do script "cd '${repoPath}' && echo 'Running ${name}' && ${command}"`
+      ]
+    } else if (platform === 'linux') {
+      // Linux - try gnome-terminal, fallback to xterm
+      // Check if gnome-terminal exists
+      try {
+        require('child_process').execSync('which gnome-terminal', { stdio: 'ignore' })
+        terminalCommand = 'gnome-terminal'
+        terminalArgs = [
+          '--',
+          'bash',
+          '-c',
+          `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`
+        ]
+      } catch {
+        // Fallback to xterm
+        terminalCommand = 'xterm'
+        terminalArgs = [
+          '-hold',
+          '-e',
+          `cd '${repoPath}' && echo 'Running ${name}' && ${command}`
+        ]
+      }
+    } else if (platform === 'win32') {
+      // Windows - check for WSL first, fallback to cmd
+      try {
+        // Check if WSL is available
+        require('child_process').execSync('wsl --list --quiet', { stdio: 'ignore' })
+        // WSL is available - use Windows Terminal with WSL
+        try {
+          // Try Windows Terminal first
+          require('child_process').execSync('where wt', { stdio: 'ignore' })
+          terminalCommand = 'wt'
+          terminalArgs = [
+            'wsl',
+            '--',
+            'bash',
+            '-c',
+            `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`
+          ]
+        } catch {
+          // Fallback to cmd with wsl
+          terminalCommand = 'cmd'
+          terminalArgs = [
+            '/c',
+            'start',
+            'cmd',
+            '/k',
+            `wsl bash -c "cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash"`
+          ]
+        }
+      } catch {
+        // No WSL, use regular cmd
+        terminalCommand = 'cmd'
+        terminalArgs = [
+          '/c',
+          'start',
+          'cmd',
+          '/k',
+          `cd /d "${repoPath}" && echo Running ${name} && ${command}`
+        ]
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: `Unsupported platform: ${platform}`
+      })
+    }
+
+    // Spawn the terminal
+    const terminal = spawn(terminalCommand, terminalArgs, {
+      detached: true,
+      stdio: 'ignore'
+    })
+
+    terminal.unref() // Allow the process to run independently
+
+    res.json({
+      success: true,
+      message: `Opened ${name} in new terminal`
+    })
+  } catch (error) {
+    console.error('Error opening terminal:', error)
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to open terminal'
     })
   }
 })
