@@ -4,7 +4,6 @@ import db from '../db'
 import { Service as SharedService } from '@devhub/shared'
 import { logManager } from './logManager'
 import { healthCheckManager } from './healthCheckManager'
-import { autoRestartManager } from './autoRestartManager'
 
 // Internal service interface (extends shared with runtime data)
 export interface Service extends Omit<SharedService, 'status' | 'pid'> {
@@ -301,13 +300,6 @@ export class ServiceManager extends EventEmitter {
         healthCheckManager.stopHealthCheck(check.id)
       }
 
-      // Schedule auto-restart if enabled (only on crash, not normal stop)
-      if (code !== 0 && code !== null) {
-        autoRestartManager.scheduleRestart(serviceId, service.name, async (sid) => {
-          await this.startService(sid)
-        })
-      }
-
       // Keep logs and service info, only remove from active processes
       this.processes.delete(serviceId)
       // DON'T delete from runningServices - keep logs visible
@@ -344,9 +336,6 @@ export class ServiceManager extends EventEmitter {
     if (!process) {
       throw new Error('Service is not running')
     }
-
-    // Cancel any pending auto-restart
-    autoRestartManager.cancelRestart(serviceId)
 
     // Stop health checks
     const healthChecks = healthCheckManager.getHealthChecks(serviceId)
