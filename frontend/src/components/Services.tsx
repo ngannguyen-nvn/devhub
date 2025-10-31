@@ -44,6 +44,9 @@ export default function Services() {
     serviceName: '',
   })
 
+  // Stop all confirmation dialog
+  const [confirmStopAll, setConfirmStopAll] = useState(false)
+
   // New service form
   const [newService, setNewService] = useState({
     name: '',
@@ -373,6 +376,56 @@ export default function Services() {
     }
   }
 
+  const handleStopAll = async () => {
+    setConfirmStopAll(false)
+
+    // Get filtered and running services
+    const filtered = services.filter(service => {
+      // Filter by group
+      if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) {
+        return false
+      }
+      // Filter by search term
+      if (searchTerm.trim()) {
+        const search = searchTerm.toLowerCase()
+        return (
+          service.name.toLowerCase().includes(search) ||
+          service.repoPath.toLowerCase().includes(search) ||
+          service.command.toLowerCase().includes(search)
+        )
+      }
+      return true
+    })
+
+    const runningServices = filtered.filter(s => s.status === 'running')
+
+    if (runningServices.length === 0) {
+      toast.error('No running services to stop')
+      return
+    }
+
+    const groupLabel = selectedGroup === 'all'
+      ? 'all services'
+      : `group "${selectedGroup}"`
+
+    toast.loading(`Stopping ${runningServices.length} services in ${groupLabel}...`)
+
+    try {
+      const stopPromises = runningServices.map(service =>
+        axios.post(`/api/services/${service.id}/stop`)
+      )
+
+      await Promise.all(stopPromises)
+      fetchServices()
+      toast.dismiss()
+      toast.success(`Successfully stopped ${runningServices.length} services`)
+    } catch (error) {
+      console.error('Error stopping services:', error)
+      toast.dismiss()
+      toast.error('Failed to stop some services')
+    }
+  }
+
   const handleDeleteService = (id: string) => {
     const service = services.find(s => s.id === id)
     setConfirmDialog({
@@ -447,6 +500,36 @@ export default function Services() {
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             Refresh
+          </button>
+          <button
+            onClick={() => {
+              const filtered = services.filter(service => {
+                if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) {
+                  return false
+                }
+                if (searchTerm.trim()) {
+                  const search = searchTerm.toLowerCase()
+                  return (
+                    service.name.toLowerCase().includes(search) ||
+                    service.repoPath.toLowerCase().includes(search) ||
+                    service.command.toLowerCase().includes(search)
+                  )
+                }
+                return true
+              })
+              const runningCount = filtered.filter(s => s.status === 'running').length
+              if (runningCount === 0) {
+                toast.error('No running services to stop')
+              } else {
+                setConfirmStopAll(true)
+              }
+            }}
+            disabled={!activeWorkspace}
+            className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="service-stop-all-button"
+          >
+            <Square size={18} />
+            Stop All
           </button>
           <button
             onClick={() => setShowGroupsModal(true)}
@@ -1178,6 +1261,36 @@ export default function Services() {
         title="Delete Service"
         message={`Are you sure you want to delete "${confirmDialog.serviceName}"? This action cannot be undone.`}
         confirmText="Delete"
+        variant="danger"
+      />
+
+      {/* Confirm Stop All Dialog */}
+      <ConfirmDialog
+        isOpen={confirmStopAll}
+        onClose={() => setConfirmStopAll(false)}
+        onConfirm={handleStopAll}
+        title="Stop All Services"
+        message={`Are you sure you want to stop all running services ${
+          selectedGroup === 'all'
+            ? 'in all groups'
+            : `in group "${selectedGroup}"`
+        }? This will stop ${
+          services
+            .filter(service => {
+              if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) return false
+              if (searchTerm.trim()) {
+                const search = searchTerm.toLowerCase()
+                return (
+                  service.name.toLowerCase().includes(search) ||
+                  service.repoPath.toLowerCase().includes(search) ||
+                  service.command.toLowerCase().includes(search)
+                )
+              }
+              return true
+            })
+            .filter(s => s.status === 'running').length
+        } service(s).`}
+        confirmText="Stop All"
         variant="danger"
       />
     </div>
