@@ -540,6 +540,16 @@ async function testDatabaseConnection(connectionString: string): Promise<any> {
   }
 }
 
+// Helper function to check if a command exists
+async function commandExists(command: string): Promise<boolean> {
+  try {
+    await execAsync(`which ${command}`)
+    return true
+  } catch {
+    return false
+  }
+}
+
 // Helper function to backup database
 async function backupDatabase(connectionString: string): Promise<any> {
   const timestamp = Date.now()
@@ -550,8 +560,16 @@ async function backupDatabase(connectionString: string): Promise<any> {
     const dbName = url.pathname.substring(1)
     const filePath = `/tmp/pg_backup_${timestamp}.sql`
 
+    // Try native pg_dump first, fallback to Docker
+    const hasPgDump = await commandExists('pg_dump')
+
     try {
-      await execAsync(`pg_dump "${connectionString}" > "${filePath}"`)
+      if (hasPgDump) {
+        await execAsync(`pg_dump "${connectionString}" > "${filePath}"`)
+      } else {
+        // Fallback to Docker
+        await execAsync(`docker run --rm --network host postgres:alpine pg_dump "${connectionString}" > "${filePath}"`)
+      }
       return {
         success: true,
         filePath,
@@ -561,7 +579,7 @@ async function backupDatabase(connectionString: string): Promise<any> {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'PostgreSQL backup failed',
+        error: error.message || 'PostgreSQL backup failed. Ensure PostgreSQL client or Docker is installed.',
       }
     }
 
@@ -575,8 +593,16 @@ async function backupDatabase(connectionString: string): Promise<any> {
     const password = url.password
     const filePath = `/tmp/mysql_backup_${timestamp}.sql`
 
+    // Try native mysqldump first, fallback to Docker
+    const hasMysqlDump = await commandExists('mysqldump')
+
     try {
-      await execAsync(`mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+      if (hasMysqlDump) {
+        await execAsync(`mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+      } else {
+        // Fallback to Docker
+        await execAsync(`docker run --rm --network host mysql:latest mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+      }
       return {
         success: true,
         filePath,
@@ -586,7 +612,7 @@ async function backupDatabase(connectionString: string): Promise<any> {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'MySQL backup failed',
+        error: error.message || 'MySQL backup failed. Ensure MySQL client or Docker is installed.',
       }
     }
 
@@ -596,8 +622,17 @@ async function backupDatabase(connectionString: string): Promise<any> {
     const dbName = url.pathname.substring(1).split('?')[0] || 'admin'
     const filePath = `/tmp/mongo_backup_${timestamp}`
 
+    // Try native mongodump first, fallback to Docker
+    const hasMongoDump = await commandExists('mongodump')
+
     try {
-      await execAsync(`mongodump --uri="${connectionString}" --out="${filePath}"`)
+      if (hasMongoDump) {
+        await execAsync(`mongodump --uri="${connectionString}" --out="${filePath}"`)
+      } else {
+        // Fallback to Docker (mount /tmp to access output)
+        await execAsync(`docker run --rm --network host -v /tmp:/tmp mongo:latest mongodump --uri="${connectionString}" --out="${filePath}"`)
+      }
+
       // Create tar.gz archive
       const archivePath = `${filePath}.tar.gz`
       await execAsync(`tar -czf "${archivePath}" -C "${filePath}" .`)
@@ -613,7 +648,7 @@ async function backupDatabase(connectionString: string): Promise<any> {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'MongoDB backup failed',
+        error: error.message || 'MongoDB backup failed. Ensure MongoDB tools or Docker is installed.',
       }
     }
 
@@ -629,8 +664,15 @@ async function backupDatabase(connectionString: string): Promise<any> {
 async function restoreDatabase(connectionString: string, backupFilePath: string): Promise<any> {
   if (connectionString.startsWith('postgres://') || connectionString.startsWith('postgresql://')) {
     // PostgreSQL restore using psql
+    const hasPsql = await commandExists('psql')
+
     try {
-      await execAsync(`psql "${connectionString}" < "${backupFilePath}"`)
+      if (hasPsql) {
+        await execAsync(`psql "${connectionString}" < "${backupFilePath}"`)
+      } else {
+        // Fallback to Docker (mount backup file)
+        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" postgres:alpine psql "${connectionString}" < "${backupFilePath}"`)
+      }
       return {
         success: true,
         message: 'PostgreSQL database restored successfully',
@@ -638,7 +680,7 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'PostgreSQL restore failed',
+        error: error.message || 'PostgreSQL restore failed. Ensure PostgreSQL client or Docker is installed.',
       }
     }
 
@@ -651,8 +693,15 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     const user = url.username
     const password = url.password
 
+    const hasMysql = await commandExists('mysql')
+
     try {
-      await execAsync(`mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+      if (hasMysql) {
+        await execAsync(`mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+      } else {
+        // Fallback to Docker
+        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" mysql:latest mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+      }
       return {
         success: true,
         message: 'MySQL database restored successfully',
@@ -660,7 +709,7 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'MySQL restore failed',
+        error: error.message || 'MySQL restore failed. Ensure MySQL client or Docker is installed.',
       }
     }
 
@@ -671,14 +720,28 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     const timestamp = Date.now()
     const extractPath = `/tmp/mongo_extract_${timestamp}`
 
+    const hasMongoRestore = await commandExists('mongorestore')
+
     try {
       // Extract tar.gz if needed
       if (backupFilePath.endsWith('.tar.gz') || backupFilePath.endsWith('.gz')) {
         await execAsync(`mkdir -p "${extractPath}" && tar -xzf "${backupFilePath}" -C "${extractPath}"`)
-        await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+
+        if (hasMongoRestore) {
+          await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+        } else {
+          // Fallback to Docker
+          await execAsync(`docker run --rm --network host -v /tmp:/tmp mongo:latest mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+        }
+
         await execAsync(`rm -rf "${extractPath}"`)
       } else {
-        await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+        if (hasMongoRestore) {
+          await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+        } else {
+          // Fallback to Docker
+          await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" mongo:latest mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+        }
       }
 
       return {
@@ -688,7 +751,7 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'MongoDB restore failed',
+        error: error.message || 'MongoDB restore failed. Ensure MongoDB tools or Docker is installed.',
       }
     }
 
