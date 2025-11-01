@@ -17,6 +17,12 @@
     "devops",
     "productivity"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ngannguyen-nvn/devhub",
+    "directory": "packages/vscode-extension"
+  },
+  "license": "MIT",
   "activationEvents": [
     "onStartupFinished"
   ],

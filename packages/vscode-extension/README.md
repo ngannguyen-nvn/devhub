@@ -1,242 +1,157 @@
-# DevHub - VSCode Extension
+# DevHub - Developer Mission Control for VSCode
 
-**Developer Mission Control for VSCode**
+**Manage microservices, Docker containers, environment variables, and documentation directly from VSCode.**
 
-Manage microservices, Docker containers, environment variables, and documentation directly within VSCode.
+DevHub brings powerful developer productivity tools into your VSCode workspace, helping you manage complex microservices ecosystems without leaving your editor.
 
-## 🎯 Status
+## ✨ Features
 
-**Current Version:** 2.0.0
-**Development Phase:** Phase 2/5 Complete ✅
+### 🚀 Service Management
+- **Start/Stop services** with one click from the tree view
+- **Real-time logs** viewer with filtering
+- **Auto-refresh** status indicators (running/stopped)
+- **Service groups** for batch operations
+- **Health checks** with HTTP/TCP/Command monitoring
 
-- ✅ **Phase 1:** Extension Scaffold - Complete
-- ✅ **Phase 2:** Core Integration - Complete
-- 🚧 **Phase 3:** React Webview UI - Pending
-- 🚧 **Phase 4:** VSCode Features - Pending
-- 🚧 **Phase 5:** Testing & Distribution - Pending
+### 🐳 Docker Integration
+- Build Docker images from Dockerfiles
+- Manage containers (start, stop, remove)
+- View container logs
+- Generate docker-compose.yml files
+- Full Docker daemon integration
 
-## 🚀 Features
+### 🌍 Environment Management
+- **Environment profiles** (dev, staging, prod)
+- **Secure storage** with AES-256-GCM encryption
+- Import/export .env files
+- Per-service variable management
+- Secret masking in UI
 
-### ✅ Implemented
+### 💾 Workspace Snapshots
+- **Capture workspace state** (running services, git branches)
+- **Restore snapshots** to recreate environment
+- Hierarchical workspace organization
+- Quick snapshot creation from command palette
 
-- **Extension Activation:** Loads on VSCode startup
-- **Status Bar:** Shows count of running services
-- **Commands:**
-  - `DevHub: Open Dashboard` - Open main panel
-  - `DevHub: Scan Workspace for Repositories` - Find git repos
-  - `DevHub: Create Quick Snapshot` - Save workspace state
-  - `DevHub: Start Service` - Start a service (quick pick)
-  - `DevHub: Stop Service` - Stop a service (quick pick)
-- **Core Integration:** All 9 service managers from `@devhub/core`
-- **Message Passing:** Webview ↔ Extension communication protocol
-- **Active Workspace:** Auto-creates and manages workspaces
+### 📚 Wiki & Notes
+- **Markdown documentation** with live preview
+- **Full-text search** powered by SQLite FTS5
+- **Bidirectional linking** with [[note-name]] syntax
+- Built-in templates (Architecture, API, Runbook, etc.)
+- Category and tag organization
 
-### 🚧 Pending
+### 📊 Tree Views
+- **Services tree** with inline start/stop buttons
+- **Workspaces tree** showing snapshots hierarchy
+- Context menus for quick actions
+- Status indicators and tooltips
 
-- React UI in webview (currently placeholder HTML)
-- Tree view for services in sidebar
-- Context menus for service operations
-- Configuration panel
-- Full feature parity with web app
+## 🎯 Use Cases
 
-## 🏗 Architecture
+- **Microservices Development:** Manage multiple services running locally
+- **Docker Workflows:** Build and manage containers without leaving VSCode
+- **Team Documentation:** Share knowledge with wiki-style notes
+- **Environment Configuration:** Manage configs across dev/staging/prod
+- **State Management:** Save and restore your complete development environment
 
-```
-VSCode Extension
-├── Extension Host (Node.js)
-│   ├── extension.ts - Entry point & commands
-│   ├── devhubManager.ts - Wraps @devhub/core managers
-│   └── messageHandler.ts - Routes webview messages
-└── Webview (Browser)
-    └── DevHubPanel.ts - Manages webview lifecycle
-```
+## 📦 Installation
 
-**Code Sharing:** 85-90% of business logic shared with web app via `@devhub/core` package.
+### From Marketplace (Future)
+Search for "DevHub" in the VSCode Extensions marketplace.
 
-## 📦 Installation (Development)
+### From VSIX (Development)
+1. Download `devhub-2.0.0.vsix`
+2. Open VSCode
+3. Go to Extensions (Ctrl+Shift+X)
+4. Click `...` → Install from VSIX
+5. Select the downloaded file
 
-### Prerequisites
+## 🚀 Quick Start
 
-- VSCode >= 1.85.0
-- Node.js >= 18.0.0
-- npm >= 9.0.0
+1. **Open DevHub Dashboard:**
+   - Press `Cmd/Ctrl + Shift + P`
+   - Type "DevHub: Open Dashboard"
 
-### Build & Run
+2. **View Services:**
+   - Click DevHub icon in Activity Bar (left sidebar)
+   - Explore Services and Workspaces tree views
 
-```bash
-# From monorepo root
-npm install
-npm run build -w packages/vscode-extension
+3. **Create a Service:**
+   - Open Dashboard
+   - Go to Services tab
+   - Click "Add Service"
+   - Fill in details (name, repo path, command)
 
-# Open extension in VSCode
-cd packages/vscode-extension
-code .
+## ⌨️ Commands
 
-# Press F5 to launch Extension Development Host
-```
+All commands available via Command Palette (`Cmd/Ctrl + Shift + P`):
 
-### Manual Installation
+- `DevHub: Open Dashboard` - Open main webview panel
+- `DevHub: Scan Workspace for Repositories` - Scan for git repos
+- `DevHub: Create Quick Snapshot` - Capture current state
+- `DevHub: Start Service` - Start a service
+- `DevHub: Stop Service` - Stop a service
 
-```bash
-# Package extension
-cd packages/vscode-extension
-npx @vscode/vsce package
+## 🔧 Requirements
 
-# Install .vsix file
-code --install-extension devhub-2.0.0.vsix
-```
+- **VSCode:** 1.85.0 or higher
+- **Node.js:** 16+ (for running services)
+- **Docker:** Optional (for Docker features)
+- **Git:** Optional (for repository scanning)
 
-## 🔧 Development
+## ⚙️ Extension Settings
 
-### Project Structure
+This extension contributes the following settings:
 
-```
-packages/vscode-extension/
-├── src/
-│   ├── extension.ts          # Extension entry point (223 lines)
-│   ├── extensionHost/
-│   │   └── devhubManager.ts  # Core wrapper (270 lines)
-│   └── webview/
-│       ├── DevHubPanel.ts    # Webview manager (218 lines)
-│       └── messageHandler.ts # Message router (237 lines)
-├── dist/                     # Compiled output
-├── package.json              # Extension manifest
-└── tsconfig.json             # TypeScript config
-```
+- `devhub.autoStartServices` - Automatically start services when workspace opens
+- `devhub.scanDepth` - Maximum depth for repository scanning (0-5)
+- `devhub.logRetentionDays` - Number of days to keep service logs
 
-### Key Files
+## 🏗️ Architecture
 
-- **package.json:** Extension manifest with commands, views, and configuration
-- **extension.ts:** Registers commands and initializes managers
-- **devhubManager.ts:** Wraps all 9 service managers from core
-- **messageHandler.ts:** Routes 40+ message types to core APIs
-
-### Building
-
-```bash
-# Watch mode (auto-rebuild on changes)
-npm run watch
-
-# Production build
-npm run build
-
-# Type check
-npm run lint
-```
-
-### Testing
-
-```bash
-# Run extension
-code --extensionDevelopmentPath=/path/to/packages/vscode-extension
-
-# Or press F5 in VSCode when in extension directory
-```
-
-## 📚 Usage
-
-### Opening Dashboard
-
-1. Press `Cmd/Ctrl + Shift + P`
-2. Type "DevHub: Open Dashboard"
-3. Dashboard opens in webview panel
-
-### Quick Service Management
-
-1. Use command palette or click status bar
-2. Select service from quick pick
-3. Start/stop with one click
-
-### Workspace Snapshots
-
-1. Run "DevHub: Create Quick Snapshot"
-2. Enter snapshot name
-3. Current workspace state saved
-
-## 🔑 Message Protocol
-
-Webview communicates with extension host via message passing:
-
-```typescript
-// Webview → Extension
-{
-  id: 12345,
-  type: 'services.getAll',
-  payload: {}
-}
-
-// Extension → Webview
-{
-  id: 12345,
-  type: 'response',
-  response: [...]
-}
-```
-
-**Supported Message Types:** 40+ (services, docker, workspaces, notes, health checks, logs, groups)
-
-## 🎨 Shared Core Architecture
-
-This extension uses the same core package as the web app:
-
-```
-@devhub/core (packages/core)
-    ↓
-┌────────────────┬─────────────────┐
-│ Web Backend    │ VSCode Extension│
-│ (HTTP wrapper) │ (Message passing)│
-└────────────────┴─────────────────┘
-```
-
-**Benefits:**
-- 85-90% code reuse
-- Single source of truth
-- Only 30% overhead for dual versions
-
-## 📋 TODO
-
-### Phase 3: React Webview UI
-
-- [ ] Set up React + Vite build for webview
-- [ ] Adapt components from frontend/
-- [ ] Replace axios with vscodeApi messaging
-- [ ] Build webview HTML with proper CSP
-
-### Phase 4: VSCode Integration
-
-- [ ] Tree view for services in sidebar
-- [ ] Context menus (right-click operations)
-- [ ] Configuration settings panel
-- [ ] Keyboard shortcuts
-- [ ] Extension icons and branding
-
-### Phase 5: Testing & Distribution
-
-- [ ] Test all features end-to-end
-- [ ] Handle edge cases
-- [ ] Performance optimization
-- [ ] Package for marketplace
-- [ ] Create screenshots and demo
-- [ ] Write marketplace description
+DevHub uses a shared core architecture:
+- **@devhub/core** - Business logic (bundled in extension)
+- **SQLite database** - Local data storage
+- **React webview** - Modern UI with VSCode theming
+- **Message passing** - Secure extension ↔ webview communication
 
 ## 🤝 Contributing
 
-This extension is part of the DevHub monorepo. See main README for contribution guidelines.
+Contributions are welcome! See the [main repository](https://github.com/ngannguyen-nvn/devhub) for:
+- Development setup
+- Architecture documentation
+- Contribution guidelines
 
 ## 📄 License
 
-MIT License - See LICENSE file in repository root.
+MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🔗 Links
+## 🐛 Issues & Support
 
-- **Monorepo:** https://github.com/ngannguyen-nvn/devhub
-- **Web App:** See `frontend/` and `backend/` directories
-- **Implementation Guide:** See `VSCODE_EXTENSION_GUIDE.md`
+- **Report bugs:** [GitHub Issues](https://github.com/ngannguyen-nvn/devhub/issues)
+- **Documentation:** See `DEVELOPMENT.md` in extension directory
+- **Main Project:** [DevHub Repository](https://github.com/ngannguyen-nvn/devhub)
+
+## 📊 Stats
+
+- **Extension size:** 294.81 KB
+- **Commands:** 10+
+- **Tree views:** 2 (Services, Workspaces)
+- **Webview tabs:** 4 (Services, Docker, Workspaces, Notes)
+
+## 🎉 What's New in v2.0.0
+
+- ✅ Complete VSCode extension implementation
+- ✅ Tree views with inline actions
+- ✅ Context menus for quick operations
+- ✅ esbuild bundling for fast loading
+- ✅ Full feature parity with web version
+- ✅ Service health checks and monitoring
+- ✅ Log persistence and filtering
+- ✅ Service groups for batch operations
 
 ---
 
-**Last Updated:** 2025-11-01
-**Version:** 2.0.0
-**Status:** Phase 2/5 Complete ✅
+**Made with ❤️ for developers who manage complex microservices ecosystems.**
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
