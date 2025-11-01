@@ -1,0 +1,106 @@
+{
+  "name": "devhub",
+  "displayName": "DevHub - Developer Mission Control",
+  "description": "Manage microservices, Docker, environment variables, and documentation from within VSCode",
+  "version": "2.0.0",
+  "publisher": "devhub",
+  "icon": "resources/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "microservices",
+    "docker",
+    "developer-tools",
+    "devops",
+    "productivity"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devhub.openPanel",
+        "title": "DevHub: Open Dashboard",
+        "icon": "$(server)"
+      },
+      {
+        "command": "devhub.scanRepos",
+        "title": "DevHub: Scan Workspace for Repositories"
+      },
+      {
+        "command": "devhub.createSnapshot",
+        "title": "DevHub: Create Quick Snapshot"
+      },
+      {
+        "command": "devhub.startService",
+        "title": "DevHub: Start Service"
+      },
+      {
+        "command": "devhub.stopService",
+        "title": "DevHub: Stop Service"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devhub",
+          "title": "DevHub",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "devhub": [
+        {
+          "id": "devhub.services",
+          "name": "Services",
+          "icon": "$(server)",
+          "contextualTitle": "DevHub Services"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DevHub",
+      "properties": {
+        "devhub.autoStartServices": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start services when workspace opens"
+        },
+        "devhub.scanDepth": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum depth for repository scanning"
+        },
+        "devhub.logRetentionDays": {
+          "type": "number",
+          "default": 7,
+          "description": "Number of days to keep service logs"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "@devhub/core": "*",
+    "@devhub/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.3"
+  }
+}
