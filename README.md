@@ -4,7 +4,7 @@
 
 DevHub is a powerful desktop application that helps developers manage their local microservices ecosystem. It combines git repository management, intelligent service orchestration, Docker management, environment configuration, and documentation in one unified interface.
 
-**🆕 v2.0 Now Available!** Advanced orchestration features including dependencies, health checks, auto-restart, port management, service templates, log persistence, and service groups.
+**⚠️ v2.0 Partially Available!** Some orchestration features implemented: health checks, log persistence, and service groups. Additional features (dependencies, port management, templates, auto-restart) are planned.
 
 ---
 
@@ -20,14 +20,18 @@ DevHub solves the chaos of managing multiple microservices locally:
 - **Wiki/Notes**: Markdown-based documentation with full-text search and bidirectional linking
 - **Hierarchical Workspaces**: Organize and manage development environments with workspace → snapshot hierarchy
 
-### Advanced Orchestration (v2.0 - NEW!)
-- **Service Dependencies**: Define dependencies, auto-calculate startup order with topological sort
+### Advanced Orchestration (v2.0 - PARTIAL!)
+
+**✅ Implemented:**
 - **Health Checks**: HTTP/TCP/Command monitoring with automatic status updates
-- **Auto-Restart**: Intelligent restart with exponential backoff on crashes
-- **Port Management**: Detect conflicts and auto-assign available ports
-- **Service Templates**: 17 built-in templates with auto-detection (Node.js, Python, Go, Ruby, Java, Rust, PHP, .NET)
 - **Log Persistence**: Historical log analysis across service restarts
 - **Service Groups**: Organize services for batch operations
+
+**❌ Planned (Not Yet Available):**
+- **Service Dependencies**: Define dependencies, auto-calculate startup order with topological sort
+- **Port Management**: Detect conflicts and auto-assign available ports
+- **Service Templates**: 17 built-in templates with auto-detection (Node.js, Python, Go, Ruby, Java, Rust, PHP, .NET)
+- **Auto-Restart**: Intelligent restart with exponential backoff on crashes
 
 **Performance**: Handles 40+ repos in seconds (97% fewer API calls)
 
@@ -49,7 +53,7 @@ Make sure you have these installed:
 ```bash
 git clone https://github.com/ngannguyen-nvn/devhub.git
 cd devhub
-git checkout claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK  # Current tested branch
+git checkout claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3  # Current branch
 ```
 
 ### Step 2: Install Dependencies
@@ -1021,16 +1025,21 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
   - **97% reduction in API calls** for 40 repos (from 120+ to 3-5 calls)
   - Dramatically faster scanning and service creation
 
-### 📅 Planned (v2.0)
+### 📅 Planned (Future Releases)
 
+**v2.0 Completion:**
+- Service dependencies and startup order
+- Port conflict detection and auto-assignment
+- Service templates (17 built-in)
+- Auto-restart with backoff strategies
+
+**Future (v3.0+):**
 - Team collaboration features
 - Cloud sync
 - CI/CD integration
 - Monitoring and APM
 - Kubernetes support
-- Service dependencies and startup order
 - Metrics dashboard (CPU/memory usage)
-- Service health checks
 
 ---
 

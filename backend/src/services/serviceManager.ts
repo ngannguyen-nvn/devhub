@@ -20,10 +20,20 @@ export interface RunningService extends Service {
   logSessionId?: string // Track current log session
 }
 
+/**
+ * ServiceManager - Manages service lifecycle, process spawning, and log capture
+ *
+ * Handles:
+ * - Service CRUD operations in database
+ * - Process spawning and monitoring with child_process
+ * - Real-time log capture (in-memory) and persistence (database)
+ * - Health check integration
+ * - Event emission for service lifecycle events
+ */
 export class ServiceManager extends EventEmitter {
   private runningServices: Map<string, RunningService> = new Map()
   private processes: Map<string, ChildProcess> = new Map()
-  private maxLogLines = 500
+  private maxLogLines = 500 // Limit in-memory logs to prevent memory leaks
 
   constructor() {
     super()
@@ -40,7 +50,9 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Get all defined services for a workspace
+   * Get all defined services for a workspace with health status and group info
+   * @param workspaceId - Workspace ID to filter services
+   * @returns Array of services with health status and tags from groups
    */
   getAllServices(workspaceId: string): Service[] {
     // Get services with health status
@@ -72,7 +84,8 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Get running services status
+   * Get all currently running services across all workspaces
+   * @returns Array of running services with runtime information
    */
   getRunningServices(): RunningService[] {
     return Array.from(this.runningServices.values())
@@ -95,6 +108,10 @@ export class ServiceManager extends EventEmitter {
 
   /**
    * Create a new service in a workspace
+   * @param workspaceId - Workspace ID to create service in
+   * @param service - Service configuration (without id and workspaceId)
+   * @returns Created service with generated ID
+   * @throws Error if workspace not found
    */
   createService(workspaceId: string, service: Omit<Service, 'id' | 'workspaceId'>): Service {
     const id = `service_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -124,7 +141,10 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Update a service
+   * Update service configuration in database
+   * @param id - Service ID
+   * @param updates - Partial service object with fields to update
+   * @returns true if updated, false if not found
    */
   updateService(id: string, updates: Partial<Omit<Service, 'id'>>): boolean {
     const fields: string[] = []
@@ -167,6 +187,12 @@ export class ServiceManager extends EventEmitter {
   /**
    * Delete a service
    */
+  /**
+   * Delete a service from database
+   * Stops the service process if running before deletion
+   * @param id - Service ID
+   * @returns true if deleted, false if not found
+   */
   deleteService(id: string): boolean {
     // Stop service if running (catch error if already stopped)
     if (this.runningServices.has(id)) {
@@ -183,7 +209,13 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Start a service
+   * Start a service by spawning a child process
+   *
+   * Creates log session, starts health checks if configured,
+   * captures stdout/stderr and persists to database
+   *
+   * @param serviceId - Service ID
+   * @throws Error if service not found or already running
    */
   async startService(serviceId: string): Promise<void> {
     // Check if already running (check for active process, not just entry in map)
@@ -328,7 +360,13 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Stop a service
+   * Stop a running service
+   *
+   * Sends SIGTERM, then SIGKILL after 5 seconds if still running.
+   * Stops health checks and marks service as stopped (log session ends on exit)
+   *
+   * @param serviceId - Service ID
+   * @throws Error if service is not running
    */
   stopService(serviceId: string): void {
     const process = this.processes.get(serviceId)
@@ -361,7 +399,13 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Get service logs
+   * Get in-memory logs for a service (for real-time viewing)
+   *
+   * For historical logs across sessions, use logManager.getServiceLogs()
+   *
+   * @param serviceId - Service ID
+   * @param lines - Number of recent log lines to return (default 100)
+   * @returns Array of log lines (most recent last)
    */
   getServiceLogs(serviceId: string, lines: number = 100): string[] {
     const service = this.runningServices.get(serviceId)
@@ -372,7 +416,9 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
-   * Stop all services
+   * Stop all running services across all workspaces
+   *
+   * Used for graceful shutdown or cleanup
    */
   stopAll(): void {
     for (const serviceId of this.processes.keys()) {

@@ -10,30 +10,33 @@ This document contains everything needed to understand and continue developing D
 
 **DevHub** is a developer productivity tool for managing microservices ecosystems locally.
 
-**Current Status:** v2.0 Backend COMPLETE ✅ - All orchestration features implemented
+**Current Status:** v1.0 Complete ✅ | v2.0 Partial (3 of 7 features)
 **Tech Stack:** React + Vite (frontend), Express + TypeScript (backend), SQLite (database)
 **Repository:** https://github.com/ngannguyen-nvn/devhub
-**Branch:** `claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK`
+**Branch:** `claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3`
 
 ---
 
 ## 🎯 What's Been Built
 
-### v2.0 Features (NEW - Just Completed! ✅)
+### v2.0 Features (PARTIALLY IMPLEMENTED ⚠️)
 
 **📖 See `DEVHUB_V2_HANDOFF.md` for complete v2.0 documentation - everything in ONE file**
 
-1. **Service Dependencies** - Topological sort, circular detection, startup ordering (6 APIs)
-2. **Health Checks** - HTTP/TCP/Command monitoring with intervals (5 APIs)
-3. **Port Management** - Conflict detection and auto-assignment (7 APIs)
-4. **Service Templates** - 17 built-in templates with auto-detection (7 APIs)
-5. **Log Persistence** - Session tracking and historical log storage (8 APIs)
-6. **Service Groups** - Organize services for batch operations (10 APIs)
-7. **Auto-Restart** - Intelligent restart with backoff strategies (5 APIs)
+**✅ Implemented (3 of 7):**
+1. **Health Checks** - HTTP/TCP/Command monitoring with intervals (~5 APIs)
+2. **Log Persistence** - Session tracking and historical log storage (~8 APIs)
+3. **Service Groups** - Organize services for batch operations (~10 APIs)
 
-**48 new API endpoints | 8 new services | 9 new database tables | 7 new UI components**
+**❌ Planned but NOT Implemented (4 of 7):**
+1. **Service Dependencies** - Topological sort, circular detection (planned 6 APIs)
+2. **Port Management** - Conflict detection and auto-assignment (planned 7 APIs)
+3. **Service Templates** - 17 built-in templates with auto-detection (planned 7 APIs)
+4. **Auto-Restart** - Intelligent restart with backoff strategies (planned 5 APIs)
 
-**Status:** ✅✅ FULLY COMPLETE - Backend AND Frontend ready to use!
+**Current:** ~18 API endpoints | 3 service managers | 9 database tables | 3 UI components (not integrated)
+
+**Status:** ⚠️ PARTIAL - 3 backend features done, UI integration pending
 
 ---
 
@@ -1082,7 +1085,7 @@ backend/devhub.db
 
 **Current branch:**
 ```
-claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK
+claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3
 ```
 
 **Repository:**
@@ -1111,9 +1114,9 @@ This document should give you everything needed to understand and continue devel
 
 ---
 
-**Last Updated:** 2025-10-29
-**Version:** v1.0.1 - Tested & Verified
-**Status:** MVP Complete ✅ + Comprehensive Testing Complete
+**Last Updated:** 2025-11-01
+**Version:** v1.0.1 - Tested & Verified | v2.0 Partial
+**Status:** v1.0 Complete ✅ | v2.0 Partial (3 of 7 features)
 
 ### Recent Updates (2025-10-29):
 
@@ -1175,60 +1178,60 @@ Features:
 
 ---
 
-### v2.0 Orchestration Features (2025-10-30):
+### v2.0 Orchestration Features (2025-10-30 to 2025-11-01):
 
-**ALL PHASES COMPLETED** ✅
+**STATUS: PARTIALLY COMPLETED** ⚠️ (3 of 7 phases done)
 
-**Phase 1: Database Schema (Migration 006)**
+**Phase 1: Database Schema (Migration 006)** - ✅ DONE
 - 9 new tables for dependencies, health checks, logs, templates, groups, events
 - 7 new columns in services table for health and auto-restart
 - Migration system with automatic execution
 
-**Phase 2: Service Dependencies**
-- Topological sort (Kahn's algorithm) for startup ordering
-- Circular dependency detection (DFS)
-- Dependency graph generation
-- 6 new API endpoints
+**Phase 2: Service Dependencies** - ❌ NOT IMPLEMENTED
+- Topological sort (Kahn's algorithm) for startup ordering - PLANNED
+- Circular dependency detection (DFS) - PLANNED
+- Files: dependencyManager.ts, dependencies.ts DO NOT EXIST
 
-**Phase 3: Service Health Checks**
+**Phase 3: Service Health Checks** - ✅ IMPLEMENTED
 - HTTP, TCP, and Command-based health checks
 - Interval monitoring with auto-start/stop
 - Health status tracking
-- 5 new API endpoints
+- ~5 API endpoints
+- Files: healthCheckManager.ts, healthChecks.ts, HealthChecks.tsx EXIST
 
-**Phase 4: Port Conflict Detection**
-- System-wide port scanning (netstat)
-- Conflict detection and auto-assignment
-- Port usage statistics
-- 7 new API endpoints
+**Phase 4: Port Conflict Detection** - ❌ NOT IMPLEMENTED
+- System-wide port scanning (netstat) - PLANNED
+- Conflict detection and auto-assignment - PLANNED
+- Files: portManager.ts, ports.ts DO NOT EXIST
 
-**Phase 5: Service Templates**
-- 17 built-in templates (Node.js, Python, Go, Ruby, Java, Rust, PHP, .NET)
-- Auto-detection from repository files
-- Custom template creation
-- 7 new API endpoints
+**Phase 5: Service Templates** - ❌ NOT IMPLEMENTED
+- 17 built-in templates - PLANNED
+- Auto-detection from repository files - PLANNED
+- Files: templateManager.ts, templates.ts DO NOT EXIST
 
-**Phase 6: Log Persistence**
+**Phase 6: Log Persistence** - ✅ IMPLEMENTED
 - Session-based log tracking
 - Persistent SQLite storage
 - Log filtering and search
-- Historical analysis
-- 8 new API endpoints
+- ~8 API endpoints
+- Files: logManager.ts, logs.ts, LogViewer.tsx EXIST
 
-**Phase 7: Service Groups & Auto-Restart**
+**Phase 7: Service Groups** - ✅ IMPLEMENTED (Auto-Restart NOT implemented)
 - Service organization into groups
 - Batch operations
-- Auto-restart with 3 backoff strategies (immediate, exponential, fixed)
-- Restart count tracking and limits
-- 15 new API endpoints (10 groups + 5 auto-restart)
+- ~10 API endpoints for groups
+- Files: groupManager.ts, groups.ts, ServiceGroups.tsx EXIST
+- Auto-restart with backoff strategies - ❌ NOT IMPLEMENTED
+- Files: autoRestartManager.ts, autoRestart.ts DO NOT EXIST
 
-**Total v2.0 Implementation:**
-- 48 new API endpoints
-- 8 new service managers
+**Current v2.0 Implementation:**
+- ~18 API endpoints (3 features)
+- 3 service managers (healthCheckManager, logManager, groupManager)
 - 9 new database tables
-- ~4,000 lines of code
-- Implementation time: ~6 hours
+- 3 UI components (exist but not integrated into navigation)
 
-**Status:** Backend v2.0 COMPLETE - Ready for frontend integration
-**Documentation:** See V2_FEATURES.md for comprehensive details
-**Next Steps:** Build React UI components for v2.0 features
+**Status:** v2.0 PARTIALLY COMPLETE - 3 backend features + UI components done, navigation integration pending
+**Documentation:** See DEVHUB_V2_HANDOFF.md for details
+**Next Steps:**
+1. Integrate existing 3 UI components into navigation
+2. Implement remaining 4 features (Dependencies, Ports, Templates, Auto-Restart)
