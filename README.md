@@ -1037,14 +1037,15 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
 
 #### Immediate Roadmap
 
-**VSCode Extension (In Progress)**
+**VSCode Extension (Phase 1-3 Complete ✅)**
 - VSCode extension version using shared `@devhub/core` package
-- All DevHub features accessible from within VSCode
-- Message passing wrapper around core logic
-- Webview UI reusing 80% of React components
-- Estimated development time: 3-4 weeks
+- **Phase 1-3 Complete:** Extension scaffold, core integration, React webview UI built successfully
+- Message passing wrapper around core logic (40+ message types)
+- Webview UI with Services management (CRUD, start/stop, logs)
+- Successfully builds: 147K JS bundle + 6K CSS with VSCode theming
+- **Next:** Phase 4 (tree views, context menus) and Phase 5 (testing, distribution)
 
-See [VSCODE_EXTENSION_GUIDE.md](./VSCODE_EXTENSION_GUIDE.md) for implementation details.
+See [VSCODE_EXTENSION_GUIDE.md](./VSCODE_EXTENSION_GUIDE.md) for full implementation details and progress.
 
 #### Long-Term Enhancements
 
