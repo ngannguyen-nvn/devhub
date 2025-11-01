@@ -7,6 +7,7 @@ import {
   Save,
   Database
 } from 'lucide-react'
+import packageJson from '../../../package.json'
 
 type ViewType = 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki' | 'database'
 
@@ -59,8 +60,8 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
       </nav>
 
       <div className="p-4 border-t border-gray-800">
-        <p className="text-gray-500 text-xs">DevHub v1.0</p>
-        <p className="text-gray-500 text-xs mt-1">Streamlined</p>
+        <p className="text-gray-500 text-xs">DevHub v{packageJson.version}</p>
+        <p className="text-gray-500 text-xs mt-1">Mission Control</p>
       </div>
     </div>
   )
