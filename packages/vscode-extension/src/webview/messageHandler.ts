@@ -93,12 +93,14 @@ export class MessageHandler {
       }
 
       if (type === 'workspaces.create') {
-        const { name, description, folderPath } = payload
-        return this.devhubManager.getWorkspaceManager().createWorkspace(
+        const { name, description, folderPath, tags } = payload
+        return this.devhubManager.getWorkspaceManager().createWorkspace({
           name,
           description,
-          folderPath
-        )
+          folderPath,
+          tags,
+          setAsActive: payload.setAsActive
+        })
       }
 
       if (type === 'workspaces.setActive') {
@@ -110,16 +112,20 @@ export class MessageHandler {
       }
 
       if (type === 'workspaces.getSnapshots') {
-        return this.devhubManager.getWorkspaceManager().getSnapshots(payload.workspaceId)
+        return this.devhubManager.getWorkspaceManager().getWorkspaceSnapshots(payload.workspaceId)
       }
 
       if (type === 'workspaces.createSnapshot') {
-        const { workspaceId, name, description, config } = payload
-        return this.devhubManager.getWorkspaceManager().createSnapshot(
-          workspaceId,
+        const { workspaceId, name, description, repoPaths, tags } = payload
+        return await this.devhubManager.getWorkspaceManager().createSnapshot(
           name,
           description,
-          config
+          repoPaths || [],
+          undefined, // activeEnvProfile
+          tags,
+          undefined, // scannedPath
+          workspaceId,
+          false // autoImportEnv
         )
       }
 
@@ -129,13 +135,24 @@ export class MessageHandler {
       }
 
       if (type === 'notes.create') {
-        const { title, content } = payload
-        return this.devhubManager.getNotesManager().createNote(workspaceId, title, content)
+        const { title, content, category, tags, template } = payload
+        return this.devhubManager.getNotesManager().createNote(workspaceId, {
+          title,
+          content,
+          category,
+          tags,
+          template
+        })
       }
 
       if (type === 'notes.update') {
-        const { id, title, content } = payload
-        return this.devhubManager.getNotesManager().updateNote(id, title, content)
+        const { id, title, content, category, tags } = payload
+        return this.devhubManager.getNotesManager().updateNote(id, {
+          title,
+          content,
+          category,
+          tags
+        })
       }
 
       if (type === 'notes.delete') {
@@ -143,7 +160,7 @@ export class MessageHandler {
       }
 
       if (type === 'notes.search') {
-        return this.devhubManager.getNotesManager().searchNotes(workspaceId, payload.query)
+        return this.devhubManager.getNotesManager().searchNotes(payload.query)
       }
 
       // Health check operations
@@ -152,10 +169,9 @@ export class MessageHandler {
       }
 
       if (type === 'healthChecks.create') {
-        const { serviceId, type: checkType, config } = payload
+        const { serviceId, ...config } = payload
         return this.devhubManager.getHealthCheckManager().createHealthCheck(
           serviceId,
-          checkType,
           config
         )
       }
@@ -172,8 +188,12 @@ export class MessageHandler {
       if (type === 'logs.getLogs') {
         return this.devhubManager.getLogManager().getLogs(
           payload.sessionId,
-          payload.limit,
-          payload.offset
+          {
+            level: payload.level,
+            search: payload.search,
+            limit: payload.limit,
+            offset: payload.offset
+          }
         )
       }
 
@@ -183,12 +203,15 @@ export class MessageHandler {
       }
 
       if (type === 'groups.create') {
-        const { name, description, color } = payload
+        const { name, description, color, icon } = payload
         return this.devhubManager.getGroupManager().createGroup(
           workspaceId,
           name,
-          description,
-          color
+          {
+            description,
+            color,
+            icon
+          }
         )
       }
 

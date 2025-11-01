@@ -110,13 +110,13 @@ export class DevHubManager {
       const folderPath = workspaceFolders?.[0]?.uri.fsPath || ''
       const workspaceName = workspaceFolders?.[0]?.name || 'Default Workspace'
 
-      const workspace = this.workspaceManager.createWorkspace(
-        workspaceName,
-        'Auto-created workspace for VSCode',
-        folderPath
-      )
+      const workspace = this.workspaceManager.createWorkspace({
+        name: workspaceName,
+        description: 'Auto-created workspace for VSCode',
+        folderPath,
+        setAsActive: true
+      })
       this.activeWorkspaceId = workspace.id
-      this.workspaceManager.setActiveWorkspace(workspace.id)
     }
   }
 
@@ -176,7 +176,7 @@ export class DevHubManager {
    */
 
   async getAllServices(): Promise<Service[]> {
-    return this.serviceManager.getAllServices(this.getActiveWorkspaceId())
+    return this.serviceManager.getAllServices(this.getActiveWorkspaceId()) as any
   }
 
   async getRunningServices(): Promise<Service[]> {
@@ -239,11 +239,15 @@ export class DevHubManager {
     }
 
     // Create snapshot in active workspace
-    this.workspaceManager.createSnapshot(
-      this.getActiveWorkspaceId(),
+    await this.workspaceManager.createSnapshot(
       name,
-      '',
-      JSON.stringify(config)
+      `Quick snapshot created at ${new Date().toLocaleString()}`,
+      repos.map(r => r.path),
+      undefined, // activeEnvProfile
+      undefined, // tags
+      workspaceFolders[0].uri.fsPath, // scannedPath
+      this.getActiveWorkspaceId(), // workspaceId
+      false // autoImportEnv
     )
   }
 
