@@ -88,9 +88,12 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build": "tsc -p ./",
+    "build": "npm run build:webview && npm run build:extension",
+    "build:extension": "tsc -p ./",
+    "build:webview": "cd webview-ui && npm run build",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package",
+    "watch:webview": "cd webview-ui && npm run dev",
+    "package": "npm run build && vsce package",
     "lint": "eslint src --ext ts"
   },
   "dependencies": {
