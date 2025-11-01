@@ -24,7 +24,7 @@ DevHub v2.0 adds **advanced microservices orchestration** on top of the existing
 ```bash
 git clone https://github.com/ngannguyen-nvn/devhub.git
 cd devhub
-git checkout claude/add-service-search-011CUaDV2ckGVoBr3SfBrnyK
+git checkout claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3
 npm install
 npm run dev
 ```
