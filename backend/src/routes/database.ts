@@ -1,14 +1,36 @@
 import express, { Request, Response } from 'express'
-import db from '@devhub/core'
+import { Database } from '@devhub/core'
 import fs from 'fs'
 import path from 'path'
 import multer from 'multer'
-import { Client as PgClient } from 'pg'
-import mysql from 'mysql2/promise'
-import { MongoClient } from 'mongodb'
 import crypto from 'crypto'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+
+// Optional database client imports (install if needed)
+let PgClient: any
+let mysql: any
+let MongoClient: any
+
+try {
+  PgClient = require('pg').Client
+} catch (e) {
+  // pg not installed
+}
+
+try {
+  mysql = require('mysql2/promise')
+} catch (e) {
+  // mysql2 not installed
+}
+
+try {
+  MongoClient = require('mongodb').MongoClient
+} catch (e) {
+  // mongodb not installed
+}
+
+const db = Database
 
 const execAsync = promisify(exec)
 const router = express.Router()
@@ -513,7 +535,7 @@ async function testDatabaseConnection(connectionString: string): Promise<any> {
 
       const db = client.db(dbName)
       const collections = await db.listCollections().toArray()
-      const collectionNames = collections.map(c => c.name)
+      const collectionNames = collections.map((c: any) => c.name)
 
       await client.close()
 

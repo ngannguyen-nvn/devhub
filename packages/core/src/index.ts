@@ -9,15 +9,15 @@
  * live here to ensure DRY principle.
  */
 
-// Service Managers
-export { ServiceManager } from './services/serviceManager'
+// Service Managers (classes and singleton instances)
+export { ServiceManager, serviceManager } from './services/serviceManager'
 export { DockerManager } from './services/dockerManager'
 export { EnvManager } from './services/envManager'
 export { WorkspaceManager } from './services/workspaceManager'
 export { NotesManager } from './services/notesManager'
-export { HealthCheckManager } from './services/healthCheckManager'
+export { HealthCheckManager, healthCheckManager } from './services/healthCheckManager'
 export { LogManager, logManager } from './services/logManager'
-export { GroupManager } from './services/groupManager'
+export { GroupManager, groupManager } from './services/groupManager'
 export { RepoScanner } from './services/repoScanner'
 
 // Database
