@@ -10,10 +10,39 @@ This document contains everything needed to understand and continue developing D
 
 **DevHub** is a developer productivity tool for managing microservices ecosystems locally.
 
-**Current Status:** v2.0 Complete ✅
+**Current Status:** v2.0 Complete ✅ | VSCode Extension Complete ✅
 **Tech Stack:** React + Vite (frontend), Express + TypeScript (backend), SQLite (database)
 **Repository:** https://github.com/ngannguyen-nvn/devhub
 **Branch:** `claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3`
+
+**Versions:**
+- Web Application: v2.0.0 (Production Ready)
+- VSCode Extension: v2.0.0 (Production Ready, 295.5 KB)
+
+---
+
+## 🚀 VSCode Extension Status
+
+**Status:** ✅ COMPLETE - All 5 phases implemented
+
+The VSCode extension provides full DevHub functionality within VSCode:
+
+- **Package:** devhub-2.0.0.vsix (295.5 KB)
+- **Bundled Code:** 796 KB (all JavaScript dependencies)
+- **Tree Views:** Services + Workspaces with inline actions
+- **Commands:** 10+ via command palette
+- **Webview UI:** React app with Services management
+- **Architecture:** esbuild bundling, message passing, VSCode theming
+
+**Implementation:**
+- ✅ Phase 1: Extension Scaffold (10+ commands, TypeScript config)
+- ✅ Phase 2: Core Integration (40+ message types, @devhub/core wrapper)
+- ✅ Phase 3: Webview UI (React + Vite, 147KB bundle)
+- ✅ Phase 4: VSCode Features (tree views, context menus, status bar)
+- ✅ Phase 5: Bundling & Distribution (esbuild, LICENSE, marketplace docs)
+
+**Location:** `packages/vscode-extension/`
+**Documentation:** See `packages/vscode-extension/DEVELOPMENT.md`
 
 ---
 
