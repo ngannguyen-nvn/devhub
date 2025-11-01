@@ -252,6 +252,21 @@ export class DevHubManager {
   }
 
   /**
+   * Activate a workspace
+   */
+  async activateWorkspace(workspaceId: string): Promise<void> {
+    this.workspaceManager.setActiveWorkspace(workspaceId)
+    this.activeWorkspaceId = workspaceId
+  }
+
+  /**
+   * Restore a snapshot
+   */
+  async restoreSnapshot(snapshotId: string, applyEnvVars: boolean = false): Promise<void> {
+    await this.workspaceManager.restoreSnapshot(snapshotId, applyEnvVars)
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {

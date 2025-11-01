@@ -39,11 +39,38 @@
       },
       {
         "command": "devhub.startService",
-        "title": "DevHub: Start Service"
+        "title": "Start Service",
+        "icon": "$(debug-start)"
       },
       {
         "command": "devhub.stopService",
-        "title": "DevHub: Stop Service"
+        "title": "Stop Service",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "devhub.showServiceDetails",
+        "title": "Show Details",
+        "icon": "$(info)"
+      },
+      {
+        "command": "devhub.activateWorkspace",
+        "title": "Activate Workspace",
+        "icon": "$(check)"
+      },
+      {
+        "command": "devhub.restoreSnapshot",
+        "title": "Restore Snapshot",
+        "icon": "$(history)"
+      },
+      {
+        "command": "devhub.refreshServices",
+        "title": "Refresh Services",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshWorkspaces",
+        "title": "Refresh Workspaces",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -58,10 +85,57 @@
     "views": {
       "devhub": [
         {
-          "id": "devhub.services",
+          "id": "devhubServices",
           "name": "Services",
           "icon": "$(server)",
           "contextualTitle": "DevHub Services"
+        },
+        {
+          "id": "devhubWorkspaces",
+          "name": "Workspaces",
+          "icon": "$(folder)",
+          "contextualTitle": "DevHub Workspaces"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "devhub.refreshServices",
+          "when": "view == devhubServices",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshWorkspaces",
+          "when": "view == devhubWorkspaces",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "devhub.startService",
+          "when": "view == devhubServices && viewItem == serviceStopped",
+          "group": "inline"
+        },
+        {
+          "command": "devhub.stopService",
+          "when": "view == devhubServices && viewItem == serviceRunning",
+          "group": "inline"
+        },
+        {
+          "command": "devhub.showServiceDetails",
+          "when": "view == devhubServices && viewItem =~ /service/",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.activateWorkspace",
+          "when": "view == devhubWorkspaces && viewItem == workspaceInactive",
+          "group": "inline"
+        },
+        {
+          "command": "devhub.restoreSnapshot",
+          "when": "view == devhubWorkspaces && viewItem == snapshot",
+          "group": "navigation"
         }
       ]
     },

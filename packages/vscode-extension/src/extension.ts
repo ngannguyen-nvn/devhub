@@ -9,9 +9,13 @@
 import * as vscode from 'vscode'
 import { DevHubManager } from './extensionHost/devhubManager'
 import { DevHubPanel } from './webview/DevHubPanel'
+import { ServicesTreeProvider } from './views/ServicesTreeProvider'
+import { WorkspaceTreeProvider } from './views/WorkspaceTreeProvider'
 
 let devhubManager: DevHubManager | undefined
 let devhubPanel: DevHubPanel | undefined
+let servicesTreeProvider: ServicesTreeProvider | undefined
+let workspaceTreeProvider: WorkspaceTreeProvider | undefined
 
 /**
  * Extension activation
@@ -27,6 +31,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Initialize webview panel manager
     devhubPanel = new DevHubPanel(context, devhubManager)
+
+    // Register tree views
+    registerTreeViews(context, devhubManager)
 
     // Register commands
     registerCommands(context, devhubPanel, devhubManager)
@@ -59,6 +66,30 @@ export function deactivate() {
     devhubPanel.dispose()
     devhubPanel = undefined
   }
+}
+
+/**
+ * Register tree views for sidebar
+ */
+function registerTreeViews(
+  context: vscode.ExtensionContext,
+  manager: DevHubManager
+) {
+  // Services tree view
+  servicesTreeProvider = new ServicesTreeProvider(manager)
+  const servicesTreeView = vscode.window.createTreeView('devhubServices', {
+    treeDataProvider: servicesTreeProvider,
+    showCollapseAll: false,
+  })
+  context.subscriptions.push(servicesTreeView)
+
+  // Workspace tree view
+  workspaceTreeProvider = new WorkspaceTreeProvider(manager)
+  const workspaceTreeView = vscode.window.createTreeView('devhubWorkspaces', {
+    treeDataProvider: workspaceTreeProvider,
+    showCollapseAll: true,
+  })
+  context.subscriptions.push(workspaceTreeView)
 }
 
 /**
@@ -152,6 +183,7 @@ function registerCommands(
         try {
           await manager.startService(serviceId)
           vscode.window.showInformationMessage('Service started')
+          servicesTreeProvider?.refresh()
         } catch (error) {
           vscode.window.showErrorMessage(
             `Failed to start service: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -184,12 +216,72 @@ function registerCommands(
         try {
           await manager.stopService(serviceId)
           vscode.window.showInformationMessage('Service stopped')
+          servicesTreeProvider?.refresh()
         } catch (error) {
           vscode.window.showErrorMessage(
             `Failed to stop service: ${error instanceof Error ? error.message : 'Unknown error'}`
           )
         }
       }
+    })
+  )
+
+  // Show service details (from tree view)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.showServiceDetails', async (serviceId: string) => {
+      panel.show()
+      // TODO: Navigate to service details in webview
+    })
+  )
+
+  // Activate workspace (from tree view)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.activateWorkspace', async (workspaceId: string) => {
+      try {
+        await manager.activateWorkspace(workspaceId)
+        vscode.window.showInformationMessage('Workspace activated')
+        workspaceTreeProvider?.refresh()
+        servicesTreeProvider?.refresh()
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to activate workspace: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      }
+    })
+  )
+
+  // Restore snapshot (from tree view)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.restoreSnapshot', async (snapshotId: string) => {
+      const confirm = await vscode.window.showWarningMessage(
+        'This will restore the snapshot and may affect running services. Continue?',
+        'Yes',
+        'No'
+      )
+      if (confirm === 'Yes') {
+        try {
+          await manager.restoreSnapshot(snapshotId)
+          vscode.window.showInformationMessage('Snapshot restored')
+          servicesTreeProvider?.refresh()
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `Failed to restore snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+        }
+      }
+    })
+  )
+
+  // Refresh tree views
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.refreshServices', () => {
+      servicesTreeProvider?.refresh()
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.refreshWorkspaces', () => {
+      workspaceTreeProvider?.refresh()
     })
   )
 }
