@@ -277,6 +277,100 @@ export default function Database() {
     }
   }
 
+  const handleBackupDatabase = async () => {
+    if (!selectedEnvVar) {
+      toast.error('Please select a database connection string')
+      return
+    }
+
+    try {
+      toast.loading('Creating backup...')
+      const response = await axios.post('/api/database/service/backup', {
+        varId: selectedEnvVar
+      }, {
+        responseType: 'blob'
+      })
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers['content-disposition']
+      let filename = 'database-backup.sql'
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+
+      toast.dismiss()
+      toast.success('Database backup downloaded successfully')
+    } catch (error: any) {
+      console.error('Error backing up database:', error)
+      toast.dismiss()
+      toast.error(error.response?.data?.error || 'Failed to backup database')
+    }
+  }
+
+  const handleRestoreDatabase = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!selectedEnvVar) {
+      toast.error('Please select a database connection string')
+      return
+    }
+
+    // Confirm action
+    const confirmed = window.confirm(
+      `⚠️ WARNING: This will restore the database and replace ALL existing data!\n\n` +
+      `Database: ${serviceDbInfo?.database}\n` +
+      `File: ${file.name}\n\n` +
+      `This action cannot be undone. Are you sure?`
+    )
+
+    if (!confirmed) {
+      e.target.value = '' // Reset file input
+      return
+    }
+
+    try {
+      const formData = new FormData()
+      formData.append('backup', file)
+      formData.append('varId', selectedEnvVar)
+
+      toast.loading('Restoring database...')
+      await axios.post('/api/database/service/restore', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      toast.dismiss()
+      toast.success('Database restored successfully!')
+
+      // Reset file input
+      e.target.value = ''
+
+      // Re-test connection to refresh info
+      await handleTestConnection()
+    } catch (error: any) {
+      console.error('Error restoring database:', error)
+      toast.dismiss()
+      toast.error(error.response?.data?.error || 'Failed to restore database')
+      e.target.value = '' // Reset file input
+    }
+  }
+
   return (
     <div className="h-full overflow-y-auto p-8">
       <div className="max-w-4xl mx-auto">
@@ -542,6 +636,32 @@ export default function Database() {
                               </div>
                             </div>
                           )}
+
+                          {/* Backup & Restore Actions */}
+                          <div className="mt-4 pt-4 border-t border-green-200">
+                            <div className="flex gap-3">
+                              <button
+                                onClick={handleBackupDatabase}
+                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                              >
+                                <Download size={18} />
+                                Download Backup
+                              </button>
+                              <label className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 cursor-pointer flex items-center justify-center gap-2">
+                                <Upload size={18} />
+                                Restore from Backup
+                                <input
+                                  type="file"
+                                  accept=".sql,.dump,.gz"
+                                  onChange={handleRestoreDatabase}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                            <p className="text-xs text-green-700 mt-2">
+                              ⚠️ Restore will replace ALL data in the database. Make a backup first!
+                            </p>
+                          </div>
                         </>
                       ) : (
                         <>

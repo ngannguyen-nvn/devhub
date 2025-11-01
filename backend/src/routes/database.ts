@@ -7,7 +7,10 @@ import { Client as PgClient } from 'pg'
 import mysql from 'mysql2/promise'
 import { MongoClient } from 'mongodb'
 import crypto from 'crypto'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 
+const execAsync = promisify(exec)
 const router = express.Router()
 
 // Configure multer for file uploads
@@ -17,10 +20,14 @@ const upload = multer({
     fileSize: 100 * 1024 * 1024, // 100MB max
   },
   fileFilter: (req, file, cb) => {
-    if (file.originalname.endsWith('.db')) {
+    // Allow .db files for DevHub database and .sql/.dump for service databases
+    if (file.originalname.endsWith('.db') ||
+        file.originalname.endsWith('.sql') ||
+        file.originalname.endsWith('.dump') ||
+        file.originalname.endsWith('.gz')) {
       cb(null, true)
     } else {
-      cb(new Error('Only .db files are allowed'))
+      cb(new Error('Only .db, .sql, .dump, or .gz files are allowed'))
     }
   },
 })
@@ -244,6 +251,131 @@ router.post('/service/test', async (req: Request, res: Response) => {
   }
 })
 
+/**
+ * POST /api/database/service/backup
+ * Backup service database
+ */
+router.post('/service/backup', async (req: Request, res: Response) => {
+  try {
+    const { varId } = req.body
+
+    if (!varId) {
+      return res.status(400).json({ success: false, error: 'Variable ID required' })
+    }
+
+    // Get environment variable
+    const envVar = db.prepare(`
+      SELECT id, key, value, is_secret
+      FROM env_variables
+      WHERE id = ?
+    `).get(varId) as any
+
+    if (!envVar) {
+      return res.status(404).json({ success: false, error: 'Environment variable not found' })
+    }
+
+    // Decrypt value if it's a secret
+    let connectionString = envVar.value
+    if (envVar.is_secret) {
+      connectionString = decrypt(connectionString)
+    }
+
+    // Perform backup
+    const backupResult = await backupDatabase(connectionString)
+
+    if (!backupResult.success) {
+      return res.status(500).json({ success: false, error: backupResult.error })
+    }
+
+    // Send file for download
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const filename = `${backupResult.dbName}-backup-${timestamp}.${backupResult.extension}`
+
+    res.setHeader('Content-Type', 'application/octet-stream')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
+
+    const fileStream = fs.createReadStream(backupResult.filePath)
+    fileStream.pipe(res)
+
+    // Clean up temp file after sending
+    fileStream.on('end', () => {
+      try {
+        fs.unlinkSync(backupResult.filePath)
+      } catch (err) {
+        console.error('Error cleaning up backup file:', err)
+      }
+    })
+  } catch (error: any) {
+    console.error('Error backing up service database:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/database/service/restore
+ * Restore service database from backup file
+ */
+router.post('/service/restore', upload.single('backup'), async (req: Request, res: Response) => {
+  try {
+    const { varId } = req.body
+
+    if (!varId) {
+      return res.status(400).json({ success: false, error: 'Variable ID required' })
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No backup file uploaded' })
+    }
+
+    // Get environment variable
+    const envVar = db.prepare(`
+      SELECT id, key, value, is_secret
+      FROM env_variables
+      WHERE id = ?
+    `).get(varId) as any
+
+    if (!envVar) {
+      return res.status(404).json({ success: false, error: 'Environment variable not found' })
+    }
+
+    // Decrypt value if it's a secret
+    let connectionString = envVar.value
+    if (envVar.is_secret) {
+      connectionString = decrypt(connectionString)
+    }
+
+    // Perform restore
+    const restoreResult = await restoreDatabase(connectionString, req.file.path)
+
+    // Clean up uploaded file
+    try {
+      fs.unlinkSync(req.file.path)
+    } catch (err) {
+      console.error('Error cleaning up uploaded file:', err)
+    }
+
+    if (!restoreResult.success) {
+      return res.status(500).json({ success: false, error: restoreResult.error })
+    }
+
+    res.json({
+      success: true,
+      message: 'Database restored successfully',
+    })
+  } catch (error: any) {
+    // Clean up uploaded file on error
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path)
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+    console.error('Error restoring service database:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // Helper function to format bytes
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
@@ -404,6 +536,166 @@ async function testDatabaseConnection(connectionString: string): Promise<any> {
     return {
       connected: false,
       error: 'Unsupported database type. Supported: PostgreSQL, MySQL, MongoDB',
+    }
+  }
+}
+
+// Helper function to backup database
+async function backupDatabase(connectionString: string): Promise<any> {
+  const timestamp = Date.now()
+
+  if (connectionString.startsWith('postgres://') || connectionString.startsWith('postgresql://')) {
+    // PostgreSQL backup using pg_dump
+    const url = new URL(connectionString)
+    const dbName = url.pathname.substring(1)
+    const filePath = `/tmp/pg_backup_${timestamp}.sql`
+
+    try {
+      await execAsync(`pg_dump "${connectionString}" > "${filePath}"`)
+      return {
+        success: true,
+        filePath,
+        dbName,
+        extension: 'sql',
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'PostgreSQL backup failed',
+      }
+    }
+
+  } else if (connectionString.startsWith('mysql://')) {
+    // MySQL backup using mysqldump
+    const url = new URL(connectionString)
+    const dbName = url.pathname.substring(1)
+    const host = url.hostname
+    const port = url.port || '3306'
+    const user = url.username
+    const password = url.password
+    const filePath = `/tmp/mysql_backup_${timestamp}.sql`
+
+    try {
+      await execAsync(`mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+      return {
+        success: true,
+        filePath,
+        dbName,
+        extension: 'sql',
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'MySQL backup failed',
+      }
+    }
+
+  } else if (connectionString.startsWith('mongodb://') || connectionString.startsWith('mongodb+srv://')) {
+    // MongoDB backup using mongodump
+    const url = new URL(connectionString)
+    const dbName = url.pathname.substring(1).split('?')[0] || 'admin'
+    const filePath = `/tmp/mongo_backup_${timestamp}`
+
+    try {
+      await execAsync(`mongodump --uri="${connectionString}" --out="${filePath}"`)
+      // Create tar.gz archive
+      const archivePath = `${filePath}.tar.gz`
+      await execAsync(`tar -czf "${archivePath}" -C "${filePath}" .`)
+      // Clean up the dump directory
+      await execAsync(`rm -rf "${filePath}"`)
+
+      return {
+        success: true,
+        filePath: archivePath,
+        dbName,
+        extension: 'tar.gz',
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'MongoDB backup failed',
+      }
+    }
+
+  } else {
+    return {
+      success: false,
+      error: 'Unsupported database type for backup',
+    }
+  }
+}
+
+// Helper function to restore database
+async function restoreDatabase(connectionString: string, backupFilePath: string): Promise<any> {
+  if (connectionString.startsWith('postgres://') || connectionString.startsWith('postgresql://')) {
+    // PostgreSQL restore using psql
+    try {
+      await execAsync(`psql "${connectionString}" < "${backupFilePath}"`)
+      return {
+        success: true,
+        message: 'PostgreSQL database restored successfully',
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'PostgreSQL restore failed',
+      }
+    }
+
+  } else if (connectionString.startsWith('mysql://')) {
+    // MySQL restore using mysql
+    const url = new URL(connectionString)
+    const dbName = url.pathname.substring(1)
+    const host = url.hostname
+    const port = url.port || '3306'
+    const user = url.username
+    const password = url.password
+
+    try {
+      await execAsync(`mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+      return {
+        success: true,
+        message: 'MySQL database restored successfully',
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'MySQL restore failed',
+      }
+    }
+
+  } else if (connectionString.startsWith('mongodb://') || connectionString.startsWith('mongodb+srv://')) {
+    // MongoDB restore using mongorestore
+    const url = new URL(connectionString)
+    const dbName = url.pathname.substring(1).split('?')[0] || 'admin'
+    const timestamp = Date.now()
+    const extractPath = `/tmp/mongo_extract_${timestamp}`
+
+    try {
+      // Extract tar.gz if needed
+      if (backupFilePath.endsWith('.tar.gz') || backupFilePath.endsWith('.gz')) {
+        await execAsync(`mkdir -p "${extractPath}" && tar -xzf "${backupFilePath}" -C "${extractPath}"`)
+        await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+        await execAsync(`rm -rf "${extractPath}"`)
+      } else {
+        await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+      }
+
+      return {
+        success: true,
+        message: 'MongoDB database restored successfully',
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'MongoDB restore failed',
+      }
+    }
+
+  } else {
+    return {
+      success: false,
+      error: 'Unsupported database type for restore',
     }
   }
 }
