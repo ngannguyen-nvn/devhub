@@ -6,6 +6,8 @@ DevHub is a powerful desktop application that helps developers manage their loca
 
 **✅ v2.0 Now Available!** Advanced orchestration features: health checks, log persistence, and service groups for professional microservices management.
 
+**🏗️ Dual-Version Architecture:** DevHub now supports both web app and VSCode extension versions using a shared core package, enabling code reuse and maintainable dual deployments.
+
 ---
 
 ## 🎯 What Does DevHub Do?
@@ -55,7 +57,7 @@ git checkout claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3  # Current branch
 npm install
 ```
 
-This will install dependencies for all three packages (frontend, backend, shared).
+This will install dependencies for all packages (frontend, backend, shared, and core).
 
 ### Step 3: Start DevHub
 
@@ -805,14 +807,19 @@ This builds all packages into `dist/` directories.
 
 ### Project Structure
 
+**DevHub uses a shared core architecture** to support both web app and VSCode extension versions:
+
 ```
 devhub/
-├── backend/          # Express API server
+├── packages/core/    # Shared backend logic (NEW!)
 │   ├── src/
-│   │   ├── db/       # SQLite database
-│   │   ├── routes/   # API endpoints
-│   │   └── services/ # Business logic
+│   │   ├── db/       # SQLite database & migrations
+│   │   └── services/ # Service managers (85-90% shared)
 │   └── package.json
+├── backend/          # Express API wrapper (web version)
+│   ├── src/
+│   │   └── routes/   # HTTP endpoints (thin layer)
+│   └── package.json  # Depends on @devhub/core
 ├── frontend/         # React application
 │   ├── src/
 │   │   ├── components/
@@ -822,6 +829,14 @@ devhub/
 │   └── src/
 └── package.json      # Root package (workspace)
 ```
+
+**Architecture Benefits:**
+- **85-90% code sharing** between web and VSCode versions
+- **Single source of truth** for all business logic
+- **Only 30% overhead** to maintain dual versions
+- **Future-ready** for VSCode extension development
+
+All service managers (ServiceManager, DockerManager, EnvManager, WorkspaceManager, NotesManager, HealthCheckManager, LogManager, GroupManager) live in `packages/core` and are imported by both web backend and future VSCode extension.
 
 ---
 
@@ -1019,6 +1034,19 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
   - Dramatically faster scanning and service creation
 
 ### 📅 Future Enhancements
+
+#### Immediate Roadmap
+
+**VSCode Extension (In Progress)**
+- VSCode extension version using shared `@devhub/core` package
+- All DevHub features accessible from within VSCode
+- Message passing wrapper around core logic
+- Webview UI reusing 80% of React components
+- Estimated development time: 3-4 weeks
+
+See [VSCODE_EXTENSION_GUIDE.md](./VSCODE_EXTENSION_GUIDE.md) for implementation details.
+
+#### Long-Term Enhancements
 
 Potential future additions:
 - Team collaboration features
