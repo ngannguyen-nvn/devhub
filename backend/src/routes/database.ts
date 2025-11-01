@@ -3,6 +3,10 @@ import db from '../db'
 import fs from 'fs'
 import path from 'path'
 import multer from 'multer'
+import { Client as PgClient } from 'pg'
+import mysql from 'mysql2/promise'
+import { MongoClient } from 'mongodb'
+import crypto from 'crypto'
 
 const router = express.Router()
 
@@ -198,6 +202,48 @@ router.post('/vacuum', (req: Request, res: Response) => {
   }
 })
 
+/**
+ * POST /api/database/service/test
+ * Test service database connection
+ */
+router.post('/service/test', async (req: Request, res: Response) => {
+  try {
+    const { varId } = req.body
+
+    if (!varId) {
+      return res.status(400).json({ success: false, error: 'Variable ID required' })
+    }
+
+    // Get environment variable
+    const envVar = db.prepare(`
+      SELECT id, key, value, is_secret
+      FROM env_variables
+      WHERE id = ?
+    `).get(varId) as any
+
+    if (!envVar) {
+      return res.status(404).json({ success: false, error: 'Environment variable not found' })
+    }
+
+    // Decrypt value if it's a secret
+    let connectionString = envVar.value
+    if (envVar.is_secret) {
+      connectionString = decrypt(connectionString)
+    }
+
+    // Test connection based on database type
+    const dbInfo = await testDatabaseConnection(connectionString)
+
+    res.json({
+      success: true,
+      info: dbInfo,
+    })
+  } catch (error: any) {
+    console.error('Error testing service database:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // Helper function to format bytes
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
@@ -207,6 +253,159 @@ function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
 
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+// Helper function to decrypt values (same as envManager)
+function decrypt(encryptedValue: string): string {
+  try {
+    const parts = encryptedValue.split(':')
+    if (parts.length !== 3) {
+      return encryptedValue // Not encrypted
+    }
+
+    const [ivHex, authTagHex, encryptedHex] = parts
+    const key = getEncryptionKey()
+
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      key,
+      Buffer.from(ivHex, 'hex')
+    )
+    decipher.setAuthTag(Buffer.from(authTagHex, 'hex'))
+
+    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+
+    return decrypted
+  } catch (error) {
+    console.error('Decryption error:', error)
+    return encryptedValue
+  }
+}
+
+function getEncryptionKey(): Buffer {
+  const keyString = process.env.ENCRYPTION_KEY || 'devhub-default-key-change-in-production-32bytes'
+  return crypto.scryptSync(keyString, 'salt', 32)
+}
+
+// Helper function to test database connections
+async function testDatabaseConnection(connectionString: string): Promise<any> {
+  // Detect database type from connection string
+  let type: string
+  let client: any
+
+  if (connectionString.startsWith('postgres://') || connectionString.startsWith('postgresql://')) {
+    type = 'PostgreSQL'
+    const pgClient = new PgClient({ connectionString })
+
+    try {
+      await pgClient.connect()
+
+      // Get database info
+      const dbName = pgClient.database
+      const hostResult = await pgClient.query('SELECT inet_server_addr() as host, inet_server_port() as port')
+      const host = hostResult.rows[0]?.host || 'localhost'
+
+      // Get tables
+      const tablesResult = await pgClient.query(`
+        SELECT tablename FROM pg_catalog.pg_tables
+        WHERE schemaname = 'public'
+        ORDER BY tablename
+      `)
+      const tables = tablesResult.rows.map((row: any) => row.tablename)
+
+      await pgClient.end()
+
+      return {
+        connected: true,
+        type,
+        host,
+        database: dbName,
+        tableCount: tables.length,
+        tables: tables.slice(0, 50), // Limit to 50 tables
+      }
+    } catch (error: any) {
+      try { await pgClient.end() } catch {}
+      return {
+        connected: false,
+        error: error.message,
+      }
+    }
+
+  } else if (connectionString.startsWith('mysql://')) {
+    type = 'MySQL'
+
+    try {
+      const connection = await mysql.createConnection(connectionString)
+
+      // Get database info
+      const [rows]: any = await connection.query('SELECT DATABASE() as db')
+      const dbName = rows[0]?.db || 'unknown'
+
+      // Get host
+      const [hostRows]: any = await connection.query('SELECT @@hostname as host, @@port as port')
+      const host = hostRows[0]?.host || 'localhost'
+
+      // Get tables
+      const [tablesRows]: any = await connection.query('SHOW TABLES')
+      const tableKey = Object.keys(tablesRows[0] || {})[0]
+      const tables = tablesRows.map((row: any) => row[tableKey])
+
+      await connection.end()
+
+      return {
+        connected: true,
+        type,
+        host,
+        database: dbName,
+        tableCount: tables.length,
+        tables: tables.slice(0, 50),
+      }
+    } catch (error: any) {
+      return {
+        connected: false,
+        error: error.message,
+      }
+    }
+
+  } else if (connectionString.startsWith('mongodb://') || connectionString.startsWith('mongodb+srv://')) {
+    type = 'MongoDB'
+
+    try {
+      const client = new MongoClient(connectionString)
+      await client.connect()
+
+      // Get database name from connection string
+      const url = new URL(connectionString)
+      const dbName = url.pathname.substring(1).split('?')[0] || 'admin'
+
+      const db = client.db(dbName)
+      const collections = await db.listCollections().toArray()
+      const collectionNames = collections.map(c => c.name)
+
+      await client.close()
+
+      return {
+        connected: true,
+        type,
+        host: url.hostname,
+        database: dbName,
+        tableCount: collectionNames.length,
+        tables: collectionNames.slice(0, 50),
+      }
+    } catch (error: any) {
+      return {
+        connected: false,
+        error: error.message,
+      }
+    }
+
+  } else {
+    return {
+      connected: false,
+      error: 'Unsupported database type. Supported: PostgreSQL, MySQL, MongoDB',
+    }
+  }
 }
 
 export default router

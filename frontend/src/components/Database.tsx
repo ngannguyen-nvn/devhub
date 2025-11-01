@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Download, Upload, Database as DatabaseIcon, HardDrive, Trash2, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react'
+import { Download, Upload, Database as DatabaseIcon, HardDrive, Trash2, AlertTriangle, CheckCircle, RefreshCw, Server, Table, CheckCircle2, XCircle, Loader } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
@@ -15,6 +15,25 @@ interface DatabaseStats {
   groups: number
   logs: number
   lastBackup?: string
+}
+
+interface EnvVariable {
+  id: string
+  key: string
+  value: string
+  profile_id: string
+  profileName: string
+  is_secret: number
+}
+
+interface ServiceDatabaseInfo {
+  connected: boolean
+  type?: string
+  host?: string
+  database?: string
+  tableCount?: number
+  tables?: string[]
+  error?: string
 }
 
 export default function Database() {
@@ -35,9 +54,16 @@ export default function Database() {
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
+  // Service Database state
+  const [envVars, setEnvVars] = useState<EnvVariable[]>([])
+  const [selectedEnvVar, setSelectedEnvVar] = useState<string>('')
+  const [serviceDbInfo, setServiceDbInfo] = useState<ServiceDatabaseInfo | null>(null)
+  const [testingConnection, setTestingConnection] = useState(false)
+
   useEffect(() => {
     fetchStats()
-  }, [])
+    fetchEnvVars()
+  }, [activeWorkspace])
 
   const fetchStats = async () => {
     setLoading(true)
@@ -180,6 +206,77 @@ export default function Database() {
     }
   }
 
+  // Service Database functions
+  const fetchEnvVars = async () => {
+    if (!activeWorkspace) return
+
+    try {
+      // Get all env profiles for active workspace
+      const profilesRes = await axios.get('/api/env/profiles')
+      const profiles = profilesRes.data.profiles || []
+
+      // Get all variables from all profiles
+      const allVars: EnvVariable[] = []
+      for (const profile of profiles) {
+        const varsRes = await axios.get(`/api/env/profiles/${profile.id}/variables`)
+        const vars = varsRes.data.variables || []
+        vars.forEach((v: any) => {
+          allVars.push({
+            ...v,
+            profileName: profile.name
+          })
+        })
+      }
+
+      // Filter to database-related variables
+      const dbVars = allVars.filter(v => {
+        const key = v.key.toUpperCase()
+        return key.includes('DATABASE') || key.includes('DB_') ||
+               key.includes('POSTGRES') || key.includes('MYSQL') ||
+               key.includes('MONGO') || key.includes('REDIS') ||
+               key.includes('CONNECTION')
+      })
+
+      setEnvVars(dbVars)
+    } catch (error) {
+      console.error('Error fetching env vars:', error)
+    }
+  }
+
+  const handleTestConnection = async () => {
+    if (!selectedEnvVar) {
+      toast.error('Please select a database connection string')
+      return
+    }
+
+    const envVar = envVars.find(v => v.id === selectedEnvVar)
+    if (!envVar) return
+
+    setTestingConnection(true)
+    setServiceDbInfo(null)
+
+    try {
+      const response = await axios.post('/api/database/service/test', {
+        varId: envVar.id
+      })
+      setServiceDbInfo(response.data.info)
+      if (response.data.info.connected) {
+        toast.success(`Connected to ${response.data.info.type} database`)
+      } else {
+        toast.error(`Connection failed: ${response.data.info.error}`)
+      }
+    } catch (error: any) {
+      console.error('Error testing connection:', error)
+      setServiceDbInfo({
+        connected: false,
+        error: error.response?.data?.error || error.message
+      })
+      toast.error('Failed to test connection')
+    } finally {
+      setTestingConnection(false)
+    }
+  }
+
   return (
     <div className="h-full overflow-y-auto p-8">
       <div className="max-w-4xl mx-auto">
@@ -300,7 +397,7 @@ export default function Database() {
         </div>
 
         {/* Maintenance Card */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <AlertTriangle size={24} className="text-orange-600" />
             Maintenance
@@ -337,6 +434,127 @@ export default function Database() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Service Databases Card */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Server size={24} className="text-purple-600" />
+            Service Databases
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Connect to your services' databases using environment variables
+          </p>
+
+          {!activeWorkspace ? (
+            <div className="text-center py-8 text-gray-500">
+              Please select a workspace to view service databases
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Connection String Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Database Connection String
+                </label>
+                <select
+                  value={selectedEnvVar}
+                  onChange={(e) => {
+                    setSelectedEnvVar(e.target.value)
+                    setServiceDbInfo(null)
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="">-- Select an environment variable --</option>
+                  {envVars.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.key} ({v.profileName})
+                    </option>
+                  ))}
+                </select>
+                {envVars.length === 0 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    No database-related environment variables found. Add them in the Environment tab.
+                  </p>
+                )}
+              </div>
+
+              {/* Test Connection Button */}
+              {selectedEnvVar && (
+                <div>
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={testingConnection}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {testingConnection ? (
+                      <>
+                        <Loader size={18} className="animate-spin" />
+                        Testing Connection...
+                      </>
+                    ) : (
+                      <>
+                        <Server size={18} />
+                        Test Connection
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Connection Results */}
+              {serviceDbInfo && (
+                <div className={`p-4 rounded-lg border-2 ${
+                  serviceDbInfo.connected
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    {serviceDbInfo.connected ? (
+                      <CheckCircle2 size={24} className="text-green-600 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle size={24} className="text-red-600 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      {serviceDbInfo.connected ? (
+                        <>
+                          <h3 className="font-semibold text-green-900 mb-2">Connection Successful</h3>
+                          <div className="space-y-1 text-sm text-green-800">
+                            <div><strong>Type:</strong> {serviceDbInfo.type}</div>
+                            <div><strong>Host:</strong> {serviceDbInfo.host}</div>
+                            <div><strong>Database:</strong> {serviceDbInfo.database}</div>
+                            {serviceDbInfo.tableCount !== undefined && (
+                              <div><strong>Tables:</strong> {serviceDbInfo.tableCount}</div>
+                            )}
+                          </div>
+                          {serviceDbInfo.tables && serviceDbInfo.tables.length > 0 && (
+                            <div className="mt-3">
+                              <div className="font-semibold text-green-900 mb-1 flex items-center gap-1">
+                                <Table size={16} />
+                                Tables:
+                              </div>
+                              <div className="max-h-40 overflow-y-auto bg-white rounded p-2">
+                                <ul className="text-sm text-gray-700 space-y-1">
+                                  {serviceDbInfo.tables.map((table, idx) => (
+                                    <li key={idx} className="font-mono">{table}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="font-semibold text-red-900 mb-1">Connection Failed</h3>
+                          <p className="text-sm text-red-700">{serviceDbInfo.error}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
