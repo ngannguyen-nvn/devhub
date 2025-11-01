@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express'
-import { ServiceManager } from '../services/serviceManager'
+import { serviceManager } from '../services/serviceManager'
+import { spawn } from 'child_process'
+import os from 'os'
 
 const router = Router()
-const serviceManager = new ServiceManager()
 
 /**
  * Middleware to get active workspace ID
@@ -241,6 +242,257 @@ router.post('/:id/stop', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+/**
+ * POST /api/services/:id/terminal
+ * Open service in a new terminal window
+ */
+router.post('/:id/terminal', async (req: Request, res: Response) => {
+  try {
+    console.log('\n========== TERMINAL SPAWN REQUEST ==========')
+
+    // Verify service exists and belongs to a workspace the user has access to
+    const workspaceId = await getWorkspaceId(req)
+    const services = serviceManager.getAllServices(workspaceId)
+    const service = services.find(s => s.id === req.params.id)
+
+    if (!service) {
+      console.log('❌ Service not found:', req.params.id)
+      return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
+    }
+
+    console.log('✅ Service found:', service.name)
+    console.log('   Repo path:', service.repoPath)
+    console.log('   Command:', service.command)
+
+    const platform = os.platform()
+    const { repoPath, command, name } = service
+
+    console.log('🖥️  Platform detected:', platform)
+    console.log('   DISPLAY:', process.env.DISPLAY || 'not set')
+    console.log('   PWD:', process.env.PWD)
+
+    let terminalCommand: string
+    let terminalArgs: string[]
+
+    // Check if we're in WSL (even though platform shows 'linux')
+    let isWSL = false
+    if (platform === 'linux') {
+      try {
+        const fs = require('fs')
+        const procVersion = fs.readFileSync('/proc/version', 'utf8')
+        isWSL = procVersion.toLowerCase().includes('microsoft') || procVersion.toLowerCase().includes('wsl')
+        console.log('🔍 WSL detection:', isWSL ? 'YES (found in /proc/version)' : 'NO')
+        if (isWSL) {
+          console.log('   /proc/version:', procVersion.substring(0, 100) + '...')
+        }
+      } catch {
+        console.log('🔍 WSL detection: Could not read /proc/version')
+      }
+    }
+
+    // Detect platform and choose appropriate terminal
+    if (platform === 'darwin') {
+      console.log('🍎 Using macOS Terminal.app')
+      // macOS - use Terminal.app with osascript
+      terminalCommand = 'osascript'
+      terminalArgs = [
+        '-e',
+        `tell application "Terminal" to do script "cd '${repoPath}' && echo 'Running ${name}' && ${command}"`
+      ]
+    } else if (isWSL) {
+      console.log('🪟 Running in WSL - attempting Windows terminal launch')
+      console.log('   Using WSL path directly (no conversion needed):', repoPath)
+
+      // Try Windows Terminal first
+      try {
+        require('child_process').execSync('which wt.exe', { stdio: 'ignore' })
+        console.log('   ✅ Found: wt.exe (Windows Terminal)')
+        terminalCommand = 'wt.exe'
+        terminalArgs = [
+          'wsl.exe',
+          'bash',
+          '-l',  // Login shell to get clean WSL environment with correct PATH
+          '-c',
+          // Use explicit cd in bash, -l ensures WSL npm is used not Windows npm
+          // After command exits, bash will exit naturally
+          `cd '${repoPath}' && echo 'Running ${name}' && ${command} || bash -l`
+        ]
+      } catch {
+        console.log('   ❌ wt.exe not found, trying cmd.exe')
+        // Fallback to cmd.exe
+        try {
+          require('child_process').execSync('which cmd.exe', { stdio: 'ignore' })
+          console.log('   ✅ Found: cmd.exe')
+          terminalCommand = 'cmd.exe'
+          terminalArgs = [
+            '/c',
+            'start',
+            'cmd.exe',
+            '/k',
+            // Use login shell for clean WSL environment
+            `wsl bash -l -c "cd '${repoPath}' && echo 'Running ${name}' && ${command} || bash -l"`
+          ]
+        } catch {
+          console.log('   ❌ cmd.exe not found')
+          return res.status(400).json({
+            success: false,
+            error: 'No Windows terminal found from WSL. Ensure Windows Terminal (wt.exe) or cmd.exe is in PATH.'
+          })
+        }
+      }
+    } else if (platform === 'linux') {
+      // Linux - check if we have a display server first
+      if (!process.env.DISPLAY) {
+        return res.status(400).json({
+          success: false,
+          error: 'No X11 display available. Terminal feature requires a graphical environment or X11 forwarding (set DISPLAY variable).'
+        })
+      }
+
+      // Linux - try multiple terminal emulators
+      const terminals = [
+        {
+          name: 'gnome-terminal',
+          check: 'gnome-terminal',
+          args: ['--', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        },
+        {
+          name: 'konsole',
+          check: 'konsole',
+          args: ['-e', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        },
+        {
+          name: 'xfce4-terminal',
+          check: 'xfce4-terminal',
+          args: ['-e', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        },
+        {
+          name: 'xterm',
+          check: 'xterm',
+          args: ['-hold', '-e', `cd '${repoPath}' && echo 'Running ${name}' && ${command}`]
+        },
+        {
+          name: 'x-terminal-emulator',
+          check: 'x-terminal-emulator',
+          args: ['-e', 'bash', '-c', `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`]
+        }
+      ]
+
+      let foundTerminal = false
+      for (const terminal of terminals) {
+        try {
+          require('child_process').execSync(`which ${terminal.check}`, { stdio: 'ignore' })
+          terminalCommand = terminal.name
+          terminalArgs = terminal.args
+          foundTerminal = true
+          break
+        } catch {
+          // Try next terminal
+        }
+      }
+
+      if (!foundTerminal) {
+        return res.status(400).json({
+          success: false,
+          error: 'No terminal emulator found. Please install gnome-terminal, konsole, xfce4-terminal, or xterm.'
+        })
+      }
+    } else if (platform === 'win32') {
+      // Windows - check for WSL first, fallback to cmd
+      try {
+        // Check if WSL is available
+        require('child_process').execSync('wsl --list --quiet', { stdio: 'ignore' })
+        // WSL is available - use Windows Terminal with WSL
+        try {
+          // Try Windows Terminal first
+          require('child_process').execSync('where wt', { stdio: 'ignore' })
+          terminalCommand = 'wt'
+          terminalArgs = [
+            'wsl',
+            '--',
+            'bash',
+            '-c',
+            `cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash`
+          ]
+        } catch {
+          // Fallback to cmd with wsl
+          terminalCommand = 'cmd'
+          terminalArgs = [
+            '/c',
+            'start',
+            'cmd',
+            '/k',
+            `wsl bash -c "cd '${repoPath}' && echo 'Running ${name}' && ${command}; exec bash"`
+          ]
+        }
+      } catch {
+        // No WSL, use regular cmd
+        terminalCommand = 'cmd'
+        terminalArgs = [
+          '/c',
+          'start',
+          'cmd',
+          '/k',
+          `cd /d "${repoPath}" && echo Running ${name} && ${command}`
+        ]
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: `Unsupported platform: ${platform}`
+      })
+    }
+
+    // Spawn the terminal
+    console.log('🚀 Spawning terminal...')
+    console.log('   Command:', terminalCommand)
+    console.log('   Args:', JSON.stringify(terminalArgs, null, 2))
+
+    const terminal = spawn(terminalCommand, terminalArgs, {
+      detached: true,
+      stdio: 'ignore'
+    })
+
+    console.log('   Process spawned with PID:', terminal.pid)
+
+    // Handle spawn errors
+    terminal.on('error', (err) => {
+      console.error('❌ Terminal spawn error:', err)
+      console.error('   Error code:', (err as any).code)
+      console.error('   Error syscall:', (err as any).syscall)
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: `Failed to spawn terminal: ${err.message}`
+        })
+      }
+    })
+
+    terminal.on('exit', (code, signal) => {
+      console.log('🔚 Terminal process exited')
+      console.log('   Exit code:', code)
+      console.log('   Signal:', signal)
+    })
+
+    terminal.unref() // Allow the process to run independently
+
+    console.log('✅ Terminal spawn initiated successfully')
+    console.log('============================================\n')
+
+    res.json({
+      success: true,
+      message: `Opened ${name} in new terminal`
+    })
+  } catch (error) {
+    console.error('❌ Exception in terminal endpoint:', error)
+    console.error('   Stack:', error instanceof Error ? error.stack : 'No stack trace')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to open terminal'
     })
   }
 })

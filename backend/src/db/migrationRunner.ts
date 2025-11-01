@@ -4,6 +4,8 @@ import * as migration002 from './migrations/002_workspace_scoping'
 import * as migration003 from './migrations/003_active_snapshot_tracking'
 import migration004 from './migrations/004_profile_source_metadata'
 import migration005 from './migrations/005_allow_duplicate_profile_names'
+import migration006 from './migrations/006_v2_orchestration_features'
+import migration007 from './migrations/007_cleanup_unused_v2_features'
 
 interface Migration {
   id: number
@@ -42,6 +44,18 @@ const migrations: Migration[] = [
     name: 'allow_duplicate_profile_names',
     up: migration005.up,
     down: migration005.down,
+  },
+  {
+    id: 6,
+    name: 'v2_orchestration_features',
+    up: migration006.up,
+    down: migration006.down,
+  },
+  {
+    id: 7,
+    name: 'cleanup_unused_v2_features',
+    up: migration007.up,
+    down: migration007.down,
   },
 ]
 

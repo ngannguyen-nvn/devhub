@@ -2,6 +2,8 @@ import { spawn, ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 import db from '../db'
 import { Service as SharedService } from '@devhub/shared'
+import { logManager } from './logManager'
+import { healthCheckManager } from './healthCheckManager'
 
 // Internal service interface (extends shared with runtime data)
 export interface Service extends Omit<SharedService, 'status' | 'pid'> {
@@ -15,6 +17,7 @@ export interface RunningService extends Service {
   stoppedAt?: Date
   exitCode?: number
   logs: string[]
+  logSessionId?: string // Track current log session
 }
 
 export class ServiceManager extends EventEmitter {
@@ -40,7 +43,17 @@ export class ServiceManager extends EventEmitter {
    * Get all defined services for a workspace
    */
   getAllServices(workspaceId: string): Service[] {
-    const stmt = db.prepare('SELECT * FROM services WHERE workspace_id = ?')
+    // Get services with health status
+    const stmt = db.prepare(`
+      SELECT
+        s.*,
+        GROUP_CONCAT(sg.name) as group_names
+      FROM services s
+      LEFT JOIN service_group_members sgm ON s.id = sgm.service_id
+      LEFT JOIN service_groups sg ON sgm.group_id = sg.id
+      WHERE s.workspace_id = ?
+      GROUP BY s.id
+    `)
     const rows = stmt.all(workspaceId) as any[]
 
     return rows.map(row => ({
@@ -51,6 +64,10 @@ export class ServiceManager extends EventEmitter {
       command: row.command,
       port: row.port,
       envVars: row.env_vars ? JSON.parse(row.env_vars) : undefined,
+      healthStatus: row.health_status as 'healthy' | 'unhealthy' | 'degraded' | 'unknown' | undefined,
+      lastHealthCheck: row.last_health_check,
+      healthCheckFailures: row.health_check_failures,
+      tags: row.group_names ? row.group_names.split(',').filter((t: string) => t) : [],
     }))
   }
 
@@ -208,12 +225,16 @@ export class ServiceManager extends EventEmitter {
       shell: true,
     })
 
+    // Create log session for persistence
+    const logSession = logManager.createSession(serviceId)
+
     const runningService: RunningService = {
       ...service,
       pid: childProcess.pid!,
       status: 'running',
       startedAt: new Date(),
       logs: [],
+      logSessionId: logSession.id,
     }
 
     // Capture stdout
@@ -224,6 +245,15 @@ export class ServiceManager extends EventEmitter {
       // Keep only last N lines
       if (runningService.logs.length > this.maxLogLines) {
         runningService.logs = runningService.logs.slice(-this.maxLogLines)
+      }
+
+      // Persist logs to database
+      if (runningService.logSessionId) {
+        const logEntries = lines.map((line: string) => ({
+          message: line,
+          level: logManager.parseLogLevel(line) as 'info' | 'warn' | 'error' | 'debug',
+        }))
+        logManager.writeLogs(runningService.logSessionId, serviceId, logEntries)
       }
 
       this.emit('log', { serviceId, type: 'stdout', data: lines })
@@ -238,6 +268,15 @@ export class ServiceManager extends EventEmitter {
         runningService.logs = runningService.logs.slice(-this.maxLogLines)
       }
 
+      // Persist logs to database (stderr typically errors/warnings)
+      if (runningService.logSessionId) {
+        const logEntries = lines.map((line: string) => ({
+          message: line,
+          level: 'error' as const,
+        }))
+        logManager.writeLogs(runningService.logSessionId, serviceId, logEntries)
+      }
+
       this.emit('log', { serviceId, type: 'stderr', data: lines })
     })
 
@@ -248,6 +287,18 @@ export class ServiceManager extends EventEmitter {
       runningService.stoppedAt = new Date()
       runningService.exitCode = code || undefined
       runningService.pid = undefined // Clear PID since process is gone
+
+      // End log session
+      if (runningService.logSessionId) {
+        const exitReason = code === 0 ? 'stopped' : (code === null ? 'killed' : 'crashed')
+        logManager.endSession(runningService.logSessionId, code || undefined, exitReason)
+      }
+
+      // Stop health checks for this service
+      const healthChecks = healthCheckManager.getHealthChecks(serviceId)
+      for (const check of healthChecks) {
+        healthCheckManager.stopHealthCheck(check.id)
+      }
 
       // Keep logs and service info, only remove from active processes
       this.processes.delete(serviceId)
@@ -265,6 +316,14 @@ export class ServiceManager extends EventEmitter {
     this.processes.set(serviceId, childProcess)
     this.runningServices.set(serviceId, runningService)
 
+    // Start health checks for this service
+    const healthChecks = healthCheckManager.getHealthChecks(serviceId)
+    for (const check of healthChecks) {
+      if (check.enabled) {
+        healthCheckManager.startHealthCheck(check)
+      }
+    }
+
     console.log(`Started service ${service.name} (PID: ${childProcess.pid})`)
   }
 
@@ -276,6 +335,12 @@ export class ServiceManager extends EventEmitter {
 
     if (!process) {
       throw new Error('Service is not running')
+    }
+
+    // Stop health checks
+    const healthChecks = healthCheckManager.getHealthChecks(serviceId)
+    for (const check of healthChecks) {
+      healthCheckManager.stopHealthCheck(check.id)
     }
 
     process.kill('SIGTERM')
@@ -291,7 +356,7 @@ export class ServiceManager extends EventEmitter {
     if (runningService) {
       runningService.status = 'stopped'
       runningService.stoppedAt = new Date()
-      // Exit handler will set exitCode when process actually exits
+      // Exit handler will set exitCode and end log session when process actually exits
     }
   }
 
@@ -319,3 +384,5 @@ export class ServiceManager extends EventEmitter {
     }
   }
 }
+
+export const serviceManager = new ServiceManager()

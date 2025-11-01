@@ -6,12 +6,15 @@ import Workspaces from './components/Workspaces'
 import Docker from './components/Docker'
 import Environment from './components/Environment'
 import Wiki from './components/Wiki'
+import Database from './components/Database'
 import Sidebar from './components/Sidebar'
 import WorkspaceSwitcher from './components/WorkspaceSwitcher'
 import { WorkspaceProvider } from './contexts/WorkspaceContext'
 
+type ViewType = 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki' | 'database'
+
 function App() {
-  const [activeView, setActiveView] = useState<'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki'>('dashboard')
+  const [activeView, setActiveView] = useState<ViewType>('dashboard')
 
   return (
     <WorkspaceProvider>
@@ -32,6 +35,7 @@ function App() {
             {activeView === 'docker' && <Docker />}
             {activeView === 'env' && <Environment />}
             {activeView === 'wiki' && <Wiki />}
+            {activeView === 'database' && <Database />}
           </div>
         </main>
       </div>

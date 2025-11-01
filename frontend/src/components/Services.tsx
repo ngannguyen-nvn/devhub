@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon, Search } from 'lucide-react'
+import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon, Search, Tags, X } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
@@ -17,6 +17,8 @@ interface Service {
   startedAt?: string
   stoppedAt?: string
   exitCode?: number
+  healthStatus?: 'healthy' | 'unhealthy' | 'unknown'
+  tags?: string[]
 }
 
 export default function Services() {
@@ -24,9 +26,12 @@ export default function Services() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
-  const [logs, setLogs] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedGroup, setSelectedGroup] = useState<string>('all')
+  const [allLogs, setAllLogs] = useState<Array<{serviceId: string, serviceName: string, log: string, timestamp: string}>>([])
+  const [showCentralLogs, setShowCentralLogs] = useState(true)
+  const [activeLogTab, setActiveLogTab] = useState<string>('all') // 'all' or serviceId
+  const [singleServiceLogs, setSingleServiceLogs] = useState<string[]>([]) // For individual service tab
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -38,6 +43,9 @@ export default function Services() {
     serviceId: null,
     serviceName: '',
   })
+
+  // Stop all confirmation dialog
+  const [confirmStopAll, setConfirmStopAll] = useState(false)
 
   // New service form
   const [newService, setNewService] = useState({
@@ -52,6 +60,13 @@ export default function Services() {
   const [workspaceRepos, setWorkspaceRepos] = useState<Array<{ path: string; name: string }>>([])
   const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
   const [importing, setImporting] = useState(false)
+
+  // Group management state
+  const [groups, setGroups] = useState<Array<{id: string, name: string, description?: string, color?: string, icon?: string, serviceIds: string[]}>>([])
+  const [showGroupsModal, setShowGroupsModal] = useState(false)
+  const [showAssignGroupModal, setShowAssignGroupModal] = useState(false)
+  const [selectedServiceForGroups, setSelectedServiceForGroups] = useState<Service | null>(null)
+  const [newGroup, setNewGroup] = useState({ name: '', description: '', color: '#3B82F6' })
 
   const fetchServices = async () => {
     if (!activeWorkspace) {
@@ -74,29 +89,131 @@ export default function Services() {
     }
   }
 
-  const fetchLogs = async (serviceId: string) => {
+  const fetchAllLogs = async () => {
+    const runningServices = services.filter(s => s.status === 'running')
+    if (runningServices.length === 0) {
+      setAllLogs([])
+      return
+    }
+
+    try {
+      const logsPromises = runningServices.map(async service => {
+        try {
+          const response = await axios.get(`/api/services/${service.id}/logs`)
+          return response.data.logs.map((log: string) => ({
+            serviceId: service.id,
+            serviceName: service.name,
+            log,
+            timestamp: new Date().toISOString(),
+          }))
+        } catch (error) {
+          console.error(`Error fetching logs for ${service.name}:`, error)
+          return []
+        }
+      })
+
+      const logsArrays = await Promise.all(logsPromises)
+      const combinedLogs = logsArrays.flat()
+      setAllLogs(combinedLogs)
+    } catch (error) {
+      console.error('Error fetching all logs:', error)
+    }
+  }
+
+  const fetchSingleServiceLogs = async (serviceId: string) => {
     try {
       const response = await axios.get(`/api/services/${serviceId}/logs`)
-      setLogs(response.data.logs)
+      setSingleServiceLogs(response.data.logs)
     } catch (error) {
       console.error('Error fetching logs:', error)
     }
   }
 
+  const fetchGroups = async () => {
+    if (!activeWorkspace) return
+
+    try {
+      const response = await axios.get(`/api/groups/${activeWorkspace.id}`)
+      setGroups(response.data.groups)
+    } catch (error) {
+      console.error('Error fetching groups:', error)
+    }
+  }
+
+  const handleCreateGroup = async () => {
+    if (!activeWorkspace || !newGroup.name.trim()) {
+      toast.error('Group name is required')
+      return
+    }
+
+    try {
+      await axios.post('/api/groups', {
+        workspaceId: activeWorkspace.id,
+        name: newGroup.name,
+        description: newGroup.description,
+        color: newGroup.color,
+      })
+      toast.success(`Group "${newGroup.name}" created`)
+      setNewGroup({ name: '', description: '', color: '#3B82F6' })
+      fetchGroups()
+    } catch (error) {
+      console.error('Error creating group:', error)
+      toast.error('Failed to create group')
+    }
+  }
+
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    try {
+      await axios.delete(`/api/groups/${groupId}`)
+      toast.success(`Group "${groupName}" deleted`)
+      fetchGroups()
+      fetchServices() // Refresh to update tags
+    } catch (error) {
+      console.error('Error deleting group:', error)
+      toast.error('Failed to delete group')
+    }
+  }
+
+  const handleToggleServiceGroup = async (groupId: string, serviceId: string, isCurrentlyIn: boolean) => {
+    try {
+      if (isCurrentlyIn) {
+        await axios.delete(`/api/groups/${groupId}/services/${serviceId}`)
+        toast.success('Service removed from group')
+      } else {
+        await axios.post(`/api/groups/${groupId}/services`, { serviceId })
+        toast.success('Service added to group')
+      }
+      fetchGroups()
+      fetchServices() // Refresh to update tags
+    } catch (error) {
+      console.error('Error toggling service group:', error)
+      toast.error('Failed to update service group')
+    }
+  }
+
   useEffect(() => {
     fetchServices()
+    fetchGroups()
     // Auto-refresh every 10 seconds
     const interval = setInterval(fetchServices, 10000)
     return () => clearInterval(interval)
   }, [activeWorkspace]) // Refresh when workspace changes
 
+  // Fetch logs based on active tab
   useEffect(() => {
-    if (selectedService) {
-      fetchLogs(selectedService)
-      const interval = setInterval(() => fetchLogs(selectedService), 5000)
+    if (!showCentralLogs) return
+
+    if (activeLogTab === 'all') {
+      fetchAllLogs()
+      const interval = setInterval(fetchAllLogs, 3000) // Poll every 3 seconds
+      return () => clearInterval(interval)
+    } else {
+      // Fetch logs for specific service
+      fetchSingleServiceLogs(activeLogTab)
+      const interval = setInterval(() => fetchSingleServiceLogs(activeLogTab), 3000)
       return () => clearInterval(interval)
     }
-  }, [selectedService])
+  }, [showCentralLogs, activeLogTab, services]) // Re-fetch when tab or services change
 
   const handleAddService = async () => {
     try {
@@ -259,6 +376,67 @@ export default function Services() {
     }
   }
 
+  const handleOpenTerminal = async (id: string) => {
+    try {
+      const service = services.find(s => s.id === id)
+      await axios.post(`/api/services/${id}/terminal`)
+      toast.success(`Opened "${service?.name || 'Unknown'}" in terminal`)
+    } catch (error: any) {
+      console.error('Error opening terminal:', error)
+      toast.error(error.response?.data?.error || 'Failed to open terminal')
+    }
+  }
+
+  const handleStopAll = async () => {
+    setConfirmStopAll(false)
+
+    // Get filtered and running services
+    const filtered = services.filter(service => {
+      // Filter by group
+      if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) {
+        return false
+      }
+      // Filter by search term
+      if (searchTerm.trim()) {
+        const search = searchTerm.toLowerCase()
+        return (
+          service.name.toLowerCase().includes(search) ||
+          service.repoPath.toLowerCase().includes(search) ||
+          service.command.toLowerCase().includes(search)
+        )
+      }
+      return true
+    })
+
+    const runningServices = filtered.filter(s => s.status === 'running')
+
+    if (runningServices.length === 0) {
+      toast.error('No running services to stop')
+      return
+    }
+
+    const groupLabel = selectedGroup === 'all'
+      ? 'all services'
+      : `group "${selectedGroup}"`
+
+    toast.loading(`Stopping ${runningServices.length} services in ${groupLabel}...`)
+
+    try {
+      const stopPromises = runningServices.map(service =>
+        axios.post(`/api/services/${service.id}/stop`)
+      )
+
+      await Promise.all(stopPromises)
+      fetchServices()
+      toast.dismiss()
+      toast.success(`Successfully stopped ${runningServices.length} services`)
+    } catch (error) {
+      console.error('Error stopping services:', error)
+      toast.dismiss()
+      toast.error('Failed to stop some services')
+    }
+  }
+
   const handleDeleteService = (id: string) => {
     const service = services.find(s => s.id === id)
     setConfirmDialog({
@@ -274,9 +452,6 @@ export default function Services() {
     try {
       await axios.delete(`/api/services/${confirmDialog.serviceId}`)
       fetchServices()
-      if (selectedService === confirmDialog.serviceId) {
-        setSelectedService(null)
-      }
       toast.success(`Service "${confirmDialog.serviceName}" deleted`)
     } catch (error) {
       console.error('Error deleting service:', error)
@@ -284,8 +459,14 @@ export default function Services() {
     }
   }
 
-  // Filter services based on search term
+  // Filter services based on search term and group
   const filteredServices = services.filter(service => {
+    // Filter by group first
+    if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) {
+      return false
+    }
+
+    // Then filter by search term
     if (!searchTerm.trim()) return true
 
     const search = searchTerm.toLowerCase()
@@ -330,6 +511,44 @@ export default function Services() {
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             Refresh
+          </button>
+          <button
+            onClick={() => {
+              const filtered = services.filter(service => {
+                if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) {
+                  return false
+                }
+                if (searchTerm.trim()) {
+                  const search = searchTerm.toLowerCase()
+                  return (
+                    service.name.toLowerCase().includes(search) ||
+                    service.repoPath.toLowerCase().includes(search) ||
+                    service.command.toLowerCase().includes(search)
+                  )
+                }
+                return true
+              })
+              const runningCount = filtered.filter(s => s.status === 'running').length
+              if (runningCount === 0) {
+                toast.error('No running services to stop')
+              } else {
+                setConfirmStopAll(true)
+              }
+            }}
+            disabled={!activeWorkspace}
+            className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="service-stop-all-button"
+          >
+            <Square size={18} />
+            Stop All
+          </button>
+          <button
+            onClick={() => setShowGroupsModal(true)}
+            disabled={!activeWorkspace}
+            className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Tags size={18} />
+            Manage Groups
           </button>
           <button
             onClick={openImportModal}
@@ -551,9 +770,51 @@ export default function Services() {
         </div>
       )}
 
-      {/* Search Bar */}
+      {/* Group Filter Tabs & Search Bar */}
       {services.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 space-y-4">
+          {/* Group Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <button
+              onClick={() => setSelectedGroup('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedGroup === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Services ({services.length})
+            </button>
+            {groups.map(group => {
+              const count = services.filter(s => s.tags?.includes(group.name)).length
+              if (count === 0) return null // Don't show groups with no services
+
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => setSelectedGroup(group.name)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
+                    selectedGroup === group.name
+                      ? 'text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  style={
+                    selectedGroup === group.name
+                      ? { backgroundColor: group.color || '#3B82F6' }
+                      : {}
+                  }
+                >
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: group.color || '#3B82F6' }}
+                  />
+                  {group.name} ({count})
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
@@ -566,7 +827,7 @@ export default function Services() {
             />
           </div>
           {searchTerm && (
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600">
               Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{searchTerm}"
             </p>
           )}
@@ -611,15 +872,11 @@ export default function Services() {
           {filteredServices.map((service) => {
             const isRunning = service.status === 'running'
             const isError = service.status === 'error'
-            const isSelected = selectedService === service.id
 
             return (
               <div
                 key={service.id}
-                onClick={() => setSelectedService(service.id)}
-                className={`bg-white border rounded-lg p-4 cursor-pointer transition-all ${
-                  isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:shadow-sm'
-                }`}
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all"
                 data-testid={`service-item-${service.id}`}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -637,6 +894,36 @@ export default function Services() {
                       >
                         {isRunning ? 'Running' : isError ? 'Error' : 'Stopped'}
                       </span>
+                      {/* Health Status Badge */}
+                      {isRunning && service.healthStatus && (
+                        <span
+                          className={`text-xs ${
+                            service.healthStatus === 'healthy'
+                              ? '🟢'
+                              : service.healthStatus === 'unhealthy'
+                              ? '🔴'
+                              : '🟡'
+                          }`}
+                          title={`Health: ${service.healthStatus}`}
+                        >
+                          {service.healthStatus === 'healthy' ? '🟢' : service.healthStatus === 'unhealthy' ? '🔴' : '🟡'}
+                        </span>
+                      )}
+                      {/* Tags */}
+                      {service.tags && service.tags.length > 0 && (
+                        <div className="flex gap-1">
+                          {service.tags.slice(0, 2).map((tag, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-xs rounded">
+                              {tag}
+                            </span>
+                          ))}
+                          {service.tags.length > 2 && (
+                            <span className="px-1.5 py-0.5 bg-gray-50 text-gray-600 text-xs rounded">
+                              +{service.tags.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600 font-mono">{service.command}</p>
                   </div>
@@ -687,6 +974,28 @@ export default function Services() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
+                      handleOpenTerminal(service.id)
+                    }}
+                    className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-sm hover:bg-blue-100 flex items-center gap-2"
+                    title="Open in terminal"
+                    data-testid={`service-terminal-button-${service.id}`}
+                  >
+                    <Terminal size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedServiceForGroups(service)
+                      setShowAssignGroupModal(true)
+                    }}
+                    className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded text-sm hover:bg-purple-100 flex items-center gap-2"
+                    title="Assign to groups"
+                  >
+                    <Tags size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
                       handleDeleteService(service.id)
                     }}
                     className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 flex items-center gap-2"
@@ -700,73 +1009,271 @@ export default function Services() {
           })}
         </div>
 
-        {/* Logs Viewer */}
-        <div className="bg-gray-900 rounded-lg p-4 overflow-hidden flex flex-col" data-testid="service-logs-viewer">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-semibold">Service Logs</h3>
-            {selectedService && (
+        {/* Tabbed Logs Viewer */}
+        <div className="bg-gray-900 rounded-lg overflow-hidden flex flex-col" data-testid="service-logs-viewer">
+          {/* Header with title and controls */}
+          <div className="flex items-center justify-between p-4 pb-0">
+            <div className="flex items-center gap-3">
+              <h3 className="text-white font-semibold">Service Logs</h3>
+              <span className="text-gray-400 text-xs">
+                ({services.filter(s => s.status === 'running').length} services running)
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => fetchLogs(selectedService)}
+                onClick={() => setShowCentralLogs(!showCentralLogs)}
+                className={`px-3 py-1 rounded text-xs ${
+                  showCentralLogs
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-700 text-gray-300'
+                }`}
+              >
+                {showCentralLogs ? 'Live' : 'Paused'}
+              </button>
+              <button
+                onClick={() => activeLogTab === 'all' ? fetchAllLogs() : fetchSingleServiceLogs(activeLogTab)}
                 className="text-gray-400 hover:text-white"
                 data-testid="service-logs-refresh-button"
               >
                 <RefreshCw size={16} />
               </button>
-            )}
+            </div>
           </div>
 
-          {!selectedService ? (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              Select a service to view logs
-            </div>
-          ) : (
-            <>
-              {/* Service Status Info */}
-              {(() => {
-                const service = services.find(s => s.id === selectedService)
-                if (service && (service.status === 'stopped' || service.status === 'error')) {
-                  return (
-                    <div className={`mb-3 p-2 rounded text-xs ${
-                      service.status === 'error' ? 'bg-red-900/50 text-red-200' : 'bg-gray-800 text-gray-300'
-                    }`}>
-                      <div className="flex items-center gap-2">
-                        <AlertCircle size={14} />
-                        <span className="font-semibold">
-                          Service {service.status === 'error' ? 'crashed' : 'stopped'}
-                        </span>
-                      </div>
-                      {service.exitCode !== undefined && (
-                        <div className="mt-1">Exit code: {service.exitCode}</div>
-                      )}
-                      {service.stoppedAt && (
-                        <div className="mt-1">
-                          Stopped at: {new Date(service.stoppedAt).toLocaleString()}
-                        </div>
-                      )}
-                      <div className="mt-2 text-gray-400">
-                        Logs from last run are preserved below
-                      </div>
-                    </div>
-                  )
-                }
-                return null
-              })()}
+          {/* Tabs */}
+          <div className="flex items-center gap-1 px-4 pt-3 pb-2 border-b border-gray-700 overflow-x-auto">
+            <button
+              onClick={() => setActiveLogTab('all')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors whitespace-nowrap ${
+                activeLogTab === 'all'
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              All Services
+            </button>
+            {services.filter(s => s.status === 'running').map(service => (
+              <button
+                key={service.id}
+                onClick={() => setActiveLogTab(service.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors whitespace-nowrap ${
+                  activeLogTab === service.id
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                {service.name}
+              </button>
+            ))}
+          </div>
 
-              <div className="flex-1 overflow-auto font-mono text-xs text-green-400 space-y-1" data-testid="service-logs-content">
-                {logs.length === 0 ? (
-                  <p className="text-gray-500">No logs available</p>
+          {/* Log Content */}
+          <div className="p-4 flex-1 overflow-hidden flex flex-col">
+            {services.filter(s => s.status === 'running').length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                No services are currently running
+              </div>
+            ) : (
+              <div className="flex-1 overflow-auto font-mono text-xs space-y-1" data-testid="service-logs-content">
+                {activeLogTab === 'all' ? (
+                  // Show all services logs with prefix
+                  allLogs.length === 0 ? (
+                    <p className="text-gray-500">Waiting for logs...</p>
+                  ) : (
+                    allLogs.map((logEntry, i) => (
+                      <div key={i} className="whitespace-pre-wrap break-all">
+                        <span className="text-blue-400 font-semibold">[{logEntry.serviceName}]</span>{' '}
+                        <span className="text-green-400">{logEntry.log}</span>
+                      </div>
+                    ))
+                  )
                 ) : (
-                  logs.map((log, i) => (
-                    <div key={i} className="whitespace-pre-wrap break-all">
-                      {log}
-                    </div>
-                  ))
+                  // Show single service logs without prefix
+                  singleServiceLogs.length === 0 ? (
+                    <p className="text-gray-500">No logs available</p>
+                  ) : (
+                    singleServiceLogs.map((log, i) => (
+                      <div key={i} className="whitespace-pre-wrap break-all text-green-400">
+                        {log}
+                      </div>
+                    ))
+                  )
                 )}
               </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Manage Groups Modal */}
+      {showGroupsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Manage Groups</h2>
+              <button
+                onClick={() => setShowGroupsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Create New Group */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold mb-3">Create New Group</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Group Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newGroup.name}
+                    onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                    placeholder="e.g., Backend Services"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    value={newGroup.description}
+                    onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                    placeholder="Optional description"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color
+                  </label>
+                  <input
+                    type="color"
+                    value={newGroup.color}
+                    onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
+                    className="h-10 w-20 rounded cursor-pointer"
+                  />
+                </div>
+                <button
+                  onClick={handleCreateGroup}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Create Group
+                </button>
+              </div>
+            </div>
+
+            {/* Existing Groups */}
+            <div>
+              <h3 className="font-semibold mb-3">Existing Groups ({groups.length})</h3>
+              {groups.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No groups created yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {groups.map(group => (
+                    <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
+                        />
+                        <div>
+                          <p className="font-medium">{group.name}</p>
+                          {group.description && (
+                            <p className="text-sm text-gray-500">{group.description}</p>
+                          )}
+                          <p className="text-xs text-gray-400">
+                            {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteGroup(group.id, group.name)}
+                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Groups Modal */}
+      {showAssignGroupModal && selectedServiceForGroups && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Assign to Groups</h2>
+              <button
+                onClick={() => {
+                  setShowAssignGroupModal(false)
+                  setSelectedServiceForGroups(null)
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              Service: <span className="font-semibold">{selectedServiceForGroups.name}</span>
+            </p>
+
+            {groups.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-3">No groups available</p>
+                <button
+                  onClick={() => {
+                    setShowAssignGroupModal(false)
+                    setShowGroupsModal(true)
+                  }}
+                  className="text-purple-600 hover:underline"
+                >
+                  Create a group first
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {groups.map(group => {
+                  const isInGroup = group.serviceIds.includes(selectedServiceForGroups.id)
+                  return (
+                    <button
+                      key={group.id}
+                      onClick={() => handleToggleServiceGroup(group.id, selectedServiceForGroups.id, isInGroup)}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors ${
+                        isInGroup
+                          ? 'border-purple-600 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
+                        />
+                        <span className="font-medium">{group.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isInGroup && (
+                          <CheckSquare size={20} className="text-purple-600" />
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
@@ -776,6 +1283,36 @@ export default function Services() {
         title="Delete Service"
         message={`Are you sure you want to delete "${confirmDialog.serviceName}"? This action cannot be undone.`}
         confirmText="Delete"
+        variant="danger"
+      />
+
+      {/* Confirm Stop All Dialog */}
+      <ConfirmDialog
+        isOpen={confirmStopAll}
+        onClose={() => setConfirmStopAll(false)}
+        onConfirm={handleStopAll}
+        title="Stop All Services"
+        message={`Are you sure you want to stop all running services ${
+          selectedGroup === 'all'
+            ? 'in all groups'
+            : `in group "${selectedGroup}"`
+        }? This will stop ${
+          services
+            .filter(service => {
+              if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) return false
+              if (searchTerm.trim()) {
+                const search = searchTerm.toLowerCase()
+                return (
+                  service.name.toLowerCase().includes(search) ||
+                  service.repoPath.toLowerCase().includes(search) ||
+                  service.command.toLowerCase().includes(search)
+                )
+              }
+              return true
+            })
+            .filter(s => s.status === 'running').length
+        } service(s).`}
+        confirmText="Stop All"
         variant="danger"
       />
     </div>

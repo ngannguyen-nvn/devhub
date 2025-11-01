@@ -1,8 +1,18 @@
-import { LayoutDashboard, Server, Container, Lock, FileText, Save } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Server,
+  Container,
+  Lock,
+  FileText,
+  Save,
+  Database
+} from 'lucide-react'
+
+type ViewType = 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki' | 'database'
 
 interface SidebarProps {
-  activeView: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki'
-  onViewChange: (view: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki') => void
+  activeView: ViewType
+  onViewChange: (view: ViewType) => void
 }
 
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
@@ -13,6 +23,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'docker' as const, label: 'Docker', icon: Container },
     { id: 'env' as const, label: 'Environment', icon: Lock },
     { id: 'wiki' as const, label: 'Wiki', icon: FileText },
+    { id: 'database' as const, label: 'Database', icon: Database },
   ]
 
   return (
@@ -22,7 +33,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         <p className="text-gray-400 text-sm mt-1">Mission Control</p>
       </div>
 
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeView === item.id
@@ -41,14 +52,15 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
               `}
             >
               <Icon size={20} />
-              <span>{item.label}</span>
+              <span className="flex-1 text-left">{item.label}</span>
             </button>
           )
         })}
       </nav>
 
       <div className="p-4 border-t border-gray-800">
-        <p className="text-gray-500 text-xs">DevHub v0.1.0-alpha</p>
+        <p className="text-gray-500 text-xs">DevHub v1.0</p>
+        <p className="text-gray-500 text-xs mt-1">Streamlined</p>
       </div>
     </div>
   )
