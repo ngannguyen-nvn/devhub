@@ -59,6 +59,7 @@ export default function Database() {
   const [selectedEnvVar, setSelectedEnvVar] = useState<string>('')
   const [serviceDbInfo, setServiceDbInfo] = useState<ServiceDatabaseInfo | null>(null)
   const [testingConnection, setTestingConnection] = useState(false)
+  const [loadingEnvVars, setLoadingEnvVars] = useState(false)
 
   useEffect(() => {
     fetchStats()
@@ -210,6 +211,7 @@ export default function Database() {
   const fetchEnvVars = async () => {
     if (!activeWorkspace) return
 
+    setLoadingEnvVars(true)
     try {
       // Get all env profiles for active workspace
       const profilesRes = await axios.get('/api/env/profiles')
@@ -240,6 +242,8 @@ export default function Database() {
       setEnvVars(dbVars)
     } catch (error) {
       console.error('Error fetching env vars:', error)
+    } finally {
+      setLoadingEnvVars(false)
     }
   }
 
@@ -550,6 +554,11 @@ export default function Database() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Database Connection String
+                  {loadingEnvVars && (
+                    <span className="ml-2 text-purple-600 text-xs">
+                      <Loader size={14} className="inline animate-spin" /> Loading...
+                    </span>
+                  )}
                 </label>
                 <select
                   value={selectedEnvVar}
@@ -557,16 +566,19 @@ export default function Database() {
                     setSelectedEnvVar(e.target.value)
                     setServiceDbInfo(null)
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={loadingEnvVars}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="">-- Select an environment variable --</option>
+                  <option value="">
+                    {loadingEnvVars ? 'Loading environment variables...' : '-- Select an environment variable --'}
+                  </option>
                   {envVars.map(v => (
                     <option key={v.id} value={v.id}>
                       {v.key} ({v.profileName})
                     </option>
                   ))}
                 </select>
-                {envVars.length === 0 && (
+                {!loadingEnvVars && envVars.length === 0 && (
                   <p className="text-sm text-gray-500 mt-2">
                     No database-related environment variables found. Add them in the Environment tab.
                   </p>
