@@ -21,9 +21,9 @@ interface EnvVariable {
   id: string
   key: string
   value: string
-  profile_id: string
+  profileId: string
   profileName: string
-  is_secret: number
+  isSecret: number | boolean
 }
 
 interface ServiceDatabaseInfo {
