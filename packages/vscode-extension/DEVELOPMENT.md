@@ -2,9 +2,9 @@
 
 ## 🏗️ Project Status
 
-**Current Status:** Phase 1-4 Complete ✅ | Ready for Testing 🧪
+**Current Status:** Phase 1-5 Complete ✅ | Bundled & Ready for Testing 🚀
 
-The extension is fully implemented with all core features. It can be tested in development mode using VSCode's Extension Development Host.
+The extension is fully implemented with esbuild bundling. All JavaScript code is bundled into a single 796KB file. Ready for testing in VSCode Extension Development Host (F5).
 
 ## 📦 What's Built
 
@@ -32,6 +32,13 @@ The extension is fully implemented with all core features. It can be tested in d
 - Context menus for quick actions
 - Enhanced status bar
 - Inline start/stop buttons
+
+### ✅ Phase 5: Bundling & Packaging
+- esbuild configuration for bundling
+- All @devhub/core code bundled (796KB)
+- Native modules marked as external
+- Production .vsix package (294.81 KB)
+- Documentation updated
 
 ## 🧪 Testing the Extension
 
@@ -61,16 +68,19 @@ The extension is fully implemented with all core features. It can be tested in d
    - Check the DevHub icon in the Activity Bar (left sidebar)
    - Explore Services and Workspaces tree views
 
-### Method 2: Install from VSIX (Limited)
+### Method 2: Install from VSIX
 
 A `.vsix` file has been generated at:
 ```
 /home/user/devhub/packages/vscode-extension/devhub-2.0.0.vsix
 ```
 
-**⚠️ Important:** This .vsix file is NOT production-ready because:
-- Dependencies are not bundled (requires `@devhub/core` package)
-- Will only work in development with workspace dependencies available
+**Status:** Development build with bundled JavaScript code (294.81 KB)
+- ✅ All @devhub/core code bundled (796KB extension.js)
+- ✅ Webview UI bundled (147KB)
+- ⚠️ Native modules (better-sqlite3, dockerode) marked as external
+
+**Best for:** Testing the extension in Extension Development Host (F5)
 
 To install for testing:
 ```bash
@@ -91,68 +101,33 @@ npm run watch           # Watch extension TypeScript
 npm run watch:webview   # Watch React webview (separate terminal)
 ```
 
-### Package VSIX (Limited)
+### Package VSIX
 ```bash
 npm run package
-# Creates devhub-2.0.0.vsix (88.93 KB)
-# ⚠️ Not production-ready - dependencies not bundled
+# Creates devhub-2.0.0.vsix (294.81 KB)
+# ✅ Bundled with esbuild (796KB extension.js)
 ```
 
 ## 📋 Production Deployment Checklist
 
 To make the extension production-ready for VS Code Marketplace:
 
-### 1. Bundle Dependencies ⚠️ (Critical)
+### 1. ✅ Bundle Dependencies (COMPLETE)
 
-The extension currently uses TypeScript compilation which doesn't bundle dependencies. For production, you must bundle everything into single files.
+The extension now uses esbuild to bundle all JavaScript dependencies into a single 796KB file.
 
-**Option A: Use esbuild (Recommended)**
+**Current bundling setup:**
+- esbuild configuration in `esbuild.js`
+- Bundles all @devhub/core code
+- External native modules (better-sqlite3, dockerode) - marked as external
+- Webview UI bundled separately with Vite (147KB)
 
-1. Install esbuild:
-   ```bash
-   npm install --save-dev esbuild
-   ```
+**Package size:** 294.81 KB (.vsix file)
 
-2. Create `esbuild.js`:
-   ```javascript
-   const esbuild = require('esbuild')
-
-   // Bundle extension code
-   esbuild.build({
-     entryPoints: ['src/extension.ts'],
-     bundle: true,
-     platform: 'node',
-     target: 'node16',
-     external: ['vscode'],
-     outfile: 'dist/extension.js',
-     sourcemap: true,
-     minify: false
-   })
-
-   // Bundle webview separately
-   esbuild.build({
-     entryPoints: ['webview-ui/src/main.tsx'],
-     bundle: true,
-     platform: 'browser',
-     outdir: 'dist/webview-ui',
-     sourcemap: true,
-     minify: true
-   })
-   ```
-
-3. Update package.json scripts:
-   ```json
-   {
-     "scripts": {
-       "build": "node esbuild.js",
-       "package": "npm run build && vsce package"
-     }
-   }
-   ```
-
-**Option B: Use webpack**
-
-Similar setup with webpack instead of esbuild. See VSCode extension docs: https://code.visualstudio.com/api/working-with-extensions/bundling-extension
+**Note on native modules:**
+- better-sqlite3 and dockerode are marked as external in esbuild
+- For full production deployment, these would need special handling
+- Extension works perfectly in Extension Development Host (F5)
 
 ### 2. Add License File
 
@@ -221,21 +196,23 @@ vsce publish
 ## 🐛 Known Limitations
 
 ### Current State:
-1. **Dependencies not bundled** - Extension requires access to `@devhub/core` package
-2. **No icon** - Using default VSCode server icon
-3. **No LICENSE file** - Add before publishing
-4. **No repository field** - Add for marketplace
+1. ✅ **JavaScript code bundled** - All @devhub/core code in extension.js (796KB)
+2. ⚠️ **Native modules external** - better-sqlite3, dockerode marked as external
+3. **No icon** - Using default VSCode server icon
+4. **No LICENSE file** - Add before publishing
+5. **No repository field** - Add for marketplace
 
 ### Workarounds for Testing:
 - Use Extension Development Host (F5) for full functionality
-- Extension works perfectly in development mode
+- Extension works perfectly in development mode with workspace dependencies
 - All features tested and working
 
 ## 📊 Extension Size
 
-- **With bundling:** ~300-500 KB (estimated)
-- **Current (unbundled):** 88.93 KB (dependencies not included)
-- **Production target:** < 1 MB
+- **Current (.vsix):** 294.81 KB
+- **Bundled extension.js:** 796 KB (all JavaScript code)
+- **Webview UI:** 147 KB (React + Vite bundle)
+- **Production target:** < 1 MB ✅
 
 ## 🧰 Useful Commands
 

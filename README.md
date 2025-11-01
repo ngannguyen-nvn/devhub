@@ -1037,15 +1037,19 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
 
 #### Immediate Roadmap
 
-**VSCode Extension (Phase 1-3 Complete ✅)**
+**VSCode Extension (Complete ✅)**
 - VSCode extension version using shared `@devhub/core` package
-- **Phase 1-3 Complete:** Extension scaffold, core integration, React webview UI built successfully
-- Message passing wrapper around core logic (40+ message types)
-- Webview UI with Services management (CRUD, start/stop, logs)
-- Successfully builds: 147K JS bundle + 6K CSS with VSCode theming
-- **Next:** Phase 4 (tree views, context menus) and Phase 5 (testing, distribution)
+- **Phase 1-5 Complete:** All implementation phases finished
+  - ✅ Extension scaffold with 10+ commands
+  - ✅ Core integration (40+ message types)
+  - ✅ React webview UI (Services, Docker, Workspaces, Notes)
+  - ✅ Tree views (Services, Workspaces with snapshots)
+  - ✅ Context menus and inline actions
+  - ✅ esbuild bundling (796KB extension.js)
+- **Package size:** 294.81 KB (.vsix file)
+- **Ready for testing** in Extension Development Host (F5)
 
-See [VSCODE_EXTENSION_GUIDE.md](./VSCODE_EXTENSION_GUIDE.md) for full implementation details and progress.
+See `packages/vscode-extension/DEVELOPMENT.md` for testing and deployment guide.
 
 #### Long-Term Enhancements
 

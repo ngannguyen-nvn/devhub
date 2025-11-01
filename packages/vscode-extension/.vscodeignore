@@ -1,7 +1,6 @@
 **/.git
 **/.gitignore
 **/.eslintrc.json
-**/node_modules
 .vscode-test
 *.vsix
 *.log
@@ -11,7 +10,9 @@ webview-ui/node_modules/
 tsconfig.json
 tsconfig.node.json
 vite.config.ts
+esbuild.js
 ../../**
+node_modules/@devhub/**
 !dist/**
 !webview-ui/dist/**
 !webview-ui/index.html

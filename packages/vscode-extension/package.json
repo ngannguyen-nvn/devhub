@@ -162,21 +162,23 @@
   "scripts": {
     "vscode:prepublish": "npm run build",
     "build": "npm run build:webview && npm run build:extension",
-    "build:extension": "tsc -p ./",
+    "build:extension": "node esbuild.js",
     "build:webview": "cd webview-ui && npm run build",
-    "watch": "tsc -watch -p ./",
+    "watch": "node esbuild.js --watch",
     "watch:webview": "cd webview-ui && npm run dev",
-    "package": "npm run build && vsce package",
+    "package": "npm run build -- --production && vsce package",
+    "compile": "tsc -p ./",
     "lint": "eslint src --ext ts"
   },
   "dependencies": {
-    "@devhub/core": "*",
-    "@devhub/shared": "*"
+    "better-sqlite3": "^12.4.1",
+    "dockerode": "^4.0.9"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.25.11",
     "typescript": "^5.3.3"
   }
 }
