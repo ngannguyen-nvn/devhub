@@ -654,12 +654,12 @@ Ready to start building? Follow this sequence:
 ---
 
 **Last Updated:** 2025-11-01
-**Status:** Guide Complete ✅ | Core Architecture Ready ✅ | **Phase 1-3 Complete ✅** | Phase 4-5 Pending 🚧
+**Status:** Guide Complete ✅ | Core Architecture Ready ✅ | **Phase 1-4 Complete ✅** | Ready for Testing 🧪
 
 ## 📊 Implementation Progress
 
 - ✅ **Phase 1: Extension Scaffold** (Complete)
-  - Extension manifest with 5 commands
+  - Extension manifest with 10+ commands
   - TypeScript configuration
   - Entry point (extension.ts)
   - Build scripts
@@ -677,14 +677,17 @@ Ready to start building? Follow this sequence:
   - Message passing API wrapper (vscodeApi.ts)
   - Successfully builds: 147K JS bundle + 6K CSS
 
-- 🚧 **Phase 4: VSCode Features** (Pending)
-  - Tree view for services
-  - Context menus
-  - Status bar enhancements
+- ✅ **Phase 4: VSCode Features** (Complete)
+  - Services tree view with status indicators (running/stopped)
+  - Workspaces tree view with snapshots hierarchy
+  - Context menus for quick actions (start/stop, activate, restore)
+  - Enhanced status bar showing running service count
+  - Inline action buttons in tree views
 
-- 🚧 **Phase 5: Testing & Distribution** (Pending)
-  - End-to-end testing
-  - Package .vsix file
-  - Marketplace preparation
+- ⚠️ **Phase 5: Testing & Distribution** (Partially Complete)
+  - ✅ .vsix file packaged (88.93 KB)
+  - ✅ Extension structure complete
+  - ⚠️ Bundling required for production (dependencies not inlined)
+  - 📝 See `packages/vscode-extension/DEVELOPMENT.md` for testing guide
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
