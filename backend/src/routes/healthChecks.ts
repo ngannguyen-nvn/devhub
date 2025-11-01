@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { healthCheckManager } from '../services/healthCheckManager'
+import { healthCheckManager } from '@devhub/core'
 
 const router = express.Router()
 

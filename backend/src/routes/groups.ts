@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { groupManager } from '../services/groupManager'
+import { groupManager } from '@devhub/core'
 
 const router = express.Router()
 

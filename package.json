@@ -4,6 +4,7 @@
   "private": true,
   "description": "Developer Mission Control - Manage your microservices ecosystem",
   "workspaces": [
+    "packages/core",
     "frontend",
     "backend",
     "shared"

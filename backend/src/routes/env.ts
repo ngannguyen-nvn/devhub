@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { EnvManager } from '../services/envManager'
+import { EnvManager } from '@devhub/core'
 
 const router = Router()
 const envManager = new EnvManager()

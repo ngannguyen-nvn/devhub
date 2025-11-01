@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { NotesManager } from '../services/notesManager'
+import { NotesManager } from '@devhub/core'
 
 const router = Router()
 const notesManager = new NotesManager()
@@ -17,7 +17,7 @@ async function getWorkspaceId(req: Request): Promise<string> {
   }
 
   // Otherwise, use active workspace
-  const db = require('../db').default
+  const db = require('@devhub/core').default
   const stmt = db.prepare('SELECT id FROM workspaces WHERE active = 1 LIMIT 1')
   const row = stmt.get() as { id: string } | undefined
 

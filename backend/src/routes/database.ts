@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import db from '../db'
+import db from '@devhub/core'
 import fs from 'fs'
 import path from 'path'
 import multer from 'multer'

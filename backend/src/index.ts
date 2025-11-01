@@ -11,7 +11,8 @@ import healthCheckRoutes from './routes/healthChecks'
 import logRoutes from './routes/logs'
 import groupRoutes from './routes/groups'
 import databaseRoutes from './routes/database'
-import './db' // Initialize database
+// Initialize database from core package
+import '@devhub/core'
 
 dotenv.config()
 

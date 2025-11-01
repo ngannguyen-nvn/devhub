@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { RepoScanner } from '../services/repoScanner'
+import { RepoScanner } from '@devhub/core'
 import * as fs from 'fs'
 import * as path from 'path'
 

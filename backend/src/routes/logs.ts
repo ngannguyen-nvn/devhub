@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { logManager } from '../services/logManager'
+import { logManager } from '@devhub/core'
 
 const router = express.Router()
 

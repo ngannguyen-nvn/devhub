@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { serviceManager } from '../services/serviceManager'
+import { serviceManager } from '@devhub/core'
 import { spawn } from 'child_process'
 import os from 'os'
 
