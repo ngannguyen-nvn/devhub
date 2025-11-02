@@ -39,49 +39,80 @@ const buildDir = path.join(betterSqliteDest, 'build', 'Release');
 fs.mkdirSync(buildDir, { recursive: true });
 
 // Download the correct prebuild for VSCode's Electron version
-// VSCode requires NODE_MODULE_VERSION 127 (Electron 28.x)
-// Closest available is electron-v128 (Electron 28.x)
-console.log('Downloading better-sqlite3 prebuild for Electron v128...');
+// This tries multiple Electron versions to find a compatible one
 const version = require(path.join(rootNodeModules, 'better-sqlite3', 'package.json')).version;
 const platform = process.platform; // linux, darwin, win32
 const arch = process.arch; // x64, arm64
-const electronVersion = 'electron-v128'; // Electron 28.x (NODE_MODULE_VERSION 127)
 
-// Construct prebuild URL
-const prebuildName = `better-sqlite3-v${version}-${electronVersion}-${platform}-${arch}.tar.gz`;
-const downloadUrl = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${version}/${prebuildName}`;
+// List of Electron versions to try
+// Ordered by compatibility: try closest to common VSCode versions first, then fallback to newer/older
+// Based on available prebuilds from better-sqlite3 releases
+const electronVersions = [
+  'electron-v128', // Electron 28.x (NODE_MODULE_VERSION 127) - VSCode 1.85-1.86
+  'electron-v130', // Electron 29.x - VSCode 1.87+
+  'electron-v132', // Electron 29.x
+  'electron-v125', // Electron 27.x
+  'electron-v123', // Electron 27.x - VSCode 1.83-1.84
+  'electron-v133', // Electron 30.x
+  'electron-v135', // Electron 31.x
+  'electron-v136', // Electron 32.x
+  'electron-v139', // Electron 33.x
+  'electron-v121', // Electron 26.x (older)
+];
 
-console.log(`Downloading from: ${downloadUrl}`);
+console.log('Trying to download compatible better-sqlite3 prebuild...');
+let downloadSuccess = false;
 
-try {
-  // Download and extract using curl and tar
-  const tmpFile = path.join('/tmp', prebuildName);
-  const tmpExtractDir = path.join('/tmp', `better-sqlite3-extract-${Date.now()}`);
-  fs.mkdirSync(tmpExtractDir, { recursive: true });
+// Try each Electron version until one works
+for (const electronVersion of electronVersions) {
+  const prebuildName = `better-sqlite3-v${version}-${electronVersion}-${platform}-${arch}.tar.gz`;
+  const downloadUrl = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${version}/${prebuildName}`;
 
-  execSync(`curl -L -o "${tmpFile}" "${downloadUrl}"`, { stdio: 'inherit' });
-  execSync(`tar -xzf "${tmpFile}" -C "${tmpExtractDir}"`, { stdio: 'inherit' });
+  console.log(`Trying ${electronVersion}...`);
 
-  // Find the .node file (might be in nested directories)
-  const nodeFiles = execSync(`find "${tmpExtractDir}" -name "*.node"`, { encoding: 'utf-8' }).trim().split('\n');
-  if (nodeFiles.length > 0 && nodeFiles[0]) {
-    fs.copyFileSync(nodeFiles[0], path.join(buildDir, 'better_sqlite3.node'));
-    console.log('✓ Downloaded and extracted prebuild');
-  } else {
-    throw new Error('No .node file found in prebuild archive');
+  try {
+    const tmpFile = path.join('/tmp', prebuildName);
+    const tmpExtractDir = path.join('/tmp', `better-sqlite3-extract-${Date.now()}`);
+    fs.mkdirSync(tmpExtractDir, { recursive: true });
+
+    // Download with silent mode and check status
+    execSync(`curl -f -sS -L -o "${tmpFile}" "${downloadUrl}"`, { stdio: 'pipe' });
+
+    // If download succeeded, extract
+    execSync(`tar -xzf "${tmpFile}" -C "${tmpExtractDir}"`, { stdio: 'pipe' });
+
+    // Find the .node file
+    const nodeFiles = execSync(`find "${tmpExtractDir}" -name "*.node"`, { encoding: 'utf-8' }).trim().split('\n');
+    if (nodeFiles.length > 0 && nodeFiles[0]) {
+      fs.copyFileSync(nodeFiles[0], path.join(buildDir, 'better_sqlite3.node'));
+      console.log(`✓ Successfully downloaded ${electronVersion} prebuild`);
+      downloadSuccess = true;
+
+      // Cleanup
+      fs.unlinkSync(tmpFile);
+      fs.rmSync(tmpExtractDir, { recursive: true, force: true });
+      break;
+    } else {
+      throw new Error('No .node file found');
+    }
+  } catch (error) {
+    // This version not available or failed, try next one
+    continue;
   }
+}
 
-  // Cleanup
-  fs.unlinkSync(tmpFile);
-  fs.rmSync(tmpExtractDir, { recursive: true, force: true });
-} catch (error) {
-  console.error(`Failed to download prebuild: ${error.message}`);
+if (!downloadSuccess) {
+  console.warn('⚠ Could not download any compatible prebuild');
   console.log('Falling back to local build (may not work in VSCode)...');
-  // Fallback: copy local build
-  fs.copyFileSync(
-    path.join(rootNodeModules, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
-    path.join(buildDir, 'better_sqlite3.node')
-  );
+  try {
+    fs.copyFileSync(
+      path.join(rootNodeModules, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+      path.join(buildDir, 'better_sqlite3.node')
+    );
+  } catch (error) {
+    console.error('❌ Failed to copy local build:', error.message);
+    throw new Error('No compatible better-sqlite3 binary available');
+  }
 }
 
 // Copy better-sqlite3 dependencies
