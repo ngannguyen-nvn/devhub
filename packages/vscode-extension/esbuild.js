@@ -39,7 +39,7 @@ async function main() {
       'cpu-features',
       'ssh2',
     ],
-    logLevel: 'silent',
+    logLevel: 'info',
     plugins: [
       esbuildProblemMatcherPlugin,
       {
