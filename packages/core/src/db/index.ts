@@ -2,7 +2,9 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import { MigrationRunner } from './migrationRunner'
 
-const dbPath = path.join(process.cwd(), 'devhub.db')
+// Allow database path to be configured via environment variable
+// Default to process.cwd() for backward compatibility
+const dbPath = process.env.DEVHUB_DB_PATH || path.join(process.cwd(), 'devhub.db')
 const db: Database.Database = new Database(dbPath)
 
 // Create initial tables (before migrations)

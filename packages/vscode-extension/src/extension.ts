@@ -7,10 +7,14 @@
  */
 
 import * as vscode from 'vscode'
-import { DevHubManager } from './extensionHost/devhubManager'
-import { DevHubPanel } from './webview/DevHubPanel'
-import { ServicesTreeProvider } from './views/ServicesTreeProvider'
-import { WorkspaceTreeProvider } from './views/WorkspaceTreeProvider'
+import * as path from 'path'
+import * as fs from 'fs'
+
+// Use type-only imports to avoid loading @devhub/core too early
+import type { DevHubManager } from './extensionHost/devhubManager'
+import type { DevHubPanel } from './webview/DevHubPanel'
+import type { ServicesTreeProvider } from './views/ServicesTreeProvider'
+import type { WorkspaceTreeProvider } from './views/WorkspaceTreeProvider'
 
 let devhubManager: DevHubManager | undefined
 let devhubPanel: DevHubPanel | undefined
@@ -25,6 +29,20 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log('DevHub extension is now active')
 
   try {
+    // Set database path for @devhub/core BEFORE any initialization
+    // This must happen before any @devhub/core code runs
+    const storagePath = context.globalStorageUri.fsPath
+    if (!fs.existsSync(storagePath)) {
+      fs.mkdirSync(storagePath, { recursive: true })
+    }
+    process.env.DEVHUB_DB_PATH = path.join(storagePath, 'devhub.db')
+    console.log(`DevHub database path: ${process.env.DEVHUB_DB_PATH}`)
+
+    // Dynamically import classes AFTER setting environment variable
+    // This ensures @devhub/core uses the correct database path
+    const { DevHubManager } = await import('./extensionHost/devhubManager')
+    const { DevHubPanel } = await import('./webview/DevHubPanel')
+
     // Initialize DevHub manager (wraps @devhub/core)
     devhubManager = new DevHubManager(context)
     await devhubManager.initialize()
@@ -33,7 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
     devhubPanel = new DevHubPanel(context, devhubManager)
 
     // Register tree views
-    registerTreeViews(context, devhubManager)
+    await registerTreeViews(context, devhubManager)
 
     // Register commands
     registerCommands(context, devhubPanel, devhubManager)
@@ -71,10 +89,14 @@ export function deactivate() {
 /**
  * Register tree views for sidebar
  */
-function registerTreeViews(
+async function registerTreeViews(
   context: vscode.ExtensionContext,
   manager: DevHubManager
 ) {
+  // Dynamically import tree providers
+  const { ServicesTreeProvider } = await import('./views/ServicesTreeProvider')
+  const { WorkspaceTreeProvider } = await import('./views/WorkspaceTreeProvider')
+
   // Services tree view
   servicesTreeProvider = new ServicesTreeProvider(manager)
   const servicesTreeView = vscode.window.createTreeView('devhubServices', {
