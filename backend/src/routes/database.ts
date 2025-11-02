@@ -558,6 +558,10 @@ async function backupDatabase(connectionString: string): Promise<any> {
     // PostgreSQL backup using pg_dump
     const url = new URL(connectionString)
     const dbName = url.pathname.substring(1)
+    const host = url.hostname
+    const port = url.port || '5432'
+    const user = url.username
+    const password = decodeURIComponent(url.password)
     const filePath = `/tmp/pg_backup_${timestamp}.sql`
 
     // Try native pg_dump first, fallback to Docker
@@ -565,10 +569,11 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasPgDump) {
-        await execAsync(`pg_dump "${connectionString}" > "${filePath}"`)
+        // Use PGPASSWORD environment variable to handle special characters
+        await execAsync(`PGPASSWORD='${password}' pg_dump -h ${host} -p ${port} -U ${user} -d ${dbName} > "${filePath}"`)
       } else {
-        // Fallback to Docker
-        await execAsync(`docker run --rm --network host postgres:alpine pg_dump "${connectionString}" > "${filePath}"`)
+        // Fallback to Docker with PGPASSWORD
+        await execAsync(`docker run --rm --network host -e PGPASSWORD='${password}' postgres:alpine pg_dump -h ${host} -p ${port} -U ${user} -d ${dbName} > "${filePath}"`)
       }
       return {
         success: true,
@@ -590,7 +595,7 @@ async function backupDatabase(connectionString: string): Promise<any> {
     const host = url.hostname
     const port = url.port || '3306'
     const user = url.username
-    const password = url.password
+    const password = decodeURIComponent(url.password)
     const filePath = `/tmp/mysql_backup_${timestamp}.sql`
 
     // Try native mysqldump first, fallback to Docker
@@ -598,10 +603,11 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasMysqlDump) {
-        await execAsync(`mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+        // Use MYSQL_PWD environment variable to handle special characters
+        await execAsync(`MYSQL_PWD='${password}' mysqldump -h ${host} -P ${port} -u ${user} ${dbName} > "${filePath}"`)
       } else {
-        // Fallback to Docker
-        await execAsync(`docker run --rm --network host mysql:latest mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+        // Fallback to Docker with MYSQL_PWD
+        await execAsync(`docker run --rm --network host -e MYSQL_PWD='${password}' mysql:latest mysqldump -h ${host} -P ${port} -u ${user} ${dbName} > "${filePath}"`)
       }
       return {
         success: true,
@@ -664,14 +670,22 @@ async function backupDatabase(connectionString: string): Promise<any> {
 async function restoreDatabase(connectionString: string, backupFilePath: string): Promise<any> {
   if (connectionString.startsWith('postgres://') || connectionString.startsWith('postgresql://')) {
     // PostgreSQL restore using psql
+    const url = new URL(connectionString)
+    const dbName = url.pathname.substring(1)
+    const host = url.hostname
+    const port = url.port || '5432'
+    const user = url.username
+    const password = decodeURIComponent(url.password)
+
     const hasPsql = await commandExists('psql')
 
     try {
       if (hasPsql) {
-        await execAsync(`psql "${connectionString}" < "${backupFilePath}"`)
+        // Use PGPASSWORD environment variable to handle special characters
+        await execAsync(`PGPASSWORD='${password}' psql -h ${host} -p ${port} -U ${user} -d ${dbName} < "${backupFilePath}"`)
       } else {
-        // Fallback to Docker (mount backup file)
-        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" postgres:alpine psql "${connectionString}" < "${backupFilePath}"`)
+        // Fallback to Docker (mount backup file with PGPASSWORD)
+        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" -e PGPASSWORD='${password}' postgres:alpine psql -h ${host} -p ${port} -U ${user} -d ${dbName} < "${backupFilePath}"`)
       }
       return {
         success: true,
@@ -691,16 +705,17 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     const host = url.hostname
     const port = url.port || '3306'
     const user = url.username
-    const password = url.password
+    const password = decodeURIComponent(url.password)
 
     const hasMysql = await commandExists('mysql')
 
     try {
       if (hasMysql) {
-        await execAsync(`mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+        // Use MYSQL_PWD environment variable to handle special characters
+        await execAsync(`MYSQL_PWD='${password}' mysql -h ${host} -P ${port} -u ${user} ${dbName} < "${backupFilePath}"`)
       } else {
-        // Fallback to Docker
-        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" mysql:latest mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+        // Fallback to Docker with MYSQL_PWD
+        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" -e MYSQL_PWD='${password}' mysql:latest mysql -h ${host} -P ${port} -u ${user} ${dbName} < "${backupFilePath}"`)
       }
       return {
         success: true,
