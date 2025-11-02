@@ -1,4 +1,5 @@
 const esbuild = require('esbuild')
+const path = require('path')
 
 const production = process.argv.includes('--production')
 const watch = process.argv.includes('--watch')
@@ -38,6 +39,10 @@ async function main() {
       'dockerode',
       'cpu-features',
       'ssh2',
+    ],
+    nodePaths: [
+      path.resolve(__dirname, '../../node_modules'),
+      path.resolve(__dirname, 'node_modules'),
     ],
     logLevel: 'info',
     plugins: [
