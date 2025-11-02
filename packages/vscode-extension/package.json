@@ -181,6 +181,7 @@
     "dockerode": "^4.0.9"
   },
   "devDependencies": {
+    "@devhub/core": "^2.0.0",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.22.0",

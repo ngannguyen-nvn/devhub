@@ -7,14 +7,24 @@
 src/
 webview-ui/src/
 webview-ui/node_modules/
+webview-ui/package-lock.json
+webview-ui/tsconfig.json
+webview-ui/vite.config.ts
 tsconfig.json
 tsconfig.node.json
 vite.config.ts
 esbuild.js
+DEVELOPMENT.md
+
+# Exclude parent directories and linked packages
 ../../**
-node_modules/@devhub/**
+../core/**
+node_modules/**
+
+# Include only necessary runtime files
+!node_modules/better-sqlite3/**
+!node_modules/dockerode/**
 !dist/**
 !webview-ui/dist/**
-!webview-ui/index.html
-!webview-ui/package.json
 !README.md
+!LICENSE.txt
