@@ -57,6 +57,16 @@ async function main() {
           }))
         },
       },
+      {
+        name: 'resolve-workspace-packages',
+        setup(build) {
+          // Resolve @devhub/core to the actual package in the workspace
+          build.onResolve({ filter: /@devhub\/core/ }, args => {
+            const corePath = path.resolve(__dirname, '../../packages/core/src/index.ts')
+            return { path: corePath }
+          })
+        },
+      },
     ],
   })
 
