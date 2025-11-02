@@ -39,13 +39,13 @@ const buildDir = path.join(betterSqliteDest, 'build', 'Release');
 fs.mkdirSync(buildDir, { recursive: true });
 
 // Download the correct prebuild for VSCode's Electron version
-// VSCode 1.85+ uses Electron 27.x which is electron-v123
-// See: https://github.com/electron/electron/blob/main/docs/tutorial/electron-timelines.md
-console.log('Downloading better-sqlite3 prebuild for Electron v123 (VSCode 1.85+)...');
+// VSCode requires NODE_MODULE_VERSION 127 (Electron 28.x)
+// Closest available is electron-v128 (Electron 28.x)
+console.log('Downloading better-sqlite3 prebuild for Electron v128...');
 const version = require(path.join(rootNodeModules, 'better-sqlite3', 'package.json')).version;
 const platform = process.platform; // linux, darwin, win32
 const arch = process.arch; // x64, arm64
-const electronVersion = 'electron-v123'; // VSCode 1.85+ (Electron 27.x)
+const electronVersion = 'electron-v128'; // Electron 28.x (NODE_MODULE_VERSION 127)
 
 // Construct prebuild URL
 const prebuildName = `better-sqlite3-v${version}-${electronVersion}-${platform}-${arch}.tar.gz`;
