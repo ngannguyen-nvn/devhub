@@ -29,6 +29,16 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log('DevHub extension is now active')
 
   try {
+    // Add dist/node_modules to module search path for native dependencies
+    const distNodeModules = path.join(context.extensionPath, 'dist', 'node_modules')
+    if (process.env.NODE_PATH) {
+      process.env.NODE_PATH = `${distNodeModules}${path.delimiter}${process.env.NODE_PATH}`
+    } else {
+      process.env.NODE_PATH = distNodeModules
+    }
+    require('module').Module._initPaths()
+    console.log(`Added to NODE_PATH: ${distNodeModules}`)
+
     // Set database path for @devhub/core BEFORE any initialization
     // This must happen before any @devhub/core code runs
     const storagePath = context.globalStorageUri.fsPath

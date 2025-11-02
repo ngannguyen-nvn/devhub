@@ -172,7 +172,8 @@
     "build:webview": "cd webview-ui && npm run build",
     "watch": "node esbuild.js --watch",
     "watch:webview": "cd webview-ui && npm run dev",
-    "package": "npm run build -- --production && vsce package",
+    "prepackage": "node scripts/prepare-package.js",
+    "package": "npm run build -- --production && npm run prepackage && vsce package",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts"
   },

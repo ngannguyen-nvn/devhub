@@ -19,11 +19,11 @@ DEVELOPMENT.md
 # Exclude parent directories and linked packages
 ../../**
 ../core/**
+
+# Exclude ALL node_modules (dependencies copied to dist/node_modules by prepare script)
 node_modules/**
 
-# Include only necessary runtime files
-!node_modules/better-sqlite3/**
-!node_modules/dockerode/**
+# Include dist (which contains bundled code + native modules) and docs
 !dist/**
 !webview-ui/dist/**
 !README.md
