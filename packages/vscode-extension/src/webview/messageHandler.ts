@@ -24,6 +24,7 @@ export class MessageHandler {
 
     try {
       const workspaceId = this.devhubManager.getActiveWorkspaceId()
+      console.log(`[MessageHandler] Handling message: ${type}, workspace: ${workspaceId}`)
 
       // Repository operations
       if (type === 'repos.scan') {
@@ -32,11 +33,15 @@ export class MessageHandler {
 
       // Service operations
       if (type === 'services.getAll') {
-        return this.devhubManager.getServiceManager().getAllServices(workspaceId)
+        const services = this.devhubManager.getServiceManager().getAllServices(workspaceId)
+        console.log(`[MessageHandler] services.getAll returned ${services.length} services`)
+        return services
       }
 
       if (type === 'services.getRunning') {
-        return this.devhubManager.getServiceManager().getRunningServicesForWorkspace(workspaceId)
+        const running = this.devhubManager.getServiceManager().getRunningServicesForWorkspace(workspaceId)
+        console.log(`[MessageHandler] services.getRunning returned ${running.length} services`)
+        return running
       }
 
       if (type === 'services.create') {

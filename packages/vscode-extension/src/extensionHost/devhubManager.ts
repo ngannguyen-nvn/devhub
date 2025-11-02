@@ -104,12 +104,14 @@ export class DevHubManager {
     const activeWorkspace = this.workspaceManager.getActiveWorkspace()
     if (activeWorkspace) {
       this.activeWorkspaceId = activeWorkspace.id
+      console.log('[DevHubManager] Using existing active workspace:', activeWorkspace.name, activeWorkspace.id)
     } else {
       // Create default workspace
       const workspaceFolders = vscode.workspace.workspaceFolders
       const folderPath = workspaceFolders?.[0]?.uri.fsPath || ''
       const workspaceName = workspaceFolders?.[0]?.name || 'Default Workspace'
 
+      console.log('[DevHubManager] Creating default workspace:', workspaceName)
       const workspace = this.workspaceManager.createWorkspace({
         name: workspaceName,
         description: 'Auto-created workspace for VSCode',
@@ -117,6 +119,7 @@ export class DevHubManager {
         setAsActive: true
       })
       this.activeWorkspaceId = workspace.id
+      console.log('[DevHubManager] Created workspace:', workspace.name, workspace.id)
     }
   }
 

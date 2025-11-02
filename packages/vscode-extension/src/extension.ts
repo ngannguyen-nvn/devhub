@@ -9,6 +9,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import * as fs from 'fs'
+import { loadBetterSqlite3 } from './nativeLoader'
 
 // Use type-only imports to avoid loading @devhub/core too early
 import type { DevHubManager } from './extensionHost/devhubManager'
@@ -29,6 +30,15 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log('DevHub extension is now active')
 
   try {
+    // Load correct better-sqlite3 prebuild for current Electron version
+    // This must happen BEFORE any module tries to load better-sqlite3
+    try {
+      loadBetterSqlite3(context.extensionPath)
+    } catch (error) {
+      console.error('Failed to load better-sqlite3 prebuild:', error)
+      throw new Error(`Failed to load native dependencies: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+
     // Add dist/node_modules to module search path for native dependencies
     const distNodeModules = path.join(context.extensionPath, 'dist', 'node_modules')
     if (process.env.NODE_PATH) {

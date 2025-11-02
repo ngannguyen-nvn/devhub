@@ -10,10 +10,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@devhub/shared": "*",
     "better-sqlite3": "^12.4.1",
     "dockerode": "^4.0.0",
-    "simple-git": "^3.21.0",
-    "@devhub/shared": "*"
+    "simple-git": "^3.21.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",

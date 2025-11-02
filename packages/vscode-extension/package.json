@@ -24,7 +24,12 @@
   },
   "license": "MIT",
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onCommand:devhub.openPanel",
+    "onCommand:devhub.scanRepos",
+    "onCommand:devhub.createSnapshot",
+    "onView:devhubServices",
+    "onView:devhubWorkspaces"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -173,7 +178,14 @@
     "watch": "node esbuild.js --watch",
     "watch:webview": "cd webview-ui && npm run dev",
     "prepackage": "node scripts/prepare-package.js",
-    "package": "npm run build -- --production && npm run prepackage && vsce package",
+    "package": "npm run build -- --production && npm run prepackage && vsce package --no-dependencies",
+    "package:linux-x64": "VSCE_TARGET=linux-x64 npm run build -- --production && npm run prepackage && vsce package --target linux-x64 --no-dependencies",
+    "package:linux-arm64": "VSCE_TARGET=linux-arm64 npm run build -- --production && npm run prepackage && vsce package --target linux-arm64 --no-dependencies",
+    "package:darwin-x64": "VSCE_TARGET=darwin-x64 npm run build -- --production && npm run prepackage && vsce package --target darwin-x64 --no-dependencies",
+    "package:darwin-arm64": "VSCE_TARGET=darwin-arm64 npm run build -- --production && npm run prepackage && vsce package --target darwin-arm64 --no-dependencies",
+    "package:win32-x64": "VSCE_TARGET=win32-x64 npm run build -- --production && npm run prepackage && vsce package --target win32-x64 --no-dependencies",
+    "package:win32-arm64": "VSCE_TARGET=win32-arm64 npm run build -- --production && npm run prepackage && vsce package --target win32-arm64 --no-dependencies",
+    "package:all": "npm run package:linux-x64 && npm run package:linux-arm64 && npm run package:darwin-x64 && npm run package:darwin-arm64 && npm run package:win32-x64 && npm run package:win32-arm64",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts"
   },

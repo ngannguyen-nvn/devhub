@@ -52,14 +52,18 @@ export default function Services() {
 
   const fetchServices = async () => {
     try {
+      console.log('[Services] Fetching services...')
       const [allServices, running] = await Promise.all([
         serviceApi.getAll(),
         serviceApi.getRunning()
       ])
+      console.log('[Services] Received services:', allServices)
+      console.log('[Services] Received running services:', running)
       setServices(allServices)
       setRunningServices(running)
       setError(null)
     } catch (err) {
+      console.error('[Services] Error fetching services:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch services')
     }
   }
