@@ -24,6 +24,24 @@ const betterSqliteFiles = [
 
 copyEssentialFiles('better-sqlite3', betterSqliteFiles);
 
+// Copy better-sqlite3 dependencies
+copyEssentialFiles('bindings', [
+  { src: 'bindings.js', required: true },
+  { src: 'package.json', required: true },
+]);
+
+copyEssentialFiles('prebuild-install', [
+  { src: 'bin.js', required: false },
+  { src: 'index.js', required: true },
+  { src: 'rc.js', required: false },
+  { src: 'package.json', required: true },
+]);
+
+copyEssentialFiles('file-uri-to-path', [
+  { src: 'index.js', required: true },
+  { src: 'package.json', required: true },
+]);
+
 // Copy dockerode (only essential files)
 const dockerodeFiles = [
   { src: 'lib', required: true },
