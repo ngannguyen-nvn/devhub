@@ -134,6 +134,60 @@ export class MessageHandler {
         )
       }
 
+      if (type === 'workspaces.createQuickSnapshot') {
+        const name = `Snapshot - ${new Date().toLocaleString()}`
+        return await this.devhubManager.createQuickSnapshot(name)
+      }
+
+      // Repository batch operations
+      if (type === 'repos.analyzeBatch') {
+        const { repoPaths } = payload
+        const repoScanner = this.devhubManager.getRepoScanner()
+        const results = []
+
+        for (const repoPath of repoPaths) {
+          try {
+            const analysis = await repoScanner.analyzeRepository(repoPath)
+            results.push({ success: true, repoPath, analysis })
+          } catch (error) {
+            results.push({ success: false, repoPath, error: error instanceof Error ? error.message : 'Unknown error' })
+          }
+        }
+
+        return results
+      }
+
+      // Service batch operations
+      if (type === 'services.batchCreate') {
+        const { services } = payload
+        const created = []
+
+        for (const service of services) {
+          try {
+            const result = await this.devhubManager.getServiceManager().createService(workspaceId, service)
+            created.push(result)
+          } catch (error) {
+            console.error(`[MessageHandler] Failed to create service ${service.name}:`, error)
+          }
+        }
+
+        return created
+      }
+
+      // Environment operations
+      if (type === 'env.createProfile') {
+        const { name, description } = payload
+        return this.devhubManager.getEnvManager().createProfile(workspaceId, {
+          name,
+          description,
+        })
+      }
+
+      if (type === 'env.importFile') {
+        const { profileId, filePath } = payload
+        return this.devhubManager.getEnvManager().importEnvFile(profileId, filePath)
+      }
+
       // Notes operations
       if (type === 'notes.getAll') {
         return this.devhubManager.getNotesManager().getAllNotes(workspaceId)

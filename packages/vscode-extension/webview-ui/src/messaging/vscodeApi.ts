@@ -73,7 +73,8 @@ window.addEventListener('message', (event) => {
 
 // Repository operations
 export const repoApi = {
-  scan: () => sendMessage('repos.scan')
+  scan: () => sendMessage('repos.scan'),
+  analyzeBatch: (repoPaths: string[]) => sendMessage('repos.analyzeBatch', { repoPaths })
 }
 
 // Service operations
@@ -81,11 +82,15 @@ export const serviceApi = {
   getAll: () => sendMessage('services.getAll'),
   getRunning: () => sendMessage('services.getRunning'),
   create: (data: any) => sendMessage('services.create', data),
+  batchCreate: (services: any[]) => sendMessage('services.batchCreate', { services }),
   update: (id: string, data: any) => sendMessage('services.update', { id, ...data }),
   delete: (id: string) => sendMessage('services.delete', { id }),
   start: (id: string) => sendMessage('services.start', { id }),
   stop: (id: string) => sendMessage('services.stop', { id }),
-  getLogs: (id: string) => sendMessage('services.getLogs', { id })
+  getLogs: (id: string) => sendMessage('services.getLogs', { id }),
+  createEnvProfile: (data: any) => sendMessage('env.createProfile', data),
+  importEnvFile: (profileId: string, filePath: string) =>
+    sendMessage('env.importFile', { profileId, filePath })
 }
 
 // Docker operations
@@ -104,7 +109,8 @@ export const workspaceApi = {
   setActive: (id: string) => sendMessage('workspaces.setActive', { id }),
   delete: (id: string) => sendMessage('workspaces.delete', { id }),
   getSnapshots: (workspaceId: string) => sendMessage('workspaces.getSnapshots', { workspaceId }),
-  createSnapshot: (data: any) => sendMessage('workspaces.createSnapshot', data)
+  createSnapshot: (data: any) => sendMessage('workspaces.createSnapshot', data),
+  createQuickSnapshot: () => sendMessage('workspaces.createQuickSnapshot')
 }
 
 // Notes operations
