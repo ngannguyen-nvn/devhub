@@ -1,10 +1,11 @@
 /**
  * Copy native dependencies into dist for packaging
- * This avoids workspace hoisting issues and reduces package size
+ * For better-sqlite3, downloads the correct prebuild for VSCode's Node.js version
  */
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const rootNodeModules = path.join(__dirname, '../../../node_modules');
 const distDir = path.join(__dirname, '../dist');
@@ -15,14 +16,73 @@ if (!fs.existsSync(nativeModulesDir)) {
   fs.mkdirSync(nativeModulesDir, { recursive: true });
 }
 
-// Copy better-sqlite3 (only essential files)
-const betterSqliteFiles = [
-  { src: 'build/Release/better_sqlite3.node', required: true },
-  { src: 'lib', required: true },
-  { src: 'package.json', required: true },
-];
+// Copy better-sqlite3 lib and package.json (NOT the .node file - we'll download the right one)
+console.log('Copying better-sqlite3 JavaScript files...');
+const betterSqliteDest = path.join(nativeModulesDir, 'better-sqlite3');
+if (fs.existsSync(betterSqliteDest)) {
+  fs.rmSync(betterSqliteDest, { recursive: true, force: true });
+}
+fs.mkdirSync(betterSqliteDest, { recursive: true });
 
-copyEssentialFiles('better-sqlite3', betterSqliteFiles);
+// Copy lib/ and package.json
+copyRecursive(
+  path.join(rootNodeModules, 'better-sqlite3', 'lib'),
+  path.join(betterSqliteDest, 'lib')
+);
+fs.copyFileSync(
+  path.join(rootNodeModules, 'better-sqlite3', 'package.json'),
+  path.join(betterSqliteDest, 'package.json')
+);
+
+// Create build/Release directory for the .node file
+const buildDir = path.join(betterSqliteDest, 'build', 'Release');
+fs.mkdirSync(buildDir, { recursive: true });
+
+// Download the correct prebuild for VSCode's Electron version
+// VSCode 1.85+ uses Electron 27.x which is electron-v123
+// See: https://github.com/electron/electron/blob/main/docs/tutorial/electron-timelines.md
+console.log('Downloading better-sqlite3 prebuild for Electron v123 (VSCode 1.85+)...');
+const version = require(path.join(rootNodeModules, 'better-sqlite3', 'package.json')).version;
+const platform = process.platform; // linux, darwin, win32
+const arch = process.arch; // x64, arm64
+const electronVersion = 'electron-v123'; // VSCode 1.85+ (Electron 27.x)
+
+// Construct prebuild URL
+const prebuildName = `better-sqlite3-v${version}-${electronVersion}-${platform}-${arch}.tar.gz`;
+const downloadUrl = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${version}/${prebuildName}`;
+
+console.log(`Downloading from: ${downloadUrl}`);
+
+try {
+  // Download and extract using curl and tar
+  const tmpFile = path.join('/tmp', prebuildName);
+  const tmpExtractDir = path.join('/tmp', `better-sqlite3-extract-${Date.now()}`);
+  fs.mkdirSync(tmpExtractDir, { recursive: true });
+
+  execSync(`curl -L -o "${tmpFile}" "${downloadUrl}"`, { stdio: 'inherit' });
+  execSync(`tar -xzf "${tmpFile}" -C "${tmpExtractDir}"`, { stdio: 'inherit' });
+
+  // Find the .node file (might be in nested directories)
+  const nodeFiles = execSync(`find "${tmpExtractDir}" -name "*.node"`, { encoding: 'utf-8' }).trim().split('\n');
+  if (nodeFiles.length > 0 && nodeFiles[0]) {
+    fs.copyFileSync(nodeFiles[0], path.join(buildDir, 'better_sqlite3.node'));
+    console.log('✓ Downloaded and extracted prebuild');
+  } else {
+    throw new Error('No .node file found in prebuild archive');
+  }
+
+  // Cleanup
+  fs.unlinkSync(tmpFile);
+  fs.rmSync(tmpExtractDir, { recursive: true, force: true });
+} catch (error) {
+  console.error(`Failed to download prebuild: ${error.message}`);
+  console.log('Falling back to local build (may not work in VSCode)...');
+  // Fallback: copy local build
+  fs.copyFileSync(
+    path.join(rootNodeModules, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+    path.join(buildDir, 'better_sqlite3.node')
+  );
+}
 
 // Copy better-sqlite3 dependencies
 copyEssentialFiles('bindings', [
@@ -42,13 +102,11 @@ copyEssentialFiles('file-uri-to-path', [
   { src: 'package.json', required: true },
 ]);
 
-// Copy dockerode (only essential files)
-const dockerodeFiles = [
+// Copy dockerode
+copyEssentialFiles('dockerode', [
   { src: 'lib', required: true },
   { src: 'package.json', required: true },
-];
-
-copyEssentialFiles('dockerode', dockerodeFiles);
+]);
 
 console.log('✓ Native dependencies prepared for packaging');
 
@@ -63,7 +121,6 @@ function copyEssentialFiles(packageName, files) {
 
   console.log(`Copying ${packageName} essential files...`);
 
-  // Remove destination if exists
   if (fs.existsSync(destRoot)) {
     fs.rmSync(destRoot, { recursive: true, force: true });
   }
@@ -85,7 +142,6 @@ function copyEssentialFiles(packageName, files) {
     if (srcStat.isDirectory()) {
       copyRecursive(srcPath, destPath);
     } else {
-      // Ensure parent directory exists
       const parentDir = path.dirname(destPath);
       if (!fs.existsSync(parentDir)) {
         fs.mkdirSync(parentDir, { recursive: true });
