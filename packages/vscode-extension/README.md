@@ -126,10 +126,51 @@ Contributions are welcome! See the [main repository](https://github.com/ngannguy
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
+## 🛠️ Development
+
+### Building from Source
+
+```bash
+# Install dependencies
+npm install
+
+# Build webview UI
+npm run build:webview
+
+# Build extension
+npm run build:extension
+
+# Package extension
+npx vsce package
+```
+
+### Testing
+
+**Method 1: Extension Development Host**
+1. Open this folder in VSCode
+2. Press F5 to launch Extension Development Host
+3. Test in the new window
+
+**Method 2: Install VSIX**
+```bash
+code --install-extension devhub-2.0.0.vsix
+```
+
+### Database Location
+
+VSCode Extension:
+```
+~/.vscode-server/data/User/globalStorage/devhub.devhub/devhub.db
+```
+
+Access with sqlite3:
+```bash
+sqlite3 ~/.vscode-server/data/User/globalStorage/devhub.devhub/devhub.db
+```
+
 ## 🐛 Issues & Support
 
 - **Report bugs:** [GitHub Issues](https://github.com/ngannguyen-nvn/devhub/issues)
-- **Documentation:** See `DEVELOPMENT.md` in extension directory
 - **Main Project:** [DevHub Repository](https://github.com/ngannguyen-nvn/devhub)
 
 ## 📊 Stats
