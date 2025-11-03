@@ -42,6 +42,14 @@ export class ServiceManager extends EventEmitter {
   }
 
   /**
+   * Strip ANSI color codes from log strings
+   */
+  private stripAnsiCodes(str: string): string {
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '')
+  }
+
+  /**
    * Load services from database
    */
   private loadServices() {
@@ -273,7 +281,9 @@ export class ServiceManager extends EventEmitter {
 
     // Capture stdout
     childProcess.stdout?.on('data', (data) => {
-      const lines = data.toString().split('\n').filter((line: string) => line.trim())
+      const rawLines = data.toString().split('\n').filter((line: string) => line.trim())
+      // Strip ANSI color codes for clean display
+      const lines = rawLines.map((line: string) => this.stripAnsiCodes(line))
       runningService.logs.push(...lines)
 
       // Keep only last N lines
@@ -295,7 +305,9 @@ export class ServiceManager extends EventEmitter {
 
     // Capture stderr
     childProcess.stderr?.on('data', (data) => {
-      const lines = data.toString().split('\n').filter((line: string) => line.trim())
+      const rawLines = data.toString().split('\n').filter((line: string) => line.trim())
+      // Strip ANSI color codes for clean display
+      const lines = rawLines.map((line: string) => this.stripAnsiCodes(line))
       runningService.logs.push(...lines)
 
       if (runningService.logs.length > this.maxLogLines) {
