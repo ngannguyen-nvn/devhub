@@ -89,6 +89,7 @@ export class ServiceManager extends EventEmitter {
    */
   getRunningServices(): RunningService[] {
     return Array.from(this.runningServices.values())
+      .filter(service => service.status === 'running')
   }
 
   /**
@@ -96,7 +97,7 @@ export class ServiceManager extends EventEmitter {
    */
   getRunningServicesForWorkspace(workspaceId: string): RunningService[] {
     return Array.from(this.runningServices.values())
-      .filter(service => service.workspaceId === workspaceId)
+      .filter(service => service.workspaceId === workspaceId && service.status === 'running')
   }
 
   /**
