@@ -55,7 +55,7 @@ export class ServiceManager extends EventEmitter {
   private loadServices() {
     const stmt = db.prepare('SELECT * FROM services')
     const services = stmt.all() as any[]
-    console.log(`Loaded ${services.length} services from database`)
+    // Services loaded from database
   }
 
   /**
@@ -328,7 +328,6 @@ export class ServiceManager extends EventEmitter {
 
     // Handle process exit
     childProcess.on('exit', (code) => {
-      console.log(`Service ${service.name} exited with code ${code}`)
       runningService.status = code === 0 ? 'stopped' : 'error'
       runningService.stoppedAt = new Date()
       runningService.exitCode = code || undefined
@@ -354,7 +353,6 @@ export class ServiceManager extends EventEmitter {
     })
 
     childProcess.on('error', (error) => {
-      console.error(`Service ${service.name} error:`, error)
       runningService.status = 'error'
       this.emit('error', { serviceId, error: error.message })
     })
@@ -369,8 +367,6 @@ export class ServiceManager extends EventEmitter {
         healthCheckManager.startHealthCheck(check)
       }
     }
-
-    console.log(`Started service ${service.name} (PID: ${childProcess.pid})`)
   }
 
   /**
@@ -398,20 +394,12 @@ export class ServiceManager extends EventEmitter {
 
     // Use tree-kill to kill entire process tree (handles shell wrappers properly)
     if (process.pid) {
-      kill(process.pid, 'SIGTERM', (err) => {
-        if (err) {
-          console.warn(`Failed to kill process tree for ${serviceId}:`, err)
-        }
-      })
+      kill(process.pid, 'SIGTERM')
 
       // Force kill after 5 seconds if still running
       setTimeout(() => {
         if (this.processes.has(serviceId) && process.pid) {
-          kill(process.pid, 'SIGKILL', (err) => {
-            if (err) {
-              console.warn(`Failed to force kill process tree for ${serviceId}:`, err)
-            }
-          })
+          kill(process.pid, 'SIGKILL')
         }
       }, 5000)
     }
@@ -451,7 +439,7 @@ export class ServiceManager extends EventEmitter {
       try {
         this.stopService(serviceId)
       } catch (error) {
-        console.error(`Error stopping service ${serviceId}:`, error)
+        // Ignore errors during shutdown
       }
     }
   }
