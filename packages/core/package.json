@@ -13,7 +13,8 @@
     "@devhub/shared": "*",
     "better-sqlite3": "^12.4.1",
     "dockerode": "^4.0.0",
-    "simple-git": "^3.21.0"
+    "simple-git": "^3.21.0",
+    "tree-kill": "^1.2.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",

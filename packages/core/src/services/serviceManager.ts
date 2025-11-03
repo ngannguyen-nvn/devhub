@@ -4,6 +4,7 @@ import db from '../db'
 import { Service as SharedService } from '@devhub/shared'
 import { logManager } from './logManager'
 import { healthCheckManager } from './healthCheckManager'
+import kill from 'tree-kill'
 
 // Internal service interface (extends shared with runtime data)
 export interface Service extends Omit<SharedService, 'status' | 'pid'> {
@@ -251,12 +252,11 @@ export class ServiceManager extends EventEmitter {
     // Parse command (handle npm run, yarn, etc.)
     const [cmd, ...args] = service.command.split(' ')
 
-    // Spawn process with detached process group for proper cleanup
+    // Spawn process
     const childProcess = spawn(cmd, args, {
       cwd: service.repoPath,
       env: { ...process.env, ...service.envVars },
       shell: true,
-      detached: true, // Create new process group so we can kill entire tree
     })
 
     // Create log session for persistence
@@ -384,38 +384,25 @@ export class ServiceManager extends EventEmitter {
       healthCheckManager.stopHealthCheck(check.id)
     }
 
-    // Kill the entire process group (not just the shell wrapper)
-    // Using negative PID kills all processes in the group
+    // Use tree-kill to kill entire process tree (handles shell wrappers properly)
     if (process.pid) {
-      try {
-        // Kill entire process group with SIGTERM
-        process.kill('SIGTERM')
-        // Also kill the process group (negative PID)
-        try {
-          process.kill(-process.pid, 'SIGTERM')
-        } catch (pgErr) {
-          // Process group kill might fail on some systems, that's ok
+      kill(process.pid, 'SIGTERM', (err) => {
+        if (err) {
+          console.warn(`Failed to kill process tree for ${serviceId}:`, err)
         }
-      } catch (error) {
-        console.warn(`Failed to kill process ${serviceId}:`, error)
-      }
-    }
+      })
 
-    // Force kill after 5 seconds if still running
-    setTimeout(() => {
-      if (this.processes.has(serviceId) && process.pid) {
-        try {
-          process.kill('SIGKILL')
-          try {
-            process.kill(-process.pid, 'SIGKILL')
-          } catch (pgErr) {
-            // Process group kill might fail, that's ok
-          }
-        } catch (error) {
-          console.warn(`Failed to force kill process ${serviceId}:`, error)
+      // Force kill after 5 seconds if still running
+      setTimeout(() => {
+        if (this.processes.has(serviceId) && process.pid) {
+          kill(process.pid, 'SIGKILL', (err) => {
+            if (err) {
+              console.warn(`Failed to force kill process tree for ${serviceId}:`, err)
+            }
+          })
         }
-      }
-    }, 5000)
+      }, 5000)
+    }
 
     const runningService = this.runningServices.get(serviceId)
     if (runningService) {
