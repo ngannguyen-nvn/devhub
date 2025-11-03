@@ -321,7 +321,7 @@ export class MessageHandler {
 
       // Environment operations
       if (type === 'env.getProfiles') {
-        const profiles = this.devhubManager.getEnvManager().getProfiles(workspaceId)
+        const profiles = this.devhubManager.getEnvManager().getAllProfiles(workspaceId)
         return { profiles }
       }
 
@@ -340,14 +340,28 @@ export class MessageHandler {
       }
 
       if (type === 'env.copyProfile') {
-        const { id, name } = payload
-        const response = this.devhubManager.getEnvManager().copyProfile(id, name)
-        return response
+        const { id, name, description } = payload
+        const sourceProfile = this.devhubManager.getEnvManager().getProfile(id)
+        if (!sourceProfile) {
+          throw new Error('Source profile not found')
+        }
+
+        // Create new profile in same workspace
+        const newProfile = this.devhubManager.getEnvManager().createProfile(
+          workspaceId,
+          name,
+          description
+        )
+
+        // Copy variables from source to new profile
+        const copiedCount = this.devhubManager.getEnvManager().copyProfile(id, newProfile.id)
+
+        return { profile: newProfile, copiedVariables: copiedCount }
       }
 
       if (type === 'env.getVariables') {
-        const { profileId } = payload
-        const variables = this.devhubManager.getEnvManager().getVariablesByProfile(profileId)
+        const { profileId, serviceId } = payload
+        const variables = this.devhubManager.getEnvManager().getVariables(profileId, serviceId)
         return { variables }
       }
 
