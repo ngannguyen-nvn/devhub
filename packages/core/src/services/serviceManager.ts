@@ -251,11 +251,12 @@ export class ServiceManager extends EventEmitter {
     // Parse command (handle npm run, yarn, etc.)
     const [cmd, ...args] = service.command.split(' ')
 
-    // Spawn process
+    // Spawn process with detached process group for proper cleanup
     const childProcess = spawn(cmd, args, {
       cwd: service.repoPath,
       env: { ...process.env, ...service.envVars },
       shell: true,
+      detached: true, // Create new process group so we can kill entire tree
     })
 
     // Create log session for persistence
@@ -383,12 +384,36 @@ export class ServiceManager extends EventEmitter {
       healthCheckManager.stopHealthCheck(check.id)
     }
 
-    process.kill('SIGTERM')
+    // Kill the entire process group (not just the shell wrapper)
+    // Using negative PID kills all processes in the group
+    if (process.pid) {
+      try {
+        // Kill entire process group with SIGTERM
+        process.kill('SIGTERM')
+        // Also kill the process group (negative PID)
+        try {
+          process.kill(-process.pid, 'SIGTERM')
+        } catch (pgErr) {
+          // Process group kill might fail on some systems, that's ok
+        }
+      } catch (error) {
+        console.warn(`Failed to kill process ${serviceId}:`, error)
+      }
+    }
 
     // Force kill after 5 seconds if still running
     setTimeout(() => {
-      if (this.processes.has(serviceId)) {
-        process.kill('SIGKILL')
+      if (this.processes.has(serviceId) && process.pid) {
+        try {
+          process.kill('SIGKILL')
+          try {
+            process.kill(-process.pid, 'SIGKILL')
+          } catch (pgErr) {
+            // Process group kill might fail, that's ok
+          }
+        } catch (error) {
+          console.warn(`Failed to force kill process ${serviceId}:`, error)
+        }
       }
     }, 5000)
 
