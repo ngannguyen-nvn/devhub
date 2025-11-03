@@ -18,10 +18,10 @@ export class LogManager {
 
     const stmt = db.prepare(`
       INSERT INTO service_log_sessions (id, service_id, started_at, logs_count)
-      VALUES (?, ?, ?, 0)
+      VALUES (?, ?, ?, ?)
     `)
 
-    stmt.run(id, serviceId, now)
+    stmt.run(id, serviceId, now, 0)
 
     return {
       id,

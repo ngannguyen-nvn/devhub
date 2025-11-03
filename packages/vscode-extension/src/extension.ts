@@ -204,7 +204,18 @@ function registerCommands(
 
   // Start service (from command palette or context menu)
   context.subscriptions.push(
-    vscode.commands.registerCommand('devhub.startService', async (serviceId?: string) => {
+    vscode.commands.registerCommand('devhub.startService', async (arg?: string | any) => {
+      // If called from tree view context menu, arg is the ServiceTreeItem object
+      // If called from command palette, arg is undefined
+      let serviceId: string | undefined
+
+      if (typeof arg === 'string') {
+        serviceId = arg
+      } else if (arg && typeof arg === 'object' && 'serviceId' in arg) {
+        // Extract serviceId from TreeItem object
+        serviceId = arg.serviceId
+      }
+
       if (!serviceId) {
         // Show quick pick if no service provided
         const services = await manager.getAllServices()
@@ -237,7 +248,18 @@ function registerCommands(
 
   // Stop service
   context.subscriptions.push(
-    vscode.commands.registerCommand('devhub.stopService', async (serviceId?: string) => {
+    vscode.commands.registerCommand('devhub.stopService', async (arg?: string | any) => {
+      // If called from tree view context menu, arg is the ServiceTreeItem object
+      // If called from command palette, arg is undefined
+      let serviceId: string | undefined
+
+      if (typeof arg === 'string') {
+        serviceId = arg
+      } else if (arg && typeof arg === 'object' && 'serviceId' in arg) {
+        // Extract serviceId from TreeItem object
+        serviceId = arg.serviceId
+      }
+
       if (!serviceId) {
         // Show quick pick if no service provided
         const services = await manager.getRunningServices()
