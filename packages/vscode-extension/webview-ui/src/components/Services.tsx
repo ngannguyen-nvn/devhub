@@ -64,6 +64,14 @@ export default function Services() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean
+    type: 'service' | 'group' | 'stopAll'
+    id?: string
+    message: string
+  }>({ show: false, type: 'service', message: '' })
+
   // Import modal
   const [showImportModal, setShowImportModal] = useState(false)
   const [workspaceRepos, setWorkspaceRepos] = useState<Array<{path: string, name: string}>>([])
@@ -253,9 +261,16 @@ export default function Services() {
     }
   }
 
-  const handleDeleteService = async (serviceId: string) => {
-    if (!confirm('Are you sure you want to delete this service?')) return
+  const handleDeleteService = (serviceId: string) => {
+    setConfirmModal({
+      show: true,
+      type: 'service',
+      id: serviceId,
+      message: 'Are you sure you want to delete this service?'
+    })
+  }
 
+  const handleDeleteServiceConfirmed = async (serviceId: string) => {
     setLoading(true)
     try {
       await serviceApi.delete(serviceId)
@@ -271,9 +286,21 @@ export default function Services() {
     }
   }
 
-  const handleStopAll = async () => {
-    if (!confirm('Stop all running services?')) return
+  const handleStopAll = () => {
+    const runningServices = services.filter(s => s.status === 'running')
 
+    if (runningServices.length === 0) {
+      return
+    }
+
+    setConfirmModal({
+      show: true,
+      type: 'stopAll',
+      message: `Stop all ${runningServices.length} running services?`
+    })
+  }
+
+  const handleStopAllConfirmed = async () => {
     setLoading(true)
     const runningServices = services.filter(s => s.status === 'running')
 
@@ -300,7 +327,6 @@ export default function Services() {
     }
 
     setLoading(false)
-    // Auto-refresh will pick up the actual state in next cycle
   }
 
   const handleOpenImportModal = async () => {
@@ -385,9 +411,16 @@ export default function Services() {
     }
   }
 
-  const handleDeleteGroup = async (groupId: string) => {
-    if (!confirm('Delete this group?')) return
+  const handleDeleteGroup = (groupId: string) => {
+    setConfirmModal({
+      show: true,
+      type: 'group',
+      id: groupId,
+      message: 'Delete this group?'
+    })
+  }
 
+  const handleDeleteGroupConfirmed = async (groupId: string) => {
     try {
       await groupApi.delete(groupId)
       await fetchGroups()
@@ -756,6 +789,39 @@ export default function Services() {
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShowGroupsModal(false)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="modal-overlay" onClick={() => setConfirmModal({ show: false, type: 'service', message: '' })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Confirm Action</h3>
+            <p>{confirmModal.message}</p>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => setConfirmModal({ show: false, type: 'service', message: '' })}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-danger"
+                onClick={() => {
+                  if (confirmModal.type === 'service' && confirmModal.id) {
+                    handleDeleteServiceConfirmed(confirmModal.id)
+                  } else if (confirmModal.type === 'group' && confirmModal.id) {
+                    handleDeleteGroupConfirmed(confirmModal.id)
+                  } else if (confirmModal.type === 'stopAll') {
+                    handleStopAllConfirmed()
+                  }
+                  setConfirmModal({ show: false, type: 'service', message: '' })
+                }}
+              >
+                Confirm
               </button>
             </div>
           </div>
