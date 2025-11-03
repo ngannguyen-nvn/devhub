@@ -198,17 +198,23 @@ export class DevHubManager {
    * Scan workspace for repositories
    */
   async scanWorkspace(): Promise<Repository[]> {
+    console.log('[DevHubManager] scanWorkspace called')
     const workspaceFolders = vscode.workspace.workspaceFolders
     if (!workspaceFolders || workspaceFolders.length === 0) {
+      console.log('[DevHubManager] No workspace folders found')
       return []
     }
 
     // Scan first workspace folder
     const rootPath = workspaceFolders[0].uri.fsPath
+    console.log('[DevHubManager] Scanning root path:', rootPath)
     const config = vscode.workspace.getConfiguration('devhub')
     const depth = config.get<number>('scanDepth', 3)
+    console.log('[DevHubManager] Scan depth:', depth)
 
-    return this.repoScanner.scanDirectory(rootPath, depth)
+    const repos = await this.repoScanner.scanDirectory(rootPath, depth)
+    console.log('[DevHubManager] Found', repos.length, 'repositories')
+    return repos
   }
 
   /**
