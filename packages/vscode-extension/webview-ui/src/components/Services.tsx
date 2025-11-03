@@ -98,6 +98,14 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
   useEffect(() => {
     if (initialSelectedServiceId) {
       setSelectedService(initialSelectedServiceId)
+
+      // Scroll to the selected service after a short delay to ensure DOM is updated
+      setTimeout(() => {
+        const serviceElement = document.querySelector(`[data-service-id="${initialSelectedServiceId}"]`)
+        if (serviceElement) {
+          serviceElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
     }
   }, [initialSelectedServiceId])
 
@@ -596,6 +604,7 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
             filteredServices.map(service => (
               <div
                 key={service.id}
+                data-service-id={service.id}
                 className={`service-card ${service.status === 'running' ? 'running' : ''} ${
                   selectedService === service.id ? 'selected' : ''
                 }`}
