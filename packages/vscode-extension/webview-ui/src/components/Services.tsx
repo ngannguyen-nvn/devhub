@@ -185,31 +185,39 @@ export default function Services() {
   }
 
   const handleStartService = async (serviceId: string) => {
-    setLoading(true)
     try {
       await serviceApi.start(serviceId)
-      await fetchServices()
+      // Immediately update UI optimistically
+      setServices(prev => prev.map(s =>
+        s.id === serviceId ? { ...s, status: 'running' as const } : s
+      ))
       setSelectedService(serviceId)
+      // Fetch full state in background
+      fetchServices()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start service')
-    } finally {
-      setLoading(false)
+      // Revert on error
+      fetchServices()
     }
   }
 
   const handleStopService = async (serviceId: string) => {
-    setLoading(true)
     try {
       await serviceApi.stop(serviceId)
-      await fetchServices()
+      // Immediately update UI optimistically
+      setServices(prev => prev.map(s =>
+        s.id === serviceId ? { ...s, status: 'stopped' as const, pid: undefined } : s
+      ))
       if (selectedService === serviceId) {
         setSelectedService(null)
         setLogs([])
       }
+      // Fetch full state in background
+      fetchServices()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to stop service')
-    } finally {
-      setLoading(false)
+      // Revert on error
+      fetchServices()
     }
   }
 

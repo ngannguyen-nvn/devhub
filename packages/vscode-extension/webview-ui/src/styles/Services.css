@@ -43,21 +43,42 @@
   border-radius: 4px;
   color: var(--vscode-input-foreground);
   font-size: 14px;
+  font-family: var(--vscode-font-family);
+  outline: none;
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--vscode-focusBorder);
+  box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+  opacity: 1;
 }
 
 .group-filter {
   padding: 8px 12px;
-  background: var(--vscode-input-background);
-  border: 1px solid var(--vscode-input-border);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border);
   border-radius: 4px;
-  color: var(--vscode-input-foreground);
+  color: var(--vscode-dropdown-foreground);
   font-size: 14px;
-  min-width: 150px;
+  font-family: var(--vscode-font-family);
+  min-width: 180px;
+  cursor: pointer;
+  outline: none;
+}
+
+.group-filter:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+  box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.group-filter:hover {
+  background: var(--vscode-dropdown-listBackground);
 }
 
 /* Central Logs */
