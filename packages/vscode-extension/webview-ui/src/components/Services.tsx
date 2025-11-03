@@ -13,6 +13,7 @@
 
 import { useState, useEffect } from 'react'
 import { serviceApi, repoApi, groupApi, workspaceApi } from '../messaging/vscodeApi'
+import '../styles/Services.css'
 
 interface Service {
   id: string
