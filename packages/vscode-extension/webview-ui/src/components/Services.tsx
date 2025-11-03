@@ -36,7 +36,11 @@ interface Group {
   serviceIds: string[]
 }
 
-export default function Services() {
+interface ServicesProps {
+  initialSelectedServiceId?: string
+}
+
+export default function Services({ initialSelectedServiceId }: ServicesProps) {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +93,13 @@ export default function Services() {
     const interval = setInterval(fetchServices, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  // Handle initial selected service from tree view navigation
+  useEffect(() => {
+    if (initialSelectedServiceId) {
+      setSelectedService(initialSelectedServiceId)
+    }
+  }, [initialSelectedServiceId])
 
   useEffect(() => {
     if (selectedService) {

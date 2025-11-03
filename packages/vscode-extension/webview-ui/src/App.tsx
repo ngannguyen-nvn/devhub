@@ -4,7 +4,7 @@
  * Main application component for VSCode extension webview.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Dashboard from './components/Dashboard'
 import Services from './components/Services'
 import Docker from './components/Docker'
@@ -18,6 +18,26 @@ type TabType = 'dashboard' | 'services' | 'docker' | 'env' | 'workspaces' | 'not
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
+  const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>()
+
+  // Listen for navigation messages from extension host
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data
+      if (message.type === 'navigate') {
+        const { tab, serviceId } = message.payload
+        if (tab) {
+          setActiveTab(tab as TabType)
+        }
+        if (serviceId) {
+          setSelectedServiceId(serviceId)
+        }
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   return (
     <div className="app">
@@ -72,7 +92,7 @@ function App() {
 
       <main className="app-content">
         {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'services' && <Services />}
+        {activeTab === 'services' && <Services initialSelectedServiceId={selectedServiceId} />}
         {activeTab === 'docker' && <Docker />}
         {activeTab === 'env' && <Environment />}
         {activeTab === 'workspaces' && <Workspaces />}

@@ -298,7 +298,14 @@ function registerCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand('devhub.showServiceDetails', async (serviceId: string) => {
       panel.show()
-      // TODO: Navigate to service details in webview
+      // Navigate to Services tab and select the service
+      panel.postMessage({
+        type: 'navigate',
+        payload: {
+          tab: 'services',
+          serviceId
+        }
+      })
     })
   )
 
