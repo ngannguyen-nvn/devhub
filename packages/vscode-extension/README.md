@@ -175,10 +175,12 @@ sqlite3 ~/.vscode-server/data/User/globalStorage/devhub.devhub/devhub.db
 
 ## 📊 Stats
 
-- **Extension size:** 294.81 KB
+- **Extension size:** 16.26 MB (includes all native dependencies)
+- **Bundled code:** 798 KB (extension.js)
+- **Webview UI:** 220 KB
 - **Commands:** 10+
 - **Tree views:** 2 (Services, Workspaces)
-- **Webview tabs:** 4 (Services, Docker, Workspaces, Notes)
+- **Webview tabs:** 6 (Dashboard, Services, Docker, Environment, Workspaces, Notes)
 
 ## 🎉 What's New in v2.0.0
 

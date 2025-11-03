@@ -1045,11 +1045,11 @@ See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
   - ✅ React webview UI (Services, Docker, Workspaces, Notes)
   - ✅ Tree views (Services, Workspaces with snapshots)
   - ✅ Context menus and inline actions
-  - ✅ esbuild bundling (796KB extension.js)
-- **Package size:** 294.81 KB (.vsix file)
-- **Ready for testing** in Extension Development Host (F5)
+  - ✅ esbuild bundling (798KB extension.js)
+- **Package size:** 16.26 MB (.vsix file, includes native dependencies)
+- **Ready for production** use in VSCode
 
-See `packages/vscode-extension/DEVELOPMENT.md` for testing and deployment guide.
+See `packages/vscode-extension/README.md` for installation and testing guide.
 
 #### Long-Term Enhancements
 
