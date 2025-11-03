@@ -263,11 +263,13 @@ export class MessageHandler {
       }
 
       if (type === 'env.createProfile') {
-        const { name, description } = payload
-        return this.devhubManager.getEnvManager().createProfile(workspaceId, {
+        const { name, description, metadata } = payload
+        return this.devhubManager.getEnvManager().createProfile(
+          workspaceId,
           name,
           description,
-        })
+          metadata
+        )
       }
 
       if (type === 'env.deleteProfile') {
