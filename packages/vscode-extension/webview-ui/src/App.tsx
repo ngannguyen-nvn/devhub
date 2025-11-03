@@ -7,6 +7,11 @@
 import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 import Services from './components/Services'
+import Docker from './components/Docker'
+import Environment from './components/Environment'
+import Workspaces from './components/Workspaces'
+import Wiki from './components/Wiki'
+import WorkspaceSwitcher from './components/WorkspaceSwitcher'
 import './styles/App.css'
 
 type TabType = 'dashboard' | 'services' | 'docker' | 'env' | 'workspaces' | 'notes'
@@ -17,8 +22,13 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🚀 DevHub</h1>
-        <p className="subtitle">Developer Mission Control</p>
+        <div className="header-left">
+          <h1>🚀 DevHub</h1>
+          <p className="subtitle">Developer Mission Control</p>
+        </div>
+        <div className="header-right">
+          <WorkspaceSwitcher />
+        </div>
       </header>
 
       <nav className="tabs">
@@ -63,30 +73,10 @@ function App() {
       <main className="app-content">
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'services' && <Services />}
-        {activeTab === 'docker' && (
-          <div className="placeholder">
-            <h2>🐳 Docker Management</h2>
-            <p>Coming soon in Phase 3</p>
-          </div>
-        )}
-        {activeTab === 'env' && (
-          <div className="placeholder">
-            <h2>⚙️ Environment Variables</h2>
-            <p>Coming soon in Phase 4</p>
-          </div>
-        )}
-        {activeTab === 'workspaces' && (
-          <div className="placeholder">
-            <h2>📁 Workspaces & Snapshots</h2>
-            <p>Coming soon in Phase 5</p>
-          </div>
-        )}
-        {activeTab === 'notes' && (
-          <div className="placeholder">
-            <h2>📝 Notes & Wiki</h2>
-            <p>Coming soon in Phase 6</p>
-          </div>
-        )}
+        {activeTab === 'docker' && <Docker />}
+        {activeTab === 'env' && <Environment />}
+        {activeTab === 'workspaces' && <Workspaces />}
+        {activeTab === 'notes' && <Wiki />}
       </main>
     </div>
   )

@@ -93,12 +93,34 @@ export const serviceApi = {
     sendMessage('env.importFile', { profileId, filePath })
 }
 
+// Environment operations
+export const envApi = {
+  getProfiles: () => sendMessage('env.getProfiles'),
+  createProfile: (data: any) => sendMessage('env.createProfile', data),
+  deleteProfile: (id: string) => sendMessage('env.deleteProfile', { id }),
+  copyProfile: (id: string, name: string) => sendMessage('env.copyProfile', { id, name }),
+  getVariables: (profileId: string) => sendMessage('env.getVariables', { profileId }),
+  createVariable: (data: any) => sendMessage('env.createVariable', data),
+  updateVariable: (id: string, data: any) => sendMessage('env.updateVariable', { id, ...data }),
+  deleteVariable: (id: string) => sendMessage('env.deleteVariable', { id }),
+  importFile: (profileId: string, filePath: string) => sendMessage('env.importFile', { profileId, filePath }),
+  exportFile: (profileId: string, filePath: string) => sendMessage('env.exportFile', { profileId, filePath }),
+  syncToService: (profileId: string, serviceId: string) => sendMessage('env.syncToService', { profileId, serviceId })
+}
+
 // Docker operations
 export const dockerApi = {
+  ping: () => sendMessage('docker.ping'),
   listImages: () => sendMessage('docker.listImages'),
+  buildImage: (data: any) => sendMessage('docker.buildImage', data),
+  removeImage: (id: string) => sendMessage('docker.removeImage', { id }),
   listContainers: () => sendMessage('docker.listContainers'),
+  runContainer: (data: any) => sendMessage('docker.runContainer', data),
   startContainer: (id: string) => sendMessage('docker.startContainer', { id }),
-  stopContainer: (id: string) => sendMessage('docker.stopContainer', { id })
+  stopContainer: (id: string) => sendMessage('docker.stopContainer', { id }),
+  removeContainer: (id: string) => sendMessage('docker.removeContainer', { id }),
+  getContainerLogs: (id: string) => sendMessage('docker.getContainerLogs', { id }),
+  generateCompose: (data: any) => sendMessage('docker.generateCompose', data)
 }
 
 // Workspace operations
@@ -110,7 +132,11 @@ export const workspaceApi = {
   delete: (id: string) => sendMessage('workspaces.delete', { id }),
   getSnapshots: (workspaceId: string) => sendMessage('workspaces.getSnapshots', { workspaceId }),
   createSnapshot: (data: any) => sendMessage('workspaces.createSnapshot', data),
-  createQuickSnapshot: () => sendMessage('workspaces.createQuickSnapshot')
+  createQuickSnapshot: () => sendMessage('workspaces.createQuickSnapshot'),
+  getSnapshot: (snapshotId: string) => sendMessage('workspaces.getSnapshot', { snapshotId }),
+  restoreSnapshot: (snapshotId: string, options: any) => sendMessage('workspaces.restoreSnapshot', { snapshotId, ...options }),
+  deleteSnapshot: (snapshotId: string) => sendMessage('workspaces.deleteSnapshot', { snapshotId }),
+  exportSnapshot: (snapshotId: string) => sendMessage('workspaces.exportSnapshot', { snapshotId })
 }
 
 // Notes operations
@@ -119,7 +145,12 @@ export const notesApi = {
   create: (data: any) => sendMessage('notes.create', data),
   update: (id: string, data: any) => sendMessage('notes.update', { id, ...data }),
   delete: (id: string) => sendMessage('notes.delete', { id }),
-  search: (query: string) => sendMessage('notes.search', { query })
+  search: (query: string) => sendMessage('notes.search', { query }),
+  getCategories: () => sendMessage('notes.getCategories'),
+  getTags: () => sendMessage('notes.getTags'),
+  getTemplates: () => sendMessage('notes.getTemplates'),
+  getLinks: (noteId: string) => sendMessage('notes.getLinks', { noteId }),
+  getBacklinks: (noteId: string) => sendMessage('notes.getBacklinks', { noteId })
 }
 
 // Health check operations

@@ -79,13 +79,71 @@ export class MessageHandler {
         return service?.logs || []
       }
 
-      // Docker operations (simplified - just return empty for now)
+      // Docker operations
+      if (type === 'docker.ping') {
+        try {
+          const info = await this.devhubManager.getDockerManager().getInfo()
+          return { available: true, info }
+        } catch (error) {
+          return { available: false }
+        }
+      }
+
       if (type === 'docker.listImages') {
-        return this.devhubManager.getDockerManager().listImages()
+        const images = await this.devhubManager.getDockerManager().listImages()
+        return { images }
+      }
+
+      if (type === 'docker.buildImage') {
+        const { contextPath, dockerfilePath, tag } = payload
+        try {
+          await this.devhubManager.getDockerManager().buildImage(contextPath, dockerfilePath || 'Dockerfile', tag)
+          return { success: true }
+        } catch (error) {
+          return { success: false, error: error instanceof Error ? error.message : 'Build failed' }
+        }
+      }
+
+      if (type === 'docker.removeImage') {
+        await this.devhubManager.getDockerManager().removeImage(payload.id)
+        return { success: true }
       }
 
       if (type === 'docker.listContainers') {
-        return this.devhubManager.getDockerManager().listContainers()
+        const containers = await this.devhubManager.getDockerManager().listContainers()
+        return { containers }
+      }
+
+      if (type === 'docker.runContainer') {
+        const { imageName, containerName, ports, env } = payload
+        const container = await this.devhubManager.getDockerManager().runContainer(imageName, containerName, ports, env)
+        return { success: true, container }
+      }
+
+      if (type === 'docker.startContainer') {
+        await this.devhubManager.getDockerManager().startContainer(payload.id)
+        return { success: true }
+      }
+
+      if (type === 'docker.stopContainer') {
+        await this.devhubManager.getDockerManager().stopContainer(payload.id)
+        return { success: true }
+      }
+
+      if (type === 'docker.removeContainer') {
+        await this.devhubManager.getDockerManager().removeContainer(payload.id)
+        return { success: true }
+      }
+
+      if (type === 'docker.getContainerLogs') {
+        const logs = await this.devhubManager.getDockerManager().getContainerLogs(payload.id)
+        return { logs }
+      }
+
+      if (type === 'docker.generateCompose') {
+        const { services } = payload
+        const yaml = await this.devhubManager.getDockerManager().generateDockerCompose(services)
+        return { yaml }
       }
 
       // Workspace operations
@@ -139,6 +197,27 @@ export class MessageHandler {
         return await this.devhubManager.createQuickSnapshot(name)
       }
 
+      if (type === 'workspaces.getSnapshot') {
+        return this.devhubManager.getWorkspaceManager().getSnapshot(payload.snapshotId)
+      }
+
+      if (type === 'workspaces.restoreSnapshot') {
+        const { snapshotId, syncEnvFiles } = payload
+        return await this.devhubManager.getWorkspaceManager().restoreSnapshot(
+          snapshotId,
+          { syncEnvFiles }
+        )
+      }
+
+      if (type === 'workspaces.deleteSnapshot') {
+        return this.devhubManager.getWorkspaceManager().deleteSnapshot(payload.snapshotId)
+      }
+
+      if (type === 'workspaces.exportSnapshot') {
+        const snapshot = this.devhubManager.getWorkspaceManager().getSnapshot(payload.snapshotId)
+        return snapshot
+      }
+
       // Repository batch operations
       if (type === 'repos.analyzeBatch') {
         const { repoPaths } = payload
@@ -175,6 +254,11 @@ export class MessageHandler {
       }
 
       // Environment operations
+      if (type === 'env.getProfiles') {
+        const profiles = this.devhubManager.getEnvManager().getProfiles(workspaceId)
+        return { profiles }
+      }
+
       if (type === 'env.createProfile') {
         const { name, description } = payload
         return this.devhubManager.getEnvManager().createProfile(workspaceId, {
@@ -183,9 +267,48 @@ export class MessageHandler {
         })
       }
 
+      if (type === 'env.deleteProfile') {
+        return this.devhubManager.getEnvManager().deleteProfile(payload.id)
+      }
+
+      if (type === 'env.copyProfile') {
+        const { id, name } = payload
+        const response = this.devhubManager.getEnvManager().copyProfile(id, name)
+        return response
+      }
+
+      if (type === 'env.getVariables') {
+        const { profileId } = payload
+        const variables = this.devhubManager.getEnvManager().getVariablesByProfile(profileId)
+        return { variables }
+      }
+
+      if (type === 'env.createVariable') {
+        return this.devhubManager.getEnvManager().createVariable(payload)
+      }
+
+      if (type === 'env.updateVariable') {
+        const { id, ...data } = payload
+        return this.devhubManager.getEnvManager().updateVariable(id, data)
+      }
+
+      if (type === 'env.deleteVariable') {
+        return this.devhubManager.getEnvManager().deleteVariable(payload.id)
+      }
+
       if (type === 'env.importFile') {
         const { profileId, filePath } = payload
         return this.devhubManager.getEnvManager().importEnvFile(profileId, filePath)
+      }
+
+      if (type === 'env.exportFile') {
+        const { profileId, filePath } = payload
+        return this.devhubManager.getEnvManager().exportEnvFile(profileId, filePath)
+      }
+
+      if (type === 'env.syncToService') {
+        const { profileId, serviceId } = payload
+        return this.devhubManager.getEnvManager().syncProfileToService(profileId, serviceId)
       }
 
       // Notes operations
@@ -220,6 +343,26 @@ export class MessageHandler {
 
       if (type === 'notes.search') {
         return this.devhubManager.getNotesManager().searchNotes(payload.query)
+      }
+
+      if (type === 'notes.getCategories') {
+        return this.devhubManager.getNotesManager().getCategories(workspaceId)
+      }
+
+      if (type === 'notes.getTags') {
+        return this.devhubManager.getNotesManager().getTags(workspaceId)
+      }
+
+      if (type === 'notes.getTemplates') {
+        return this.devhubManager.getNotesManager().getTemplates()
+      }
+
+      if (type === 'notes.getLinks') {
+        return this.devhubManager.getNotesManager().getNoteLinks(payload.noteId)
+      }
+
+      if (type === 'notes.getBacklinks') {
+        return this.devhubManager.getNotesManager().getNoteBacklinks(payload.noteId)
       }
 
       // Health check operations
