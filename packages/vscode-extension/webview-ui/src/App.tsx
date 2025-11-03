@@ -12,6 +12,7 @@ import Environment from './components/Environment'
 import Workspaces from './components/Workspaces'
 import Wiki from './components/Wiki'
 import WorkspaceSwitcher from './components/WorkspaceSwitcher'
+import { vscode } from './messaging/vscodeApi'
 import './styles/App.css'
 
 type TabType = 'dashboard' | 'services' | 'docker' | 'env' | 'workspaces' | 'notes'
@@ -23,10 +24,7 @@ function App() {
   // Listen for navigation messages from extension host
   useEffect(() => {
     // Signal to extension that webview is ready
-    const vscode = (window as any).acquireVsCodeApi?.()
-    if (vscode) {
-      vscode.postMessage({ type: 'webview-ready' })
-    }
+    vscode.postMessage({ type: 'webview-ready' })
 
     const handleMessage = (event: MessageEvent) => {
       const message = event.data

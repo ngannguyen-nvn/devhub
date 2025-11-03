@@ -17,6 +17,9 @@ declare function acquireVsCodeApi(): VSCodeAPI
 // Get VSCode API singleton
 const vscode = acquireVsCodeApi()
 
+// Export for direct use when needed (e.g., sending ready signal)
+export { vscode }
+
 // Message ID counter
 let messageIdCounter = 0
 
