@@ -159,8 +159,8 @@ export class LogManager {
     if (messages.length === 0) return
 
     const insertStmt = db.prepare(`
-      INSERT INTO service_logs (session_id, service_id, level, message, timestamp)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO service_logs (session_id, service_id, level, message)
+      VALUES (?, ?, ?, ?)
     `)
 
     const updateStmt = db.prepare(`
@@ -176,9 +176,8 @@ export class LogManager {
           ? message.substring(0, this.MAX_LOG_LENGTH) + '... [truncated]'
           : message
 
-        // Pass timestamp as ISO string
-        const timestamp = new Date().toISOString()
-        insertStmt.run(sessionId, serviceId, level, truncatedMessage, timestamp)
+        // Let database use DEFAULT CURRENT_TIMESTAMP for timestamp
+        insertStmt.run(sessionId, serviceId, level, truncatedMessage)
       }
 
       updateStmt.run(messages.length, sessionId)

@@ -330,13 +330,13 @@ export class ServiceManager extends EventEmitter {
     childProcess.on('exit', (code) => {
       runningService.status = code === 0 ? 'stopped' : 'error'
       runningService.stoppedAt = new Date()
-      runningService.exitCode = code || undefined
+      runningService.exitCode = code ?? undefined
       runningService.pid = undefined // Clear PID since process is gone
 
       // End log session
       if (runningService.logSessionId) {
         const exitReason = code === 0 ? 'stopped' : (code === null ? 'killed' : 'crashed')
-        logManager.endSession(runningService.logSessionId, code || undefined, exitReason)
+        logManager.endSession(runningService.logSessionId, code ?? undefined, exitReason)
       }
 
       // Stop health checks for this service
