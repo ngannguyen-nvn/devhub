@@ -365,13 +365,13 @@ export class MessageHandler {
       }
 
       if (type === 'env.importFile') {
-        const { profileId, filePath } = payload
-        return this.devhubManager.getEnvManager().importEnvFile(profileId, filePath)
+        const { profileId, filePath, serviceId } = payload
+        return this.devhubManager.getEnvManager().importFromEnvFile(filePath, profileId, serviceId)
       }
 
       if (type === 'env.exportFile') {
-        const { profileId, filePath } = payload
-        return this.devhubManager.getEnvManager().exportEnvFile(profileId, filePath)
+        const { profileId, filePath, serviceId } = payload
+        return this.devhubManager.getEnvManager().exportToEnvFile(profileId, filePath, serviceId)
       }
 
       if (type === 'env.syncToService') {
