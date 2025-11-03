@@ -277,16 +277,30 @@ export default function Services() {
     setLoading(true)
     const runningServices = services.filter(s => s.status === 'running')
 
-    for (const service of runningServices) {
-      try {
-        await serviceApi.stop(service.id)
-      } catch (err) {
-        console.error(`Failed to stop ${service.name}:`, err)
-      }
+    // Stop all services
+    await Promise.all(
+      runningServices.map(service =>
+        serviceApi.stop(service.id).catch(err => {
+          console.error(`Failed to stop ${service.name}:`, err)
+        })
+      )
+    )
+
+    // Immediately update UI optimistically
+    setServices(prev => prev.map(s =>
+      runningServices.find(r => r.id === s.id)
+        ? { ...s, status: 'stopped' as const, pid: undefined }
+        : s
+    ))
+
+    // Clear selected service if it was stopped
+    if (selectedService && runningServices.find(s => s.id === selectedService)) {
+      setSelectedService(null)
+      setLogs([])
     }
 
-    await fetchServices()
     setLoading(false)
+    // Auto-refresh will pick up the actual state in next cycle
   }
 
   const handleOpenImportModal = async () => {
