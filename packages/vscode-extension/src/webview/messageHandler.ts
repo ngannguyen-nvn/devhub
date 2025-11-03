@@ -23,13 +23,16 @@ export class MessageHandler {
     const { type, payload } = message
 
     try {
-      const workspaceId = this.devhubManager.getActiveWorkspaceId()
-      console.log(`[MessageHandler] Handling message: ${type}, workspace: ${workspaceId}`)
+      console.log(`[MessageHandler] Handling message: ${type}`)
 
       // Repository operations
       if (type === 'repos.scan') {
         return await this.devhubManager.scanWorkspace()
       }
+
+      // Get workspace ID for operations that need it
+      const workspaceId = this.devhubManager.getActiveWorkspaceId()
+      console.log(`[MessageHandler] Using workspace: ${workspaceId}`)
 
       // Service operations
       if (type === 'services.getAll') {

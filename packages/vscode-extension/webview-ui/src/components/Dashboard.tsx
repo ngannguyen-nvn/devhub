@@ -72,20 +72,30 @@ export default function Dashboard() {
       const workspace = await workspaceApi.getActive()
       setActiveWorkspace(workspace)
 
+      if (!workspace) {
+        console.log('[Dashboard] No active workspace')
+        return
+      }
+
       // Fetch service stats
       const [allServices, runningServices] = await Promise.all([
         serviceApi.getAll(),
         serviceApi.getRunning()
       ])
+
+      const allServicesArray = Array.isArray(allServices) ? allServices : []
+      const runningServicesArray = Array.isArray(runningServices) ? runningServices : []
+
       setServiceCount({
-        total: allServices.length,
-        running: runningServices.length,
-        stopped: allServices.length - runningServices.length
+        total: allServicesArray.length,
+        running: runningServicesArray.length,
+        stopped: allServicesArray.length - runningServicesArray.length
       })
 
       // Fetch recent snapshots
-      const snapshots = await workspaceApi.getSnapshots(workspace.id)
-      setRecentSnapshots(snapshots.slice(0, 5))
+      const snapshotsResponse = await workspaceApi.getSnapshots(workspace.id)
+      const snapshotsArray = Array.isArray(snapshotsResponse) ? snapshotsResponse : []
+      setRecentSnapshots(snapshotsArray.slice(0, 5))
     } catch (err) {
       console.error('[Dashboard] Error fetching data:', err)
     }
@@ -96,7 +106,11 @@ export default function Dashboard() {
     setError(null)
     try {
       console.log('[Dashboard] Starting repo scan...')
-      const repositories = await repoApi.scan()
+      const response = await repoApi.scan()
+      console.log('[Dashboard] Scan response:', response)
+
+      // Handle response format - could be array or object with repositories property
+      const repositories = Array.isArray(response) ? response : (response?.repositories || [])
       console.log('[Dashboard] Found', repositories.length, 'repositories')
       setRepos(repositories)
 
@@ -153,8 +167,8 @@ export default function Dashboard() {
       }))
 
       if (servicesToCreate.length > 0) {
-        await serviceApi.batchCreate(servicesToCreate)
-        console.log('[Dashboard] Created', servicesToCreate.length, 'services')
+        const createdServices = await serviceApi.batchCreate(servicesToCreate)
+        console.log('[Dashboard] Created', createdServices?.length || servicesToCreate.length, 'services')
       }
 
       // Import .env files if enabled

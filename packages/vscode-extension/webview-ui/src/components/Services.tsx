@@ -100,10 +100,13 @@ export default function Services() {
         serviceApi.getRunning()
       ])
 
+      const allServicesArray = Array.isArray(allServices) ? allServices : []
+      const runningArray = Array.isArray(running) ? running : []
+
       // Merge status from running services
-      const servicesWithStatus = allServices.map((s: Service) => ({
+      const servicesWithStatus = allServicesArray.map((s: Service) => ({
         ...s,
-        status: running.find((r: Service) => r.id === s.id) ? 'running' : 'stopped'
+        status: runningArray.find((r: Service) => r.id === s.id) ? 'running' : 'stopped'
       }))
 
       setServices(servicesWithStatus)
