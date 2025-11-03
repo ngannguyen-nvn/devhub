@@ -50,10 +50,8 @@ export class DevHubPanel {
     // Handle messages from webview
     this.panel.webview.onDidReceiveMessage(
       async (message) => {
-        console.log('[DevHubPanel] Received message from webview:', message.type)
         try {
           const response = await this.messageHandler.handleMessage(message)
-          console.log('[DevHubPanel] Sending response for', message.type, ':', response)
           this.panel?.webview.postMessage({
             id: message.id,
             type: 'response',

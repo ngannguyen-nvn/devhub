@@ -104,14 +104,12 @@ export class DevHubManager {
     const activeWorkspace = this.workspaceManager.getActiveWorkspace()
     if (activeWorkspace) {
       this.activeWorkspaceId = activeWorkspace.id
-      console.log('[DevHubManager] Using existing active workspace:', activeWorkspace.name, activeWorkspace.id)
     } else {
       // Create default workspace
       const workspaceFolders = vscode.workspace.workspaceFolders
       const folderPath = workspaceFolders?.[0]?.uri.fsPath || ''
       const workspaceName = workspaceFolders?.[0]?.name || 'Default Workspace'
 
-      console.log('[DevHubManager] Creating default workspace:', workspaceName)
       const workspace = this.workspaceManager.createWorkspace({
         name: workspaceName,
         description: 'Auto-created workspace for VSCode',
@@ -119,7 +117,6 @@ export class DevHubManager {
         setAsActive: true
       })
       this.activeWorkspaceId = workspace.id
-      console.log('[DevHubManager] Created workspace:', workspace.name, workspace.id)
     }
   }
 
@@ -198,22 +195,17 @@ export class DevHubManager {
    * Scan workspace for repositories
    */
   async scanWorkspace(): Promise<Repository[]> {
-    console.log('[DevHubManager] scanWorkspace called')
     const workspaceFolders = vscode.workspace.workspaceFolders
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      console.log('[DevHubManager] No workspace folders found')
       return []
     }
 
     // Scan first workspace folder
     const rootPath = workspaceFolders[0].uri.fsPath
-    console.log('[DevHubManager] Scanning root path:', rootPath)
     const config = vscode.workspace.getConfiguration('devhub')
     const depth = config.get<number>('scanDepth', 3)
-    console.log('[DevHubManager] Scan depth:', depth)
 
     const repos = await this.repoScanner.scanDirectory(rootPath, depth)
-    console.log('[DevHubManager] Found', repos.length, 'repositories')
     return repos
   }
 
