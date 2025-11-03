@@ -507,7 +507,7 @@ export default function Services() {
             filteredServices.map(service => (
               <div
                 key={service.id}
-                className={`service-card ${isRunning(service.id) ? 'running' : ''} ${
+                className={`service-card ${service.status === 'running' ? 'running' : ''} ${
                   selectedService === service.id ? 'selected' : ''
                 }`}
                 onClick={() => setSelectedService(service.id)}
@@ -515,7 +515,7 @@ export default function Services() {
                 <div className="service-header">
                   <h3>{service.name}</h3>
                   <div className="service-status">
-                    {isRunning(service.id) ? (
+                    {service.status === 'running' ? (
                       <span className="status-badge running">● Running</span>
                     ) : (
                       <span className="status-badge stopped">● Stopped</span>
@@ -545,14 +545,13 @@ export default function Services() {
                   )}
                 </div>
                 <div className="service-actions">
-                  {isRunning(service.id) ? (
+                  {service.status === 'running' ? (
                     <button
                       className="btn-danger"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleStopService(service.id)
                       }}
-                      disabled={loading}
                     >
                       Stop
                     </button>
@@ -563,7 +562,6 @@ export default function Services() {
                         e.stopPropagation()
                         handleStartService(service.id)
                       }}
-                      disabled={loading}
                     >
                       Start
                     </button>
