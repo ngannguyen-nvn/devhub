@@ -53,7 +53,17 @@
         "icon": "$(debug-start)"
       },
       {
+        "command": "devhub.startServiceFromTree",
+        "title": "Start Service",
+        "icon": "$(debug-start)"
+      },
+      {
         "command": "devhub.stopService",
+        "title": "Stop Service",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "devhub.stopServiceFromTree",
         "title": "Stop Service",
         "icon": "$(debug-stop)"
       },
@@ -123,12 +133,12 @@
       ],
       "view/item/context": [
         {
-          "command": "devhub.startService",
+          "command": "devhub.startServiceFromTree",
           "when": "view == devhubServices && viewItem == serviceStopped",
           "group": "inline"
         },
         {
-          "command": "devhub.stopService",
+          "command": "devhub.stopServiceFromTree",
           "when": "view == devhubServices && viewItem == serviceRunning",
           "group": "inline"
         },

@@ -202,90 +202,94 @@ function registerCommands(
     })
   )
 
-  // Start service (from command palette or context menu)
+  // Start service (main command - can be called with serviceId string)
+  const startServiceCommand = async (serviceId?: string) => {
+    if (!serviceId) {
+      // Show quick pick if no service provided
+      const services = await manager.getAllServices()
+      const items = services.map(s => ({
+        label: s.name,
+        description: s.repoPath,
+        id: s.id,
+      }))
+      const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select service to start',
+      })
+      if (selected) {
+        serviceId = selected.id
+      }
+    }
+
+    if (serviceId) {
+      try {
+        await manager.startService(serviceId)
+        vscode.window.showInformationMessage('Service started')
+        servicesTreeProvider?.refresh()
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to start service: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      }
+    }
+  }
+
+  // Register main command (for command palette)
   context.subscriptions.push(
-    vscode.commands.registerCommand('devhub.startService', async (arg?: string | any) => {
-      // If called from tree view context menu, arg is the ServiceTreeItem object
-      // If called from command palette, arg is undefined
-      let serviceId: string | undefined
+    vscode.commands.registerCommand('devhub.startService', startServiceCommand)
+  )
 
-      if (typeof arg === 'string') {
-        serviceId = arg
-      } else if (arg && typeof arg === 'object' && 'serviceId' in arg) {
-        // Extract serviceId from TreeItem object
-        serviceId = arg.serviceId
-      }
-
-      if (!serviceId) {
-        // Show quick pick if no service provided
-        const services = await manager.getAllServices()
-        const items = services.map(s => ({
-          label: s.name,
-          description: s.repoPath,
-          id: s.id,
-        }))
-        const selected = await vscode.window.showQuickPick(items, {
-          placeHolder: 'Select service to start',
-        })
-        if (selected) {
-          serviceId = selected.id
-        }
-      }
-
+  // Register context menu command (receives TreeItem, extracts serviceId)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.startServiceFromTree', async (treeItem: any) => {
+      const serviceId = treeItem?.serviceId
       if (serviceId) {
-        try {
-          await manager.startService(serviceId)
-          vscode.window.showInformationMessage('Service started')
-          servicesTreeProvider?.refresh()
-        } catch (error) {
-          vscode.window.showErrorMessage(
-            `Failed to start service: ${error instanceof Error ? error.message : 'Unknown error'}`
-          )
-        }
+        await startServiceCommand(serviceId)
       }
     })
   )
 
-  // Stop service
+  // Stop service (main command - can be called with serviceId string)
+  const stopServiceCommand = async (serviceId?: string) => {
+    if (!serviceId) {
+      // Show quick pick if no service provided
+      const services = await manager.getRunningServices()
+      const items = services.map(s => ({
+        label: s.name,
+        description: s.repoPath,
+        id: s.id,
+      }))
+      const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select service to stop',
+      })
+      if (selected) {
+        serviceId = selected.id
+      }
+    }
+
+    if (serviceId) {
+      try {
+        await manager.stopService(serviceId)
+        vscode.window.showInformationMessage('Service stopped')
+        servicesTreeProvider?.refresh()
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to stop service: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      }
+    }
+  }
+
+  // Register main command (for command palette)
   context.subscriptions.push(
-    vscode.commands.registerCommand('devhub.stopService', async (arg?: string | any) => {
-      // If called from tree view context menu, arg is the ServiceTreeItem object
-      // If called from command palette, arg is undefined
-      let serviceId: string | undefined
+    vscode.commands.registerCommand('devhub.stopService', stopServiceCommand)
+  )
 
-      if (typeof arg === 'string') {
-        serviceId = arg
-      } else if (arg && typeof arg === 'object' && 'serviceId' in arg) {
-        // Extract serviceId from TreeItem object
-        serviceId = arg.serviceId
-      }
-
-      if (!serviceId) {
-        // Show quick pick if no service provided
-        const services = await manager.getRunningServices()
-        const items = services.map(s => ({
-          label: s.name,
-          description: s.repoPath,
-          id: s.id,
-        }))
-        const selected = await vscode.window.showQuickPick(items, {
-          placeHolder: 'Select service to stop',
-        })
-        if (selected) {
-          serviceId = selected.id
-        }
-      }
-
+  // Register context menu command (receives TreeItem, extracts serviceId)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.stopServiceFromTree', async (treeItem: any) => {
+      const serviceId = treeItem?.serviceId
       if (serviceId) {
-        try {
-          await manager.stopService(serviceId)
-          vscode.window.showInformationMessage('Service stopped')
-          servicesTreeProvider?.refresh()
-        } catch (error) {
-          vscode.window.showErrorMessage(
-            `Failed to stop service: ${error instanceof Error ? error.message : 'Unknown error'}`
-          )
-        }
+        await stopServiceCommand(serviceId)
       }
     })
   )
