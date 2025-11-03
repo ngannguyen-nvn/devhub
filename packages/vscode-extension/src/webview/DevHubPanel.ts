@@ -12,6 +12,8 @@ import { MessageHandler } from './messageHandler'
 export class DevHubPanel {
   private panel: vscode.WebviewPanel | undefined
   private messageHandler: MessageHandler
+  private pendingMessages: any[] = []
+  private isWebviewReady = false
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -50,6 +52,17 @@ export class DevHubPanel {
     // Handle messages from webview
     this.panel.webview.onDidReceiveMessage(
       async (message) => {
+        // Webview signals it's ready to receive messages
+        if (message.type === 'webview-ready') {
+          this.isWebviewReady = true
+          // Send any pending messages
+          this.pendingMessages.forEach(msg => {
+            this.panel?.webview.postMessage(msg)
+          })
+          this.pendingMessages = []
+          return
+        }
+
         try {
           const response = await this.messageHandler.handleMessage(message)
           this.panel?.webview.postMessage({
@@ -74,6 +87,8 @@ export class DevHubPanel {
     this.panel.onDidDispose(
       () => {
         this.panel = undefined
+        this.isWebviewReady = false
+        this.pendingMessages = []
       },
       undefined,
       this.context.subscriptions
@@ -117,9 +132,19 @@ export class DevHubPanel {
 
   /**
    * Send message to webview
+   * Queues messages if webview is not ready yet
    */
   postMessage(message: any): void {
-    this.panel?.webview.postMessage(message)
+    if (!this.panel) {
+      return
+    }
+
+    if (this.isWebviewReady) {
+      this.panel.webview.postMessage(message)
+    } else {
+      // Queue message to send when webview is ready
+      this.pendingMessages.push(message)
+    }
   }
 
   /**

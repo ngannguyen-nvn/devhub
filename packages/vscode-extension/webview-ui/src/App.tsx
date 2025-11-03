@@ -22,6 +22,12 @@ function App() {
 
   // Listen for navigation messages from extension host
   useEffect(() => {
+    // Signal to extension that webview is ready
+    const vscode = (window as any).acquireVsCodeApi?.()
+    if (vscode) {
+      vscode.postMessage({ type: 'webview-ready' })
+    }
+
     const handleMessage = (event: MessageEvent) => {
       const message = event.data
       if (message.type === 'navigate') {
