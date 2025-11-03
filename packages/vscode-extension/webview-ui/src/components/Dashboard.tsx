@@ -108,14 +108,23 @@ export default function Dashboard() {
       console.log('[Dashboard] Starting repo scan...')
       const response = await repoApi.scan()
       console.log('[Dashboard] Scan response:', response)
+      console.log('[Dashboard] Response type:', typeof response)
+      console.log('[Dashboard] Is array?', Array.isArray(response))
 
       // Handle response format - could be array or object with repositories property
       const repositories = Array.isArray(response) ? response : (response?.repositories || [])
+      console.log('[Dashboard] Parsed repositories:', repositories)
       console.log('[Dashboard] Found', repositories.length, 'repositories')
+
+      if (repositories.length === 0) {
+        setError('No repositories found. Make sure you have git repositories in your workspace folder.')
+      }
+
       setRepos(repositories)
 
       // Select all by default
       setSelectedRepos(new Set(repositories.map((r: Repository) => r.path)))
+      console.log('[Dashboard] Selected repos:', repositories.length, 'repos')
     } catch (err) {
       console.error('[Dashboard] Scan error:', err)
       setError(err instanceof Error ? err.message : 'Failed to scan repositories')
@@ -283,6 +292,9 @@ export default function Dashboard() {
           >
             {scanning ? 'Scanning...' : 'Scan Workspace'}
           </button>
+          <span style={{ marginLeft: '10px', fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
+            {repos.length > 0 ? `${repos.length} repositories found` : 'No repositories scanned yet'}
+          </span>
         </div>
 
         {error && (
