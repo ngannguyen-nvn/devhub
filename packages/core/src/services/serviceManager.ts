@@ -372,7 +372,8 @@ export class ServiceManager extends EventEmitter {
     const process = this.processes.get(serviceId)
 
     if (!process) {
-      throw new Error('Service is not running')
+      // Service already stopped - this is fine, just return
+      return
     }
 
     // Stop health checks
