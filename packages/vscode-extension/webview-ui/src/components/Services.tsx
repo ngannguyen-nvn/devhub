@@ -193,8 +193,8 @@ export default function Services() {
         s.id === serviceId ? { ...s, status: 'running' as const } : s
       ))
       setSelectedService(serviceId)
-      // Fetch full state in background
-      fetchServices()
+      // Fetch full state after a brief delay to allow process to fully start
+      setTimeout(() => fetchServices(), 500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start service')
       // Revert on error
@@ -213,8 +213,8 @@ export default function Services() {
         setSelectedService(null)
         setLogs([])
       }
-      // Fetch full state in background
-      fetchServices()
+      // Fetch full state after a brief delay to allow process to fully stop
+      setTimeout(() => fetchServices(), 500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to stop service')
       // Revert on error
