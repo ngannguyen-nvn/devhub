@@ -41,6 +41,10 @@ export default function Services() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Resizable layout state
+  const [leftWidth, setLeftWidth] = useState(60) // percentage
+  const [isDragging, setIsDragging] = useState(false)
+
   // Form state
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -93,6 +97,35 @@ export default function Services() {
       return () => clearInterval(interval)
     }
   }, [showCentralLogs, services])
+
+  // Resize handlers
+  const handleMouseDown = () => {
+    setIsDragging(true)
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return
+    const containerWidth = window.innerWidth - 40 // Account for padding
+    const newWidth = (e.clientX / containerWidth) * 100
+    if (newWidth >= 30 && newWidth <= 70) { // Min 30%, max 70%
+      setLeftWidth(newWidth)
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isDragging])
 
   const fetchServices = async () => {
     try {
@@ -494,9 +527,9 @@ export default function Services() {
         </div>
       )}
 
-      {/* Services Grid */}
-      <div className="services-grid">
-        <div className="services-list">
+      {/* Services Grid - Resizable */}
+      <div className="services-grid-resizable">
+        <div className="services-list" style={{ width: `${leftWidth}%` }}>
           {filteredServices.length === 0 ? (
             <div className="empty-state">
               <p>No services yet. Create your first service to get started.</p>
@@ -580,8 +613,14 @@ export default function Services() {
           )}
         </div>
 
+        {/* Resize Divider */}
+        <div
+          className={`resize-divider ${isDragging ? 'dragging' : ''}`}
+          onMouseDown={handleMouseDown}
+        />
+
         {/* Service Logs Panel */}
-        <div className="logs-panel">
+        <div className="logs-panel" style={{ width: `${100 - leftWidth}%` }}>
           {selectedService ? (
             <>
               <div className="logs-header">

@@ -168,17 +168,46 @@
   margin-top: 20px;
 }
 
-/* Services Grid */
-.services-grid {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 20px;
+/* Services Grid - Resizable */
+.services-grid-resizable {
+  display: flex;
+  gap: 0;
+  position: relative;
 }
 
 .services-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 30%;
+  max-width: 70%;
+  overflow-y: auto;
+}
+
+.resize-divider {
+  width: 4px;
+  background: var(--vscode-panel-border);
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.resize-divider:hover {
+  background: var(--vscode-focusBorder);
+}
+
+.resize-divider.dragging {
+  background: var(--vscode-focusBorder);
+}
+
+.resize-divider::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 0;
+  bottom: 0;
 }
 
 .empty-state {
@@ -283,8 +312,10 @@
   display: flex;
   flex-direction: column;
   max-height: 600px;
-  position: sticky;
-  top: 20px;
+  flex-shrink: 0;
+  min-width: 30%;
+  max-width: 70%;
+  overflow: hidden;
 }
 
 .logs-header {
