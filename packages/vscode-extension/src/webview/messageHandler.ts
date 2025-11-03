@@ -224,12 +224,75 @@ export class MessageHandler {
       // Repository batch operations
       if (type === 'repos.analyzeBatch') {
         const { repoPaths } = payload
-        const repoScanner = this.devhubManager.getRepoScanner()
+        const fs = require('fs')
+        const path = require('path')
         const results = []
 
         for (const repoPath of repoPaths) {
           try {
-            const analysis = await repoScanner.analyzeRepository(repoPath)
+            if (!repoPath || typeof repoPath !== 'string') {
+              results.push({ success: false, repoPath, error: 'Invalid repository path' })
+              continue
+            }
+
+            if (!fs.existsSync(repoPath)) {
+              results.push({ success: false, repoPath, error: 'Repository path does not exist' })
+              continue
+            }
+
+            const analysis: any = {
+              name: path.basename(repoPath),
+              command: null,
+              port: null,
+              packageJsonFound: false,
+              envFound: false
+            }
+
+            // Read package.json
+            const packageJsonPath = path.join(repoPath, 'package.json')
+            if (fs.existsSync(packageJsonPath)) {
+              try {
+                const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8')
+                const packageJson = JSON.parse(packageJsonContent)
+                analysis.packageJsonFound = true
+
+                // Try to find start command
+                if (packageJson.scripts) {
+                  if (packageJson.scripts.start) {
+                    analysis.command = 'npm start'
+                  } else if (packageJson.scripts.dev) {
+                    analysis.command = 'npm run dev'
+                  } else if (packageJson.scripts.serve) {
+                    analysis.command = 'npm run serve'
+                  } else {
+                    const scripts = Object.keys(packageJson.scripts)
+                    if (scripts.length > 0) {
+                      analysis.command = `npm run ${scripts[0]}`
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error(`Error parsing package.json for ${repoPath}:`, error)
+              }
+            }
+
+            // Read .env file
+            const envPath = path.join(repoPath, '.env')
+            if (fs.existsSync(envPath)) {
+              try {
+                const envContent = fs.readFileSync(envPath, 'utf-8')
+                analysis.envFound = true
+
+                // Parse PORT from .env
+                const portMatch = envContent.match(/^PORT\s*=\s*(\d+)/m)
+                if (portMatch && portMatch[1]) {
+                  analysis.port = parseInt(portMatch[1], 10)
+                }
+              } catch (error) {
+                console.error(`Error reading .env file for ${repoPath}:`, error)
+              }
+            }
+
             results.push({ success: true, repoPath, analysis })
           } catch (error) {
             results.push({ success: false, repoPath, error: error instanceof Error ? error.message : 'Unknown error' })
