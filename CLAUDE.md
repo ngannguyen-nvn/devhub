@@ -17,7 +17,7 @@ This document contains everything needed to understand and continue developing D
 
 **Versions:**
 - Web Application: v2.0.0 (Production Ready)
-- VSCode Extension: v2.0.0 (Production Ready, 295.5 KB)
+- VSCode Extension: v2.0.0 (Production Ready, 16.26 MB)
 
 ---
 
@@ -27,11 +27,12 @@ This document contains everything needed to understand and continue developing D
 
 The VSCode extension provides full DevHub functionality within VSCode:
 
-- **Package:** devhub-2.0.0.vsix (295.5 KB)
-- **Bundled Code:** 796 KB (all JavaScript dependencies)
+- **Package:** devhub-2.0.0.vsix (16.26 MB with native dependencies)
+- **Bundled Code:** 798 KB extension.js
+- **Webview UI:** 220 KB
 - **Tree Views:** Services + Workspaces with inline actions
 - **Commands:** 10+ via command palette
-- **Webview UI:** React app with Services management
+- **Webview Tabs:** 6 (Dashboard, Services, Docker, Environment, Workspaces, Notes)
 - **Architecture:** esbuild bundling, message passing, VSCode theming
 
 **Implementation:**
@@ -42,7 +43,7 @@ The VSCode extension provides full DevHub functionality within VSCode:
 - ✅ Phase 5: Bundling & Distribution (esbuild, LICENSE, marketplace docs)
 
 **Location:** `packages/vscode-extension/`
-**Documentation:** See `packages/vscode-extension/DEVELOPMENT.md`
+**Documentation:** See `packages/vscode-extension/README.md`
 
 ---
 
