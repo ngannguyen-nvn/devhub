@@ -58,6 +58,30 @@ See `packages/vscode-extension/README.md` for detailed documentation.
 
 ---
 
+## 📸 Screenshots
+
+### Dashboard - Workspace Overview
+![Dashboard](screenshots/01-dashboard.png)
+*Central hub showing workspace stats, services, snapshots, and repository scanner*
+
+### Service Manager - Control Your Microservices
+![Services](screenshots/02-services.png)
+*Start/stop 40+ services with one click, real-time logs, and search*
+
+### Environment Variables - Secure Configuration
+![Environment](screenshots/03-environment.png)
+*AES-256 encrypted profiles with inline editing and .env file sync*
+
+### Workspaces - Organize Your Projects
+![Workspaces](screenshots/04-workspaces.png)
+*Hierarchical workspace management with snapshots and isolation*
+
+### Wiki & Notes - Documentation System
+![Wiki](screenshots/05-wiki.png)
+*Markdown-based notes with full-text search and bidirectional linking*
+
+---
+
 ## 🎯 What Does DevHub Do?
 
 DevHub solves the chaos of managing multiple microservices locally:
