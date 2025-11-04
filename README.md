@@ -4,9 +4,57 @@
 
 DevHub is a powerful desktop application that helps developers manage their local microservices ecosystem. It combines git repository management, intelligent service orchestration, Docker management, environment configuration, and documentation in one unified interface.
 
-**✅ v2.0 Now Available!** Advanced orchestration features: health checks, log persistence, and service groups for professional microservices management.
+**✅ v2.0 Production Ready!** Advanced orchestration features: health checks, log persistence, and service groups for professional microservices management.
 
 **🏗️ Dual-Version Architecture:** DevHub now supports both web app and VSCode extension versions using a shared core package, enabling code reuse and maintainable dual deployments.
+
+---
+
+## 🚀 Quick Start
+
+### Option 1: Web Application
+
+#### Prerequisites
+
+- **Node.js** >= 18.0.0 ([Download here](https://nodejs.org/))
+- **npm** >= 9.0.0 (comes with Node.js)
+- **Git** (to scan repositories)
+- **Docker** (optional, for Docker features)
+
+#### Installation
+
+```bash
+git clone https://github.com/ngannguyen-nvn/devhub.git
+cd devhub
+npm install
+npm run dev
+```
+
+Open **http://localhost:3000** in your browser.
+
+---
+
+### Option 2: VSCode Extension
+
+**Install from .vsix file:**
+
+1. Download `devhub-2.0.0.vsix` from releases
+2. In VSCode:
+   - Open Command Palette (`Cmd/Ctrl+Shift+P`)
+   - Run "Extensions: Install from VSIX..."
+   - Select the downloaded `.vsix` file
+3. Reload VSCode
+
+**Features:**
+- Service management from tree view with inline start/stop
+- Real-time logs viewer with filtering
+- Docker integration (build, manage containers)
+- Environment profiles with AES-256 encryption
+- Workspace snapshots (capture and restore state)
+- Wiki/Notes with markdown and [[bidirectional linking]]
+- Command palette integration (10+ commands)
+
+See `packages/vscode-extension/README.md` for detailed documentation.
 
 ---
 
@@ -32,48 +80,7 @@ DevHub solves the chaos of managing multiple microservices locally:
 
 ---
 
-## 🚀 Quick Start (Testing the Current Version)
-
-### Prerequisites
-
-Make sure you have these installed:
-
-- **Node.js** >= 18.0.0 ([Download here](https://nodejs.org/))
-- **npm** >= 9.0.0 (comes with Node.js)
-- **Git** (to scan repositories)
-- **Docker** (optional, for future Docker features)
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/ngannguyen-nvn/devhub.git
-cd devhub
-git checkout claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3  # Current branch
-```
-
-### Step 2: Install Dependencies
-
-```bash
-npm install
-```
-
-This will install dependencies for all packages (frontend, backend, shared, and core).
-
-### Step 3: Start DevHub
-
-```bash
-npm run dev
-```
-
-This starts both the backend API and frontend UI:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-
-**That's it!** Open http://localhost:3000 in your browser to start using DevHub.
-
----
-
-## 📖 How to Test DevHub - Step by Step
+## 📖 Web Application Guide
 
 ### Feature 1: Repository Dashboard
 
@@ -83,616 +90,307 @@ This starts both the backend API and frontend UI:
 
 1. **Open DevHub** at http://localhost:3000
 2. You should see the **Dashboard** (it's the default view)
-3. In the **scan path input field**, enter a directory path, for example:
+3. In the **scan path input field**, enter a directory path:
    - `/home/user` (Linux/Mac)
    - `C:\Users\YourName` (Windows)
-   - Or any folder where you have git repositories
 4. Click the **"Scan"** button
-5. **Wait a moment** - DevHub will search for all git repos in that directory
 
 **What you should see:**
 
-Each repository will display:
-- Repository name
-- Full path
+Each repository displays:
+- Repository name and full path
 - Current branch (e.g., `main`, `develop`)
 - Uncommitted changes indicator (yellow badge if there are changes)
 - Last commit message and author
 - Dockerfile indicator (blue "Docker" badge if Dockerfile exists)
 
-**Try this:**
-- Scan different directories
-- Navigate to one of your repos and make a change, then rescan to see the "Uncommitted changes" badge
-
 #### 1.1 Save Repositories to Workspace
 
-**What it does:** After scanning, you can save selected repositories to a workspace with optional .env file import.
+**What it does:** After scanning, save selected repositories to a workspace with optional .env file import.
 
 **How to test:**
 
 1. **Scan a folder** with repositories
-2. **Select repositories** - All repos are selected by default, or click checkboxes to select specific ones
+2. **Select repositories** - All repos are selected by default
 3. Click **"Save to Workspace"** button
 4. **Choose workspace mode:**
-   - **Create New**: Enter workspace name (auto-populated from folder name)
-   - **Use Existing**: Select from existing workspaces
+   - **Create New**: Enter workspace name
+   - **Use Existing**: Select existing workspace
 5. **Optional: Import .env files**
-   - If any selected repos have .env files, you'll see a checkbox
    - Check to import .env files to environment profiles
-   - Format: `"{SnapshotName} - {RepoName}"` (one profile per repo)
-   - Example: "Scan - 1/27/2025 - Backend API"
+   - Creates one profile per repository
 6. Click **"Save"**
-
-**What happens:**
-- Creates/uses workspace
-- Creates snapshot with selected repos
-- (Optional) Creates environment profiles from .env files
-- Automatically activates new workspaces
 
 **Benefits:**
 - One-click setup for entire project
 - .env files automatically imported (opt-in)
 - No variable conflicts between repos
-- Clear organization with snapshot-prefixed profiles
 
 ---
 
 ### Feature 2: Service Manager
 
-**What it does:** Lets you define, start, stop, and monitor services (any command-line program).
-
-**How to test:**
+**What it does:** Define, start, stop, and monitor services (any command-line program).
 
 #### 2.1 Add Your First Service
 
 1. Click **"Services"** in the left sidebar
-2. Click the **"Add Service"** button (blue button in top-right)
+2. Click **"Add Service"** button
 3. Fill out the form:
    - **Service Name**: `Test Echo Service`
-   - **Repository Path**: `/home/user` (or any valid directory)
+   - **Repository Path**: `/home/user`
    - **Start Command**: `echo "Hello from DevHub!" && sleep 30`
    - **Port**: Leave empty (optional)
 4. Click **"Add Service"**
 
-#### 2.2 Start the Service
+#### 2.2 Start and Monitor
 
-1. You should see your new service in the list with a "Stopped" badge
-2. Click the **green "Start"** button
-3. The badge should change to **"Running"** with a green color
-4. You should see a PID (process ID) displayed
+1. Click the **green "Start"** button
+2. Badge changes to **"Running"** with a green color
+3. **Click on the service card** to view logs in the right panel
+4. Logs update automatically every 5 seconds
 
-#### 2.3 View Logs
+#### 2.3 Search Services
 
-1. **Click on the service card** (anywhere on it)
-2. Look at the **right panel** (dark terminal-style panel)
-3. You should see the output: `Hello from DevHub!`
-4. Logs update automatically every 2 seconds while the service is running
+**Quick find services by name, path, command, or port:**
 
-#### 2.4 Stop the Service
+1. Use the **search bar** at the top
+2. Type to search (real-time filtering)
+3. Click **"Clear"** to reset
 
-1. Click the **red "Stop"** button
-2. The service status changes to "Stopped"
-3. The logs stop updating
+#### 2.4 Import from Workspace
 
-#### 2.5 Add a Real Service (Optional)
+**Batch import services with auto-detection:**
 
-If you have a Node.js project, try this:
-
-1. Click **"Add Service"** again
-2. Fill out:
-   - **Service Name**: `My Node App`
-   - **Repository Path**: Path to your Node.js project (e.g., `/path/to/my-project`)
-   - **Start Command**: `npm start` (or `npm run dev`)
-   - **Port**: `3001` (or whatever port your app uses)
-3. Click **"Add Service"**
-4. Start it and watch the logs in real-time!
-
-#### 2.6 Test Multiple Services
-
-- Add 2-3 services
-- Start them all at once
-- Switch between services by clicking on their cards
-- Each service has its own log viewer
-- Try stopping and restarting services
-
-#### 2.7 Search Services
-
-**What it does:** Quickly find services by name, path, command, or port.
-
-**How to test:**
-
-1. Add multiple services (or import from workspace)
-2. Look for the **search bar** at the top of the service list
-3. Type to search:
-   - **By name**: `api`
-   - **By path**: `/home/user/backend`
-   - **By command**: `npm start`
-   - **By port**: `3000`
-4. Results filter in real-time
-5. Result count shows: "X service(s)"
-6. Click **"Clear"** (X icon) to reset
-
-**Benefits:**
-- Fast filtering with real-time results
-- Search across multiple fields simultaneously
-- Helpful when managing 10+ services
-
-#### 2.8 Import Services from Workspace
-
-**What it does:** Automatically import services from repositories in the active workspace with auto-detected configuration.
-
-**How to test:**
-
-1. Make sure you have an **active workspace** with repositories
-2. Click **"Import from Workspace"** button
-3. **Select repositories** to import as services
-4. Review auto-detected configuration:
-   - **Service name**: From folder name
-   - **Start command**: Detected from package.json (`npm start`, `npm run dev`, etc.)
-   - **Port**: Detected from .env file (if `PORT=` exists)
-5. Click **"Import Selected"**
-
-**What happens:**
-- Creates one service per selected repository
-- Auto-detection saves time (no manual configuration)
-- Skips repositories that are already imported (shows "Already added" badge)
-- Shows toast notifications for success/skipped/failed imports
-
-**Benefits:**
-- Batch import multiple services at once
-- No manual entry for common configurations
-- Duplicate detection prevents re-adding services
-- Quick setup for entire project
+1. Click **"Import from Workspace"** button
+2. **Select repositories** to import
+3. Review auto-detected configuration:
+   - Service name from folder name
+   - Start command from package.json
+   - Port from .env file
+4. Click **"Import Selected"**
 
 ---
 
 ### Feature 3: Docker Management
 
-**What it does:** Build Docker images, manage containers, and generate docker-compose files.
-
 **Prerequisites:** Docker must be installed and running.
 
-**How to test:**
+#### 3.1 View Images
 
-#### 3.1 View Docker Images
-
-1. Click **"Docker"** in the left sidebar
-2. You should see the **Images** tab (default view)
-3. All your local Docker images will be listed with:
-   - Image name and tags
-   - Size
-   - Created date
-   - Number of containers using it
+1. Click **"Docker"** in sidebar
+2. See the **Images** tab
+3. All local Docker images listed
 
 #### 3.2 Build an Image
 
-1. Click **"Build Image"** button
-2. Fill out the form:
-   - **Context Path**: Path to directory with Dockerfile (e.g., `/home/user/my-app`)
-   - **Dockerfile Path**: `Dockerfile` (or custom name)
-   - **Image Name**: `my-app`
-   - **Image Tag**: `latest`
+1. Click **"Build Image"**
+2. Fill context path, Dockerfile name, image name, tag
 3. Click **"Build"**
-4. Watch the build progress stream in real-time
-5. New image appears in the list when complete
+4. Watch real-time build progress
 
-#### 3.3 Run a Container
-
-1. Find an image in the list
-2. Click **"Run"** button
-3. Fill out the form:
-   - **Container Name**: `my-app-container`
-   - **Ports**: `8080:80` (hostPort:containerPort)
-   - **Environment Variables**: `KEY=value` (one per line)
-4. Click **"Run"**
-5. Container starts and appears in Containers tab
-
-#### 3.4 Manage Containers
+#### 3.3 Manage Containers
 
 1. Switch to **"Containers"** tab
-2. See all containers (running and stopped)
-3. For each container:
-   - **Start**: Green play button (for stopped containers)
-   - **Stop**: Red stop button (for running containers)
-   - **View Logs**: Click "Logs" button to see container output
-   - **Remove**: Trash icon to delete container
+2. Start/stop/remove containers
+3. View container logs
 
-#### 3.5 Generate docker-compose.yml
+#### 3.4 Generate docker-compose.yml
 
-1. Click **"Generate Compose"** button
-2. Select multiple images to include
-3. Configure ports and environment variables
-4. Click **"Generate"**
-5. Copy the generated docker-compose.yml content
+1. Click **"Generate Compose"**
+2. Select images to include
+3. Configure ports and environment
+4. Copy generated YAML
 
 ---
 
 ### Feature 4: Environment Variables Manager
 
-**What it does:** Manage environment variables across services with secure encrypted storage.
+**What it does:** Manage environment variables with secure AES-256 encryption.
 
-**How to test:**
+#### 4.1 Create Profile
 
-#### 4.1 Create an Environment Profile
-
-1. Click **"Environment"** in the left sidebar
-2. Click **"Create Profile"** button
-3. Fill out:
-   - **Profile Name**: `Development`
-   - **Description**: `Dev environment variables`
+1. Click **"Environment"** in sidebar
+2. Click **"Create Profile"**
+3. Enter name and description
 4. Click **"Create"**
-5. Profile appears in the left panel
 
 #### 4.2 Add Variables
 
-1. Select a profile from the left panel
-2. Click **"Add Variable"** in the center panel
-3. Fill out:
-   - **Key**: `DATABASE_URL`
-   - **Value**: `postgresql://localhost:5432/mydb`
-   - **Is Secret**: Check this box to encrypt and mask the value
-   - **Description**: `Primary database connection`
-4. Click **"Add"**
-5. Variable appears in the list
-6. Note: Secrets show as `•••••` in the UI
+1. Select profile
+2. Click **"Add Variable"**
+3. Fill out key, value, description
+4. Check **"Is Secret"** to encrypt
+5. Click **"Add"**
 
-#### 4.3 Import from .env File
+#### 4.3 Search
 
-1. Select a profile
-2. Click **"Import .env"** button
-3. Paste your .env file content:
-   ```
-   NODE_ENV=development
-   API_KEY=secret123
-   PORT=3000
-   ```
-4. Click **"Import"**
-5. All variables are added to the profile
+- **Search profiles**: Use search bar above profile list
+- **Search variables**: Use search bar above variable list
+- Real-time filtering
 
-#### 4.4 Export to .env
+#### 4.4 Copy in KEY=VALUE Format
 
-1. Select a profile with variables
-2. Click **"Export"** button
-3. Copy the generated .env format
-4. Save to a file or use in your project
+1. Click **Copy** button next to variable
+2. Paste anywhere (terminal, .env file)
+3. Format: `KEY=value`
 
-#### 4.5 Search Profiles and Variables
+#### 4.5 Inline Editing
 
-**What it does:** Quickly find profiles and variables by name, description, key, or value.
+1. Click **Edit** button (pencil icon)
+2. Update any field
+3. Click **Save** (checkmark) or **Cancel** (X)
 
-**How to test:**
+#### 4.6 Sync to Service .env Files
 
-1. Create multiple profiles with variables
-2. **Search profiles**:
-   - Use search bar above profile list
-   - Type profile name or description
-   - Results filter in real-time
-3. **Search variables**:
-   - Select a profile with many variables
-   - Use search bar above variable list
-   - Type key, value, or description
-   - Results filter in real-time
+**Write profile variables directly to service .env files:**
 
-**Benefits:**
-- Find variables quickly in large profiles
-- Locate profiles by description or name
-- Real-time filtering for instant results
-
-#### 4.6 Copy Variable in KEY=VALUE Format
-
-**What it does:** Copy variables in standard .env format with one click.
-
-**How to test:**
-
-1. Select a profile with variables
-2. Look for the **Copy** button next to each variable
-3. Click the copy button
-4. Paste anywhere (e.g., terminal, .env file)
-5. Format is: `KEY=value` (e.g., `DATABASE_URL=postgresql://...`)
-6. Toast notification confirms: "Copied: KEY=..."
-
-**Benefits:**
-- Quick copy-paste to terminal or files
-- Standard .env format
-- No manual formatting needed
-
-#### 4.7 Edit Variable Values
-
-**What it does:** Update variable values inline without recreating them.
-
-**How to test:**
-
-1. Select a profile with variables
-2. Click the **Edit** button (pencil icon) next to a variable
-3. Inline edit form appears with current values
-4. Update any field:
-   - **Key**: Change variable name
-   - **Value**: Update value (decrypted if secret)
-   - **Description**: Add or update description
-   - **Is Secret**: Toggle encryption
-5. Click **Save** (checkmark icon) or **Cancel** (X icon)
-6. Variable updates immediately
-
-**Benefits:**
-- No need to delete and recreate variables
-- Edit multiple fields at once
-- Secrets are decrypted for editing
-
-#### 4.8 Sync Variables to Service .env Files
-
-**What it does:** Write profile variables directly to service .env files on disk.
-
-**How to test:**
-
-1. Create a profile with variables (e.g., `DATABASE_URL`, `API_KEY`, `PORT`)
-2. Click **"Sync to Service"** button
-3. **Smart matching**: DevHub automatically selects the matching service
-   - Matches by name (profile name → service name)
-   - Example: Profile "admin-api" → Service "admin-api"
-4. **Review match**: Default service shown, or expand to see all services
-5. **Search services** (if expanded): Type to filter services
-6. Click **"Sync"**
-7. Variables are written to `{service.repoPath}/.env`
-
-**What happens:**
-- Existing .env file is backed up (if exists)
-- All profile variables written in KEY=VALUE format
-- Secrets are decrypted before writing
-- Toast confirms: "Synced X variables to service"
-
-**Benefits:**
-- Update service .env files without manual editing
-- Smart matching saves time
-- Backup created for safety
-- One-click sync for entire profile
-
-#### 4.9 Apply Profile to Service
-
-1. Select a profile
-2. In the right panel, see "Apply to Service" section
-3. Select a service from dropdown
-4. Click **"Apply"**
-5. Environment variables are now available to that service when it runs
-
-#### 4.10 Auto-Import from Dashboard (Recommended)
-
-**What it does:** When saving repositories to a workspace from Dashboard, you can automatically import .env files with per-repository isolation.
-
-**How it works:**
-
-1. **Scan folder** in Dashboard
-2. Select repos with .env files
-3. Click **"Save to Workspace"**
-4. **Check "Import .env files"** option
-5. DevHub creates **one profile per repository**:
-   - Profile name format: `"{SnapshotName} - {RepoName}"`
-   - Example: "Scan - 1/27/2025 - Backend API"
-   - Example: "Scan - 1/27/2025 - Frontend Web"
-
-**Benefits of per-repo profiles:**
-
-✅ **No variable conflicts** - Each repo gets its own profile (PORT=3000 vs PORT=4000)
-✅ **Clear organization** - Easy to identify which profile belongs to which repo
-✅ **Snapshot isolation** - Each snapshot creates its own set of profiles
-✅ **History preserved** - Profiles persist at workspace level, never deleted
-✅ **Easy management** - Filter/search by snapshot name or repo name
-
-**Example:**
-
-Snapshot 1: "Initial Setup" (Jan 27)
-- Creates: "Initial Setup - Backend API" (PORT=3000, DB_HOST=localhost)
-- Creates: "Initial Setup - Frontend Web" (PORT=4000, API_URL=...)
-
-Snapshot 2: "Feature Branch" (Feb 5)
-- Creates: "Feature Branch - Backend API" (PORT=3000, DB_HOST=staging)
-- Creates: "Feature Branch - Payment Service" (PORT=5000, STRIPE_KEY=...)
-
-When you restore Snapshot 1, all profiles are still visible, but you can clearly see which ones belong to "Initial Setup".
+1. Select profile
+2. Click **"Sync to Service"**
+3. **Smart matching** selects matching service by name
+4. Click **"Sync"**
+5. Variables written to `{service.repoPath}/.env`
 
 ---
 
 ### Feature 5: Hierarchical Workspaces
 
-**What it does:** Organize your development environments with a hierarchical workspace → snapshots structure. Each workspace can contain multiple snapshots, making it easy to manage different states of the same project.
+**What it does:** Organize development environments with workspace → snapshots structure.
 
 **⚡ Key Concept: Workspace Scoping**
 
-All resources in DevHub are **workspace-scoped** for complete isolation:
-
-- **Services** belong to workspaces (not global)
-- **Environment profiles** belong to workspaces
-- **Notes/Wiki** belong to workspaces
-- **Snapshots** belong to workspaces (child entities)
+All resources are **workspace-scoped** for complete isolation:
+- Services belong to workspaces
+- Environment profiles belong to workspaces
+- Notes/Wiki belong to workspaces
+- Snapshots belong to workspaces
 
 **Benefits:**
-- ✅ **Complete isolation** - Switching workspaces shows only that workspace's resources
-- ✅ **No naming conflicts** - Different projects can have services with same name
-- ✅ **Organized by project** - Each workspace is self-contained
-- ✅ **Cascade deletion** - Deleting workspace removes all its resources (services, profiles, notes, snapshots)
-- ✅ **Active workspace** - One workspace is active at a time (services, env profiles, notes are filtered by active workspace)
+- ✅ Complete isolation between projects
+- ✅ No naming conflicts
+- ✅ Cascade deletion
+- ✅ Active workspace pattern
 
-**Example:**
+#### 5.1 Create Workspace
 
-```
-Workspace: "E-commerce Backend"
-├── Services: auth-api, payment-api, user-service
-├── Env Profiles: "Initial Setup - Backend API", "Feature Branch - Payment Service"
-├── Notes: API docs, architecture notes, troubleshooting guides
-└── Snapshots: Initial Setup, Feature Branch, Production Ready
-
-Workspace: "Mobile App"
-├── Services: react-native, ios-simulator, android-emulator
-├── Env Profiles: "Dev Build - Mobile App", "Staging Build - Mobile App"
-├── Notes: Mobile API docs, deployment guide
-└── Snapshots: Dev Build, Staging Build
-```
-
-When you switch from "E-commerce Backend" to "Mobile App", you see completely different services, profiles, and notes.
-
-**How to test:**
-
-#### 5.1 Create a Manual Workspace
-
-1. Click **"Workspaces"** in the left sidebar
-2. Click **"New Workspace"** button
-3. Fill out:
-   - **Workspace Name**: `Feature A Development`
-   - **Description**: `Working on feature A`
-   - **Folder Path**: `/path/to/project` (optional)
-   - **Tags**: `backend,api` (comma-separated, optional)
+1. Click **"Workspaces"** in sidebar
+2. Click **"New Workspace"**
+3. Fill name, description, folder path (optional), tags
 4. Click **"Create"**
-5. New workspace appears in the workspace list
 
 #### 5.2 Navigate Workspaces
 
-**Level 1: Workspace List**
-1. All workspaces appear as cards showing:
-   - Name and description
-   - Snapshot count
-   - Active status badge
-   - Tags
-2. Click on a workspace card to drill down
+**3-Level Navigation:**
 
-**Level 2: Workspace Detail (Snapshots List)**
-1. See all snapshots under the selected workspace
-2. Breadcrumb navigation: "Workspaces > Workspace Name"
-3. Each snapshot shows:
-   - Name and description
-   - Number of services and repos
-   - Created date
-   - Tags
-4. Click on a snapshot to view details
+**Level 1: Workspace List**
+- All workspaces as cards
+- Shows snapshot count, active status, tags
+
+**Level 2: Workspace Detail**
+- All snapshots under workspace
+- Breadcrumb: "Workspaces > Workspace Name"
 
 **Level 3: Snapshot Detail**
-1. Full snapshot details:
-   - Running services that were captured
-   - Git branches for each repository
-   - Uncommitted changes status
-2. Breadcrumb navigation: "Workspaces > Workspace Name > Snapshot Name"
-3. Actions: Export, Restore, Delete
+- Full snapshot details
+- Running services, git branches
+- Breadcrumb: "Workspaces > Workspace > Snapshot"
 
-#### 5.3 Scan Folder to Auto-Create Workspace
+#### 5.3 Create Snapshot
 
-1. From workspace list, click **"Scan Folder"**
-2. Enter folder path to scan
-3. DevHub will:
-   - Scan for git repositories
-   - Auto-create a workspace (or use existing one for that folder)
-   - Create a snapshot with all repos
-4. Navigate into the workspace to see the snapshot
+1. Navigate to workspace
+2. Click **"New Snapshot"** (manual)
+   - OR **"Quick Snapshot"** (capture current state)
+3. Fill details
+4. Click **"Create"**
 
-#### 5.4 Create Snapshot in a Workspace
+#### 5.4 Restore Snapshot
 
-1. Navigate to a workspace (Level 2)
-2. Click **"New Snapshot"** to manually create
-   - OR click **"Quick Snapshot"** to capture current state immediately
-3. Fill out snapshot details (name, description, tags)
-4. Snapshot appears in the workspace's snapshot list
-
-#### 5.5 Restore a Snapshot
-
-1. Navigate to snapshot detail (Level 3)
-2. Review the snapshot details:
-   - Services that will be started
-   - Git branches that will be checked out
-3. Click **"Restore"** button
+1. Navigate to snapshot detail
+2. Review services and git branches
+3. Click **"Restore"**
 4. DevHub will:
-   - Stop any running services not in the snapshot
-   - Start all services from the snapshot
-   - Switch git branches (if repositories exist)
-5. Your environment is restored to that exact state!
-
-#### 5.6 Activate a Workspace
-
-1. In workspace list (Level 1)
-2. Click **"Activate"** button on any workspace
-3. That workspace becomes the active workspace
-4. New snapshots will be created under the active workspace by default
-
-#### 5.7 Delete Workspace (Cascade)
-
-1. In workspace list (Level 1)
-2. Click **"Delete"** button on a workspace
-3. Confirm the deletion
-4. **Important**: Deleting a workspace will also delete ALL its snapshots
-5. Workspace and all snapshots are removed
+   - Stop services not in snapshot
+   - Start snapshot services
+   - Switch git branches
 
 ---
 
 ### Feature 6: Wiki/Notes System
 
-**What it does:** Markdown-based documentation with full-text search and bidirectional linking.
+**What it does:** Markdown documentation with full-text search and bidirectional linking.
 
-**How to test:**
+#### 6.1 Create Note
 
-#### 6.1 Create Your First Note
-
-1. Click **"Wiki"** in the left sidebar
-2. Click **"New Note"** button (top-right)
-3. Fill out:
-   - **Title**: `API Documentation`
-   - **Category**: `Architecture`
-   - **Tags**: `api,backend` (comma-separated)
-   - **Content**: Write markdown (see template options)
+1. Click **"Wiki"** in sidebar
+2. Click **"New Note"**
+3. Fill title, category, tags, content
 4. Click **"Save"**
 
-#### 6.2 Use a Template
+#### 6.2 Use Templates
 
-1. Click **"New Note"**
-2. Click **"Use Template"** button
-3. Browse 5 built-in templates:
-   - **Architecture**: System architecture docs
-   - **API Documentation**: API endpoint docs
-   - **Runbook**: Operational procedures
-   - **Troubleshooting**: Debug guides
-   - **Meeting Notes**: Meeting minutes
-4. Click on a template to apply it
-5. Template content pre-fills the editor
-6. Customize and save
+5 built-in templates:
+- **Architecture**: System architecture docs
+- **API Documentation**: API endpoint docs
+- **Runbook**: Operational procedures
+- **Troubleshooting**: Debug guides
+- **Meeting Notes**: Meeting minutes
 
-#### 6.3 Add Bidirectional Links
+#### 6.3 Bidirectional Links
 
-1. In note content, use double brackets: `[[Note Name]]`
-2. Example:
-   ```markdown
-   # API Gateway
+Use double brackets: `[[Note Name]]`
 
-   The gateway routes to [[User Service]] and [[Auth Service]].
+```markdown
+# API Gateway
 
-   See [[System Architecture]] for details.
-   ```
-3. Save the note
-4. Create the linked notes ("User Service", "Auth Service", etc.)
-5. Links become clickable in preview
-6. View **"Links"** section to see all forward links
-7. View **"Backlinks"** section to see what links to this note
+The gateway routes to [[User Service]] and [[Auth Service]].
 
-#### 6.4 Search Notes
+See [[System Architecture]] for details.
+```
 
-1. Use the search bar at the top
-2. Type keywords: `authentication`
+Links become clickable in preview.
+View **"Links"** and **"Backlinks"** sections.
+
+#### 6.4 Search
+
+1. Use search bar
+2. Type keywords
 3. Full-text search returns matching notes
-4. Results show title and preview snippet
-5. Click a result to open that note
 
-#### 6.5 Filter by Category or Tags
+#### 6.5 Filter
 
-1. Use **Category** dropdown to filter
-2. Select "Architecture" to see only architecture docs
-3. Tags appear as badges on each note
-4. Click a tag to filter by that tag
+- Use **Category** dropdown
+- Click tags to filter
 
-#### 6.6 Edit and Preview
+---
 
-1. Toggle between **Editor** and **Preview** views
-2. Editor shows raw markdown
-3. Preview renders:
-   - Formatted text
-   - Code blocks with syntax highlighting
-   - Tables
-   - Lists
-   - Clickable [[links]]
-4. GitHub Flavored Markdown supported
+## 🛠 Project Structure
+
+**Shared Core Architecture:**
+
+```
+devhub/
+├── packages/core/         # Shared business logic (NEW!)
+│   ├── src/
+│   │   ├── db/            # SQLite database & 7 migrations
+│   │   └── services/      # All service managers
+│   └── package.json
+├── backend/               # Express API wrapper (web)
+│   ├── src/routes/        # HTTP endpoints (thin layer)
+│   └── package.json       # Depends on @devhub/core
+├── frontend/              # React + Vite web UI
+│   ├── src/components/
+│   └── package.json
+├── packages/vscode-extension/  # VSCode extension
+│   ├── src/extension.ts
+│   └── webview-ui/
+└── shared/                # TypeScript types
+```
+
+**Architecture Benefits:**
+- **85-90% code sharing** between web and VSCode
+- **Single source of truth** for business logic
+- **30% overhead** to maintain dual versions
+- **DRY principle** - write once, use everywhere
 
 ---
 
@@ -700,143 +398,14 @@ When you switch from "E-commerce Backend" to "Mobile App", you see completely di
 
 ### Sidebar Navigation
 
-The left sidebar has 6 sections:
+6 main sections:
 
-1. **Dashboard** (✅ Working) - Repository scanner
-2. **Services** (✅ Working) - Service manager with logs
-3. **Workspaces** (✅ Working) - Hierarchical workspace → snapshots management with 3-level navigation
-4. **Docker** (✅ Working) - Container and image management
-5. **Environment** (✅ Working) - Environment variables manager
-6. **Wiki** (✅ Working) - Documentation and notes system
-
-### Dashboard View
-
-```
-┌─────────────────────────────────────────────┐
-│  [Scan Path Input]  [Scan Button]           │
-├─────────────────────────────────────────────┤
-│                                              │
-│  ┌──────────────────────────────────────┐  │
-│  │ Repository Name               [Docker]│  │
-│  │ /path/to/repo                         │  │
-│  │ • main branch  [Uncommitted changes] │  │
-│  │ Last commit: "Fix bug in auth"       │  │
-│  └──────────────────────────────────────┘  │
-│                                              │
-│  [... more repos ...]                        │
-└─────────────────────────────────────────────┘
-```
-
-### Services View
-
-```
-┌──────────────────────┬──────────────────────┐
-│   Service List       │   Logs Viewer        │
-├──────────────────────┼──────────────────────┤
-│ ┌─────────────────┐  │                      │
-│ │ Service Name    │  │  $ npm start         │
-│ │ • Running  PID  │  │  > Starting...       │
-│ │ npm start       │  │  > Server running    │
-│ │ [Stop] [Delete] │  │  > Ready on :3000    │
-│ └─────────────────┘  │                      │
-│                      │  [... live logs ...]  │
-│ ┌─────────────────┐  │                      │
-│ │ Another Service │  │                      │
-│ │ • Stopped       │  │                      │
-│ └─────────────────┘  │                      │
-└──────────────────────┴──────────────────────┘
-```
-
----
-
-## 🧪 Testing Scenarios
-
-### Scenario 1: Developer with Multiple Projects
-
-**Goal**: Monitor all your projects in one place
-
-1. Use the Dashboard to scan your projects directory
-2. See which projects have uncommitted changes
-3. Identify which projects use Docker
-
-### Scenario 2: Starting a Microservices Stack
-
-**Goal**: Start all services for local development
-
-1. Add each microservice as a service:
-   - Auth Service (port 3001)
-   - API Gateway (port 3000)
-   - Database Migration (`npm run migrate`)
-   - Background Worker (`npm run worker`)
-2. Start them all
-3. Monitor their logs in one place
-4. Quickly stop everything when done
-
-### Scenario 3: Debugging a Service
-
-**Goal**: Watch logs in real-time while testing
-
-1. Add your service with debug logging enabled
-2. Start the service
-3. Click on it to view logs
-4. Make requests to your service
-5. Watch logs update in real-time
-6. Spot errors immediately
-
----
-
-## 🛠 Advanced Usage
-
-### Running Frontend and Backend Separately
-
-```bash
-# Terminal 1 - Backend only
-npm run dev:backend
-
-# Terminal 2 - Frontend only
-npm run dev:frontend
-```
-
-### Building for Production
-
-```bash
-npm run build
-```
-
-This builds all packages into `dist/` directories.
-
-### Project Structure
-
-**DevHub uses a shared core architecture** to support both web app and VSCode extension versions:
-
-```
-devhub/
-├── packages/core/    # Shared backend logic (NEW!)
-│   ├── src/
-│   │   ├── db/       # SQLite database & migrations
-│   │   └── services/ # Service managers (85-90% shared)
-│   └── package.json
-├── backend/          # Express API wrapper (web version)
-│   ├── src/
-│   │   └── routes/   # HTTP endpoints (thin layer)
-│   └── package.json  # Depends on @devhub/core
-├── frontend/         # React application
-│   ├── src/
-│   │   ├── components/
-│   │   └── App.tsx
-│   └── package.json
-├── shared/           # Shared TypeScript types
-│   └── src/
-└── package.json      # Root package (workspace)
-```
-
-**Architecture Benefits:**
-- **85-90% code sharing** between web and VSCode versions
-- **Single source of truth** for all business logic
-- **Only 30% overhead** to maintain dual versions
-- **Future-ready** for VSCode extension development
-
-All service managers (ServiceManager, DockerManager, EnvManager, WorkspaceManager, NotesManager, HealthCheckManager, LogManager, GroupManager) live in `packages/core` and are imported by both web backend and future VSCode extension.
+1. **Dashboard** - Repository scanner with workspace integration
+2. **Services** - Service manager with logs and search
+3. **Workspaces** - Hierarchical workspace → snapshots management
+4. **Docker** - Container and image management
+5. **Environment** - Environment variables with encryption
+6. **Wiki** - Documentation and notes system
 
 ---
 
@@ -844,41 +413,39 @@ All service managers (ServiceManager, DockerManager, EnvManager, WorkspaceManage
 
 ### "Port 3000 already in use"
 
-Another app is using port 3000. Either:
-- Stop the other app
-- Or change the port in `frontend/vite.config.ts`:
-  ```typescript
-  server: {
-    port: 3001, // Change this
-  }
-  ```
+Change port in `frontend/vite.config.ts`:
+```typescript
+server: {
+  port: 3001, // Change this
+}
+```
 
 ### "Port 5000 already in use"
 
-Another app is using port 5000 for the backend. Change it:
-1. Create `backend/.env`:
-   ```
-   PORT=5001
-   ```
-2. Update `frontend/vite.config.ts` proxy:
-   ```typescript
-   proxy: {
-     '/api': {
-       target: 'http://localhost:5001', // Update this
-     }
-   }
-   ```
+Create `backend/.env`:
+```
+PORT=5001
+```
+
+Update `frontend/vite.config.ts` proxy:
+```typescript
+proxy: {
+  '/api': {
+    target: 'http://localhost:5001',
+  }
+}
+```
 
 ### Services won't start
 
 **Check:**
-- The repository path exists and is correct
-- The command is valid (try running it manually in terminal)
+- Repository path exists and is correct
+- Command is valid (try manually in terminal)
 - You're in the right directory
 
 ### "Module not found" errors
 
-Run `npm install` again:
+Run:
 ```bash
 npm install
 ```
@@ -886,174 +453,84 @@ npm install
 ### Logs not showing
 
 - Logs only appear while service is running
-- Click on the service card to select it
-- Wait 2 seconds for logs to refresh
-- Some commands may not output to stdout (try adding `echo` statements)
+- Click on service card to select it
+- Wait 5 seconds for logs to refresh
 
 ---
 
-## 📊 API Endpoints (for developers)
+## 📊 API Endpoints
 
-### Repository API
-- `GET /api/repos/scan?path=/home/user&depth=3` - Scan for repositories
-- `POST /api/repos/analyze` - Analyze a repository (detect name, command, port)
-- `POST /api/repos/analyze-batch` - **Batch analyze multiple repositories** (performance optimized)
+### Core APIs
 
-### Services API
+**Repository API**
+- `GET /api/repos/scan?path=/path&depth=3` - Scan for repositories
+- `POST /api/repos/analyze-batch` - Batch analyze repositories (performance)
+
+**Services API**
 - `GET /api/services` - List all services
-- `POST /api/services` - Create a service
-- `POST /api/services/batch` - **Batch create multiple services** (performance optimized)
-- `GET /api/services/:id` - Get service details
-- `PUT /api/services/:id` - Update service
-- `DELETE /api/services/:id` - Delete service
+- `POST /api/services` - Create service
+- `POST /api/services/batch` - Batch create services (performance)
 - `POST /api/services/:id/start` - Start service
 - `POST /api/services/:id/stop` - Stop service
-- `GET /api/services/:id/logs?lines=100` - Get service logs
+- `GET /api/services/:id/logs?lines=100` - Get logs
 
-### Docker API
-- `GET /api/docker/images` - List all images
+**Docker API**
+- `GET /api/docker/images` - List images
 - `POST /api/docker/images/build` - Build image (SSE stream)
-- `DELETE /api/docker/images/:id` - Remove image
-- `POST /api/docker/images/:id/run` - Run container from image
-- `GET /api/docker/containers` - List all containers
+- `GET /api/docker/containers` - List containers
 - `POST /api/docker/containers/:id/start` - Start container
-- `POST /api/docker/containers/:id/stop` - Stop container
-- `DELETE /api/docker/containers/:id` - Remove container
-- `GET /api/docker/containers/:id/logs` - Get container logs
-- `POST /api/docker/compose/generate` - Generate docker-compose.yml
 
-### Environment Variables API
-- `GET /api/env/profiles` - List all profiles
-- `POST /api/env/profiles` - Create profile
-- `GET /api/env/profiles/:id` - Get profile details
-- `PUT /api/env/profiles/:id` - Update profile
-- `DELETE /api/env/profiles/:id` - Delete profile
-- `GET /api/env/profiles/:id/variables` - Get variables in profile
+**Environment API**
+- `GET /api/env/profiles` - List profiles
 - `POST /api/env/variables` - Create variable
-- `PUT /api/env/variables/:id` - Update variable
-- `DELETE /api/env/variables/:id` - Delete variable
 - `POST /api/env/profiles/:id/import` - Import .env file
-- `GET /api/env/profiles/:id/export` - Export to .env format
-- `POST /api/env/profiles/:id/apply/:serviceId` - Apply profile to service
+- `POST /api/env/profiles/:id/apply/:serviceId` - Apply to service
 
-### Workspaces API
-
-**Workspace Endpoints:**
+**Workspaces API**
 - `GET /api/workspaces` - List all workspaces
-- `POST /api/workspaces` - Create workspace
 - `GET /api/workspaces/active` - Get active workspace
-- `GET /api/workspaces/:workspaceId` - Get workspace details
-- `PUT /api/workspaces/:workspaceId` - Update workspace
-- `DELETE /api/workspaces/:workspaceId` - Delete workspace (cascade deletes all snapshots)
-- `POST /api/workspaces/:workspaceId/activate` - Activate workspace
-- `GET /api/workspaces/:workspaceId/snapshots` - Get snapshots for workspace
-- `POST /api/workspaces/:workspaceId/snapshots` - Create snapshot in workspace
-- `POST /api/workspaces/:workspaceId/scan` - Scan folder and create snapshot in workspace
+- `POST /api/workspaces/:id/snapshots` - Create snapshot
+- `POST /api/workspaces/snapshots/:id/restore` - Restore snapshot
 
-**Snapshot Endpoints:**
-- `GET /api/workspaces/snapshots` - List all snapshots
-- `POST /api/workspaces/snapshots` - Create snapshot (hybrid: auto or manual workspace)
-- `POST /api/workspaces/snapshots/quick` - Quick snapshot (capture current state)
-- `POST /api/workspaces/snapshots/scan` - Scan folder and create snapshot (auto-creates workspace)
-- `GET /api/workspaces/snapshots/:snapshotId` - Get snapshot details
-- `PUT /api/workspaces/snapshots/:snapshotId` - Update snapshot
-- `DELETE /api/workspaces/snapshots/:snapshotId` - Delete snapshot
-- `POST /api/workspaces/snapshots/:snapshotId/restore` - Restore snapshot state
-- `GET /api/workspaces/snapshots/:snapshotId/export` - Export snapshot config
-
-### Notes/Wiki API
-- `GET /api/notes` - List all notes (filter: ?category=X)
-- `POST /api/notes` - Create note
-- `GET /api/notes/:id` - Get note details
-- `PUT /api/notes/:id` - Update note
-- `DELETE /api/notes/:id` - Delete note
+**Notes/Wiki API**
+- `GET /api/notes` - List notes
 - `GET /api/notes/search/:query` - Full-text search
-- `GET /api/notes/meta/categories` - Get all categories
-- `GET /api/notes/meta/tags` - Get all tags
-- `GET /api/notes/meta/templates` - Get note templates
 - `GET /api/notes/:id/links` - Get linked notes
-- `GET /api/notes/:id/backlinks` - Get backlinks
 
-**Total: 63 API endpoints** (Including batch processing endpoints for performance)
-
-See feature-specific documentation for detailed API usage:
-- [DOCKER_FEATURE.md](./DOCKER_FEATURE.md)
-- [ENV_FEATURE.md](./ENV_FEATURE.md)
-- [WORKSPACE_FEATURE.md](./WORKSPACE_FEATURE.md)
-- [WIKI_FEATURE.md](./WIKI_FEATURE.md)
+**Total: 63 API endpoints** (including batch processing for performance)
 
 ---
 
 ## 🗺 Roadmap
 
-See [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for the complete product roadmap.
+### ✅ Completed (v2.0)
 
-### ✅ Completed (v1.0) - MVP Complete!
-
+**v1.0 MVP:**
 - Repository scanner with git status
-- **Dashboard enhancements:**
-  - Checkbox selection for repositories
-  - "Save to Workspace" with selected repos
-  - Auto-populate workspace names from folder paths
-  - SessionStorage for last scan path
-  - Optional .env import when saving to workspace (auto-creates services + profiles)
-  - Auto-activate newly created workspaces
 - Service manager with process control
-  - **Search functionality** - Find services by name, path, command, or port
-  - **"Import from Workspace"** - Batch import services with auto-detection
-  - Auto-detect service name, start command, and port from package.json/.env
-  - Duplicate service detection with "Already added" badges
-  - Auto-service creation during folder scanning (opt-in)
-  - Increased auto-refresh intervals (10s services, 5s logs)
 - Real-time logs viewer
 - SQLite persistence
-- **Docker integration** - Build images, manage containers, generate docker-compose
-- **Environment variables manager** - Secure storage with AES-256 encryption
-  - **Search functionality** - Find profiles and variables by name, description, key, or value
-  - **Copy variables in KEY=VALUE format** - One-click copy for terminal/files
-  - **Inline editing** - Update variable values without recreating
-  - **Sync to service .env files** - Write profile variables directly to disk with smart matching
-  - **Per-repository profiles** - One profile per repo for complete isolation
-  - Profile naming: Clean service names (e.g., "admin-api" not "Scan - timestamp - admin-api")
-  - Auto-import .env files from Dashboard (opt-in)
-  - No variable conflicts between repos
-  - Snapshot-prefixed profiles for clear organization
-- **Wiki/notes system** - Markdown docs with full-text search and [[linking]]
-- **Hierarchical workspace management** - Organize environments with workspace → snapshots structure
-  - Database migration system with automatic execution (2 migrations)
-  - Hybrid workspace creation (auto from folder scan + manual)
-  - **Full workspace scoping** - All resources (services, env profiles, notes) belong to workspaces
-  - Complete isolation between workspaces
-  - 3-level navigation UI with breadcrumb & workspace switcher
-  - Cascade deletion (workspace → snapshots → all resources)
-  - Active workspace pattern
-- **Performance optimizations** - Batch API endpoints
-  - **POST /api/repos/analyze-batch** - Analyze multiple repos in one call
-  - **POST /api/services/batch** - Create multiple services in one call
-  - **97% reduction in API calls** for 40 repos (from 120+ to 3-5 calls)
-  - Dramatically faster scanning and service creation
+- Docker integration
+- Environment variables manager with AES-256 encryption
+- Wiki/notes system with full-text search
+- Hierarchical workspace management with full resource scoping
+
+**v2.0 Advanced Orchestration:**
+- Health checks (HTTP/TCP/Command monitoring)
+- Log persistence (session-based historical analysis)
+- Service groups (batch operations)
+
+**VSCode Extension (v2.0):**
+- ✅ Complete implementation (all 5 phases)
+- ✅ Tree views (Services, Workspaces)
+- ✅ React webview UI (6 tabs)
+- ✅ Command palette integration (10+ commands)
+- ✅ esbuild bundling (16.26 MB .vsix)
+- ✅ Production ready
 
 ### 📅 Future Enhancements
 
-#### Immediate Roadmap
-
-**VSCode Extension (Complete ✅)**
-- VSCode extension version using shared `@devhub/core` package
-- **Phase 1-5 Complete:** All implementation phases finished
-  - ✅ Extension scaffold with 10+ commands
-  - ✅ Core integration (40+ message types)
-  - ✅ React webview UI (Services, Docker, Workspaces, Notes)
-  - ✅ Tree views (Services, Workspaces with snapshots)
-  - ✅ Context menus and inline actions
-  - ✅ esbuild bundling (798KB extension.js)
-- **Package size:** 16.26 MB (.vsix file, includes native dependencies)
-- **Ready for production** use in VSCode
-
-See `packages/vscode-extension/README.md` for installation and testing guide.
-
-#### Long-Term Enhancements
-
-Potential future additions:
+Potential additions:
 - Team collaboration features
 - Cloud sync
 - CI/CD integration
@@ -1065,32 +542,26 @@ Potential future additions:
 
 ## 💡 Tips & Tricks
 
-### Tip 1: Auto-Refresh
+### Auto-Refresh
 
-The dashboard and services auto-refresh:
+Services and logs auto-refresh:
 - **Services**: Every 10 seconds
 - **Logs**: Every 5 seconds
 
-No need to manually refresh!
+No manual refresh needed!
 
-### Tip 2: Service Templates
+### Service Templates
 
-Create common service templates:
+Common patterns:
 - `npm run dev` for Node.js apps
 - `python manage.py runserver` for Django
 - `go run main.go` for Go apps
 - `docker-compose up` for Docker stacks
 
-### Tip 3: Long-Running Services
+### Quick Testing
 
-For services that run indefinitely (like web servers):
-- They'll stay running until you stop them
-- Logs are kept (last 500 lines)
-- Survives browser refresh (backend keeps running)
+For quick testing without real services:
 
-### Tip 4: Quick Testing
-
-For quick testing without real services, use:
 ```bash
 # Service that outputs then exits
 echo "Test" && sleep 10
@@ -1098,7 +569,7 @@ echo "Test" && sleep 10
 # Service that outputs continuously
 while true; do echo "Tick: $(date)"; sleep 2; done
 
-# Service that simulates a web server
+# Simple HTTP server
 python3 -m http.server 8080
 ```
 
@@ -1106,7 +577,7 @@ python3 -m http.server 8080
 
 ## 🤝 Contributing
 
-This is currently a solo project but contributions are welcome!
+Contributions welcome!
 
 ### Development
 
@@ -1126,6 +597,16 @@ npm run build
 
 ---
 
+## 📚 Documentation
+
+- **CLAUDE.md** - Comprehensive development guide for Claude Code AI and developers
+- **PROJECT_INDEX.md** - Project structure and codebase overview
+- **TESTING.md** - E2E testing guide with Playwright
+- **packages/core/README.md** - Shared core package documentation
+- **packages/vscode-extension/README.md** - VSCode extension guide
+
+---
+
 ## 📄 License
 
 MIT License - See LICENSE file for details
@@ -1136,24 +617,27 @@ MIT License - See LICENSE file for details
 
 **Issues?**
 - Check the Troubleshooting section above
-- Review the [DEVHUB_PLAN.md](./DEVHUB_PLAN.md) for feature status
+- Review this README for feature usage
 - Open an issue on GitHub
 
 **Questions?**
-- Is it about how to use a feature? Check this README
-- Is it about the architecture? Check the Project Structure section
-- Is it a bug? Open an issue with reproduction steps
+- How to use a feature? Check this README
+- Architecture questions? Check Project Structure section or CLAUDE.md
+- Bug reports? Open an issue with reproduction steps
 
 ---
 
 ## 🎉 You're Ready!
 
-Now that you understand how DevHub works:
+**Web App:**
+1. `npm run dev`
+2. Open http://localhost:3000
+3. Try the Dashboard and Services
 
-1. **Start the app**: `npm run dev`
-2. **Open your browser**: http://localhost:3000
-3. **Try the Dashboard**: Scan for repositories
-4. **Try Services**: Add a service and see it run
+**VSCode Extension:**
+1. Install from .vsix file
+2. Open Command Palette
+3. Run "DevHub: Open Dashboard"
 
 **Have fun managing your microservices!** 🚀
 
