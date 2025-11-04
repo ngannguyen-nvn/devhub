@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { serviceManager } from '@devhub/core'
+import { serviceManager, Database } from '@devhub/core'
 import { spawn } from 'child_process'
 import os from 'os'
 
@@ -18,7 +18,7 @@ async function getWorkspaceId(req: Request): Promise<string> {
   }
 
   // Otherwise, use active workspace
-  const db = require('../db').default
+  const db = Database
   const stmt = db.prepare('SELECT id FROM workspaces WHERE active = 1 LIMIT 1')
   const row = stmt.get() as { id: string } | undefined
 
