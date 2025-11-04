@@ -71,6 +71,7 @@ export default function Environment() {
   const [serviceSearchTerm, setServiceSearchTerm] = useState('')
   const [showAllServices, setShowAllServices] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [knownGroups, setKnownGroups] = useState<Set<string>>(new Set())
 
   // Forms
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
@@ -433,17 +434,23 @@ export default function Environment() {
     return a.name.localeCompare(b.name)
   })
 
-  // Auto-expand all groups (including newly created ones)
+  // Auto-expand only NEW groups (not manually collapsed ones)
   useEffect(() => {
     if (sortedGroups.length > 0) {
       const allGroupNames = sortedGroups.map(g => g.name)
-      // Only update if there are new groups that aren't expanded
-      const hasNewGroups = allGroupNames.some(name => !expandedGroups.has(name))
-      if (hasNewGroups) {
-        setExpandedGroups(new Set(allGroupNames))
+
+      // Find groups that are truly new (not in knownGroups)
+      const newGroups = allGroupNames.filter(name => !knownGroups.has(name))
+
+      if (newGroups.length > 0) {
+        // Add new groups to known groups
+        setKnownGroups(prev => new Set([...prev, ...allGroupNames]))
+
+        // Expand all groups (existing expanded + new groups)
+        setExpandedGroups(prev => new Set([...prev, ...newGroups]))
       }
     }
-  }, [sortedGroups])
+  }, [sortedGroups.map(g => g.name).join(',')]) // Stable dependency
 
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups)
