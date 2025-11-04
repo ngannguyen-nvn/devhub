@@ -303,7 +303,7 @@ export class DevHubManager {
     console.log('Disposing DevHub managers')
 
     try {
-      // Stop all running services
+      // Stop all running services and clean up service manager resources
       const runningServices = this.serviceManager.getRunningServices()
       runningServices.forEach(service => {
         try {
@@ -312,6 +312,9 @@ export class DevHubManager {
           console.error(`Failed to stop service ${service.name}:`, error)
         }
       })
+
+      // Dispose service manager (clears cleanup interval)
+      this.serviceManager.dispose()
 
       console.log('DevHub managers disposed successfully')
     } catch (error) {

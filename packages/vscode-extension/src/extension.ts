@@ -114,6 +114,12 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   console.log('DevHub extension is being deactivated')
 
+  // Dispose tree providers (particularly important for ServicesTreeProvider which has setInterval)
+  if (servicesTreeProvider && 'dispose' in servicesTreeProvider) {
+    ;(servicesTreeProvider as any).dispose()
+    servicesTreeProvider = undefined
+  }
+
   if (devhubManager) {
     devhubManager.dispose()
     devhubManager = undefined

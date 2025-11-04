@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import multer from 'multer'
 import crypto from 'crypto'
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { promisify } from 'util'
 
 // Optional database client imports (install if needed)
@@ -32,7 +32,7 @@ try {
 
 const db = Database
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 const router = express.Router()
 
 // Configure multer for file uploads
@@ -565,7 +565,7 @@ async function testDatabaseConnection(connectionString: string): Promise<any> {
 // Helper function to check if a command exists
 async function commandExists(command: string): Promise<boolean> {
   try {
-    await execAsync(`which ${command}`)
+    await execFileAsync('which', [command])
     return true
   } catch {
     return false
@@ -587,10 +587,15 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasPgDump) {
-        await execAsync(`pg_dump "${connectionString}" > "${filePath}"`)
+        // Use pg_dump with -f flag instead of shell redirection
+        await execFileAsync('pg_dump', [connectionString, '-f', filePath])
       } else {
-        // Fallback to Docker
-        await execAsync(`docker run --rm --network host postgres:alpine pg_dump "${connectionString}" > "${filePath}"`)
+        // Fallback to Docker - use execFileAsync with proper argument array
+        const { stdout } = await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host', 'postgres:alpine',
+          'pg_dump', connectionString
+        ])
+        fs.writeFileSync(filePath, stdout)
       }
       return {
         success: true,
@@ -620,10 +625,23 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasMysqlDump) {
-        await execAsync(`mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+        // Use mysqldump with proper argument array and result-file flag
+        const args = ['-h', host, '-P', port, '-u', user]
+        if (password) {
+          args.push(`-p${password}`)
+        }
+        args.push('--result-file=' + filePath, dbName)
+        await execFileAsync('mysqldump', args)
       } else {
-        // Fallback to Docker
-        await execAsync(`docker run --rm --network host mysql:latest mysqldump -h ${host} -P ${port} -u ${user} -p${password} ${dbName} > "${filePath}"`)
+        // Fallback to Docker - use execFileAsync with proper argument array
+        const dockerArgs = ['run', '--rm', '--network', 'host', 'mysql:latest', 'mysqldump',
+          '-h', host, '-P', port, '-u', user]
+        if (password) {
+          dockerArgs.push(`-p${password}`)
+        }
+        dockerArgs.push(dbName)
+        const { stdout } = await execFileAsync('docker', dockerArgs)
+        fs.writeFileSync(filePath, stdout)
       }
       return {
         success: true,
@@ -649,17 +667,20 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasMongoDump) {
-        await execAsync(`mongodump --uri="${connectionString}" --out="${filePath}"`)
+        await execFileAsync('mongodump', ['--uri=' + connectionString, '--out=' + filePath])
       } else {
         // Fallback to Docker (mount /tmp to access output)
-        await execAsync(`docker run --rm --network host -v /tmp:/tmp mongo:latest mongodump --uri="${connectionString}" --out="${filePath}"`)
+        await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host', '-v', '/tmp:/tmp',
+          'mongo:latest', 'mongodump', '--uri=' + connectionString, '--out=' + filePath
+        ])
       }
 
       // Create tar.gz archive
       const archivePath = `${filePath}.tar.gz`
-      await execAsync(`tar -czf "${archivePath}" -C "${filePath}" .`)
+      await execFileAsync('tar', ['-czf', archivePath, '-C', filePath, '.'])
       // Clean up the dump directory
-      await execAsync(`rm -rf "${filePath}"`)
+      await execFileAsync('rm', ['-rf', filePath])
 
       return {
         success: true,

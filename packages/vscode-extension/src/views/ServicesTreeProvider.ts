@@ -4,14 +4,20 @@ import { DevHubManager } from '../extensionHost/devhubManager'
 export class ServicesTreeProvider implements vscode.TreeDataProvider<ServiceTreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<ServiceTreeItem | undefined | null | void>()
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event
+  private refreshInterval: NodeJS.Timeout
 
   constructor(private devhubManager: DevHubManager) {
     // Auto-refresh every 5 seconds
-    setInterval(() => this.refresh(), 5000)
+    this.refreshInterval = setInterval(() => this.refresh(), 5000)
   }
 
   refresh(): void {
     this._onDidChangeTreeData.fire()
+  }
+
+  dispose(): void {
+    clearInterval(this.refreshInterval)
+    this._onDidChangeTreeData.dispose()
   }
 
   getTreeItem(element: ServiceTreeItem): vscode.TreeItem {

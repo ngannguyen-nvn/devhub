@@ -35,10 +35,44 @@ export class ServiceManager extends EventEmitter {
   private runningServices: Map<string, RunningService> = new Map()
   private processes: Map<string, ChildProcess> = new Map()
   private maxLogLines = 500 // Limit in-memory logs to prevent memory leaks
+  private maxStoppedServices = 50 // Keep only last 50 stopped services to prevent memory leak
+  private cleanupInterval: NodeJS.Timeout
 
   constructor() {
     super()
     this.loadServices()
+    // Periodic cleanup of old stopped services every 5 minutes
+    this.cleanupInterval = setInterval(() => this.cleanupStoppedServices(), 5 * 60 * 1000)
+  }
+
+  /**
+   * Clean up old stopped services to prevent memory leak
+   * Keeps only the most recent stopped services (up to maxStoppedServices)
+   */
+  private cleanupStoppedServices(): void {
+    const stoppedServices = Array.from(this.runningServices.entries())
+      .filter(([_, service]) => service.status !== 'running')
+      .sort((a, b) => {
+        const aTime = a[1].stoppedAt?.getTime() || 0
+        const bTime = b[1].stoppedAt?.getTime() || 0
+        return bTime - aTime // Sort by most recent first
+      })
+
+    // Remove old stopped services beyond the limit
+    if (stoppedServices.length > this.maxStoppedServices) {
+      const toRemove = stoppedServices.slice(this.maxStoppedServices)
+      toRemove.forEach(([serviceId]) => {
+        this.runningServices.delete(serviceId)
+      })
+    }
+  }
+
+  /**
+   * Dispose resources and stop cleanup interval
+   */
+  dispose(): void {
+    clearInterval(this.cleanupInterval)
+    this.stopAll()
   }
 
   /**
