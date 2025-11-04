@@ -79,8 +79,13 @@
       },
       {
         "command": "devhub.restoreSnapshot",
-        "title": "Restore Snapshot",
-        "icon": "$(history)"
+        "title": "Restore Snapshot Options",
+        "icon": "$(ellipsis)"
+      },
+      {
+        "command": "devhub.refreshDashboard",
+        "title": "Refresh Dashboard",
+        "icon": "$(refresh)"
       },
       {
         "command": "devhub.refreshServices",
@@ -88,9 +93,40 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "devhub.refreshDocker",
+        "title": "Refresh Docker",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshEnvironment",
+        "title": "Refresh Environment",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "devhub.refreshWorkspaces",
         "title": "Refresh Workspaces",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshNotes",
+        "title": "Refresh Notes",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.showDashboard",
+        "title": "Show Dashboard"
+      },
+      {
+        "command": "devhub.showDocker",
+        "title": "Show Docker"
+      },
+      {
+        "command": "devhub.showEnvironment",
+        "title": "Show Environment"
+      },
+      {
+        "command": "devhub.showNotes",
+        "title": "Show Notes"
       }
     ],
     "viewsContainers": {
@@ -105,29 +141,73 @@
     "views": {
       "devhub": [
         {
+          "id": "devhubDashboard",
+          "name": "Dashboard",
+          "icon": "$(dashboard)",
+          "contextualTitle": "DevHub Dashboard"
+        },
+        {
           "id": "devhubServices",
           "name": "Services",
           "icon": "$(server)",
           "contextualTitle": "DevHub Services"
         },
         {
+          "id": "devhubDocker",
+          "name": "Docker",
+          "icon": "$(package)",
+          "contextualTitle": "DevHub Docker"
+        },
+        {
+          "id": "devhubEnvironment",
+          "name": "Environment",
+          "icon": "$(gear)",
+          "contextualTitle": "DevHub Environment"
+        },
+        {
           "id": "devhubWorkspaces",
           "name": "Workspaces",
           "icon": "$(folder)",
           "contextualTitle": "DevHub Workspaces"
+        },
+        {
+          "id": "devhubNotes",
+          "name": "Notes",
+          "icon": "$(note)",
+          "contextualTitle": "DevHub Notes"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
+          "command": "devhub.refreshDashboard",
+          "when": "view == devhubDashboard",
+          "group": "navigation"
+        },
+        {
           "command": "devhub.refreshServices",
           "when": "view == devhubServices",
           "group": "navigation"
         },
         {
+          "command": "devhub.refreshDocker",
+          "when": "view == devhubDocker",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshEnvironment",
+          "when": "view == devhubEnvironment",
+          "group": "navigation"
+        },
+        {
           "command": "devhub.refreshWorkspaces",
           "when": "view == devhubWorkspaces",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshNotes",
+          "when": "view == devhubNotes",
           "group": "navigation"
         }
       ],
@@ -155,7 +235,7 @@
         {
           "command": "devhub.restoreSnapshot",
           "when": "view == devhubWorkspaces && viewItem == snapshot",
-          "group": "navigation"
+          "group": "inline"
         }
       ]
     },

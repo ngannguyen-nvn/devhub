@@ -16,11 +16,19 @@ import type { DevHubManager } from './extensionHost/devhubManager'
 import type { DevHubPanel } from './webview/DevHubPanel'
 import type { ServicesTreeProvider } from './views/ServicesTreeProvider'
 import type { WorkspaceTreeProvider } from './views/WorkspaceTreeProvider'
+import type { DashboardTreeProvider } from './views/DashboardTreeProvider'
+import type { DockerTreeProvider } from './views/DockerTreeProvider'
+import type { EnvironmentTreeProvider } from './views/EnvironmentTreeProvider'
+import type { NotesTreeProvider } from './views/NotesTreeProvider'
 
 let devhubManager: DevHubManager | undefined
 let devhubPanel: DevHubPanel | undefined
 let servicesTreeProvider: ServicesTreeProvider | undefined
 let workspaceTreeProvider: WorkspaceTreeProvider | undefined
+let dashboardTreeProvider: DashboardTreeProvider | undefined
+let dockerTreeProvider: DockerTreeProvider | undefined
+let environmentTreeProvider: EnvironmentTreeProvider | undefined
+let notesTreeProvider: NotesTreeProvider | undefined
 
 /**
  * Extension activation
@@ -73,6 +81,17 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register tree views
     await registerTreeViews(context, devhubManager)
 
+    // Set callback for refreshing workspaces tree view from webview
+    devhubPanel.setRefreshWorkspacesTreeCallback(() => {
+      console.log('[Extension] Refreshing workspaces tree view')
+      if (workspaceTreeProvider) {
+        console.log('[Extension] Tree provider exists, calling refresh')
+        workspaceTreeProvider.refresh()
+      } else {
+        console.log('[Extension] Tree provider is undefined!')
+      }
+    })
+
     // Register commands
     registerCommands(context, devhubPanel, devhubManager)
 
@@ -114,8 +133,20 @@ async function registerTreeViews(
   manager: DevHubManager
 ) {
   // Dynamically import tree providers
+  const { DashboardTreeProvider } = await import('./views/DashboardTreeProvider')
   const { ServicesTreeProvider } = await import('./views/ServicesTreeProvider')
+  const { DockerTreeProvider } = await import('./views/DockerTreeProvider')
+  const { EnvironmentTreeProvider } = await import('./views/EnvironmentTreeProvider')
   const { WorkspaceTreeProvider } = await import('./views/WorkspaceTreeProvider')
+  const { NotesTreeProvider } = await import('./views/NotesTreeProvider')
+
+  // Dashboard tree view
+  dashboardTreeProvider = new DashboardTreeProvider(manager)
+  const dashboardTreeView = vscode.window.createTreeView('devhubDashboard', {
+    treeDataProvider: dashboardTreeProvider,
+    showCollapseAll: false,
+  })
+  context.subscriptions.push(dashboardTreeView)
 
   // Services tree view
   servicesTreeProvider = new ServicesTreeProvider(manager)
@@ -125,6 +156,22 @@ async function registerTreeViews(
   })
   context.subscriptions.push(servicesTreeView)
 
+  // Docker tree view
+  dockerTreeProvider = new DockerTreeProvider(manager)
+  const dockerTreeView = vscode.window.createTreeView('devhubDocker', {
+    treeDataProvider: dockerTreeProvider,
+    showCollapseAll: true,
+  })
+  context.subscriptions.push(dockerTreeView)
+
+  // Environment tree view
+  environmentTreeProvider = new EnvironmentTreeProvider(manager)
+  const environmentTreeView = vscode.window.createTreeView('devhubEnvironment', {
+    treeDataProvider: environmentTreeProvider,
+    showCollapseAll: true,
+  })
+  context.subscriptions.push(environmentTreeView)
+
   // Workspace tree view
   workspaceTreeProvider = new WorkspaceTreeProvider(manager)
   const workspaceTreeView = vscode.window.createTreeView('devhubWorkspaces', {
@@ -132,6 +179,14 @@ async function registerTreeViews(
     showCollapseAll: true,
   })
   context.subscriptions.push(workspaceTreeView)
+
+  // Notes tree view
+  notesTreeProvider = new NotesTreeProvider(manager)
+  const notesTreeView = vscode.window.createTreeView('devhubNotes', {
+    treeDataProvider: notesTreeProvider,
+    showCollapseAll: true,
+  })
+  context.subscriptions.push(notesTreeView)
 }
 
 /**
@@ -325,29 +380,139 @@ function registerCommands(
     })
   )
 
-  // Restore snapshot (from tree view)
-  context.subscriptions.push(
-    vscode.commands.registerCommand('devhub.restoreSnapshot', async (snapshotId: string) => {
-      const confirm = await vscode.window.showWarningMessage(
-        'This will restore the snapshot and may affect running services. Continue?',
-        'Yes',
-        'No'
+  // Snapshot menu (main command - can be called with snapshotId string)
+  const snapshotMenuCommand = async (snapshotId?: string) => {
+    if (!snapshotId) {
+      vscode.window.showErrorMessage('No snapshot selected')
+      return
+    }
+
+    // Show action menu
+    const action = await vscode.window.showQuickPick(
+      [
+        { label: '$(history) Restore Snapshot', description: 'Restore workspace state from this snapshot', action: 'restore' },
+        { label: '$(trash) Delete Snapshot', description: 'Permanently delete this snapshot', action: 'delete' }
+      ],
+      {
+        placeHolder: 'Select action for snapshot'
+      }
+    )
+
+    if (!action) {
+      return // User cancelled
+    }
+
+    if (action.action === 'restore') {
+      // Show restore options picker with checkboxes
+      const options = await vscode.window.showQuickPick(
+        [
+          { label: 'Restore Git Branches', picked: true, key: 'restoreBranches' },
+          { label: 'Restore & Start Services', picked: true, key: 'restoreServices' },
+          { label: 'Restore Docker Containers', picked: false, key: 'restoreDocker' },
+          { label: 'Apply Environment Variables to .env files', picked: false, key: 'restoreEnvVars' }
+        ],
+        {
+          canPickMany: true,
+          placeHolder: 'Select what to restore from this snapshot'
+        }
       )
-      if (confirm === 'Yes') {
+
+      if (!options || options.length === 0) {
+        return // User cancelled
+      }
+
+      // Build options object from selections
+      const restoreOptions = {
+        restoreBranches: options.some(o => o.key === 'restoreBranches'),
+        restoreServices: options.some(o => o.key === 'restoreServices'),
+        restoreDocker: options.some(o => o.key === 'restoreDocker'),
+        restoreEnvVars: options.some(o => o.key === 'restoreEnvVars')
+      }
+
+      try {
+        const result = await manager.restoreSnapshotSelective(snapshotId, restoreOptions)
+
+        // Build success message
+        const messages: string[] = []
+        if (result.branchesSwitched > 0) {
+          messages.push(`${result.branchesSwitched} branch(es) switched`)
+        }
+        if (result.servicesStarted > 0) {
+          messages.push(`${result.servicesStarted} service(s) started`)
+        }
+        if (result.containersStarted > 0) {
+          messages.push(`${result.containersStarted} container(s) started`)
+        }
+        if (result.envVarsApplied > 0) {
+          messages.push(`${result.envVarsApplied} env var(s) applied`)
+        }
+
+        if (messages.length > 0) {
+          vscode.window.showInformationMessage(`Snapshot restored: ${messages.join(', ')}`)
+        } else {
+          vscode.window.showInformationMessage('Snapshot restored (no changes needed)')
+        }
+
+        if (result.errors.length > 0) {
+          vscode.window.showWarningMessage(`Restored with ${result.errors.length} error(s). Check output for details.`)
+        }
+
+        servicesTreeProvider?.refresh()
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to restore snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      }
+    } else if (action.action === 'delete') {
+      // Confirm deletion
+      const confirm = await vscode.window.showWarningMessage(
+        'Are you sure you want to delete this snapshot? This action cannot be undone.',
+        { modal: true },
+        'Delete'
+      )
+
+      if (confirm === 'Delete') {
         try {
-          await manager.restoreSnapshot(snapshotId)
-          vscode.window.showInformationMessage('Snapshot restored')
-          servicesTreeProvider?.refresh()
+          await manager.deleteSnapshot(snapshotId)
+          vscode.window.showInformationMessage('Snapshot deleted')
+          workspaceTreeProvider?.refresh()
+
+          // Notify webview to refresh snapshots list
+          panel.postMessage({
+            type: 'snapshotDeleted',
+            snapshotId
+          })
         } catch (error) {
           vscode.window.showErrorMessage(
-            `Failed to restore snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`
+            `Failed to delete snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`
           )
         }
+      }
+    }
+  }
+
+  // Register main command (for command palette)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.snapshotMenu', snapshotMenuCommand)
+  )
+
+  // Register context menu command (receives TreeItem, extracts snapshotId)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.restoreSnapshot', async (treeItem: any) => {
+      const snapshotId = treeItem?.snapshot?.id || treeItem?.workspaceId
+      if (snapshotId) {
+        await snapshotMenuCommand(snapshotId)
       }
     })
   )
 
   // Refresh tree views
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.refreshDashboard', () => {
+      dashboardTreeProvider?.refresh()
+    })
+  )
+
   context.subscriptions.push(
     vscode.commands.registerCommand('devhub.refreshServices', () => {
       servicesTreeProvider?.refresh()
@@ -355,8 +520,51 @@ function registerCommands(
   )
 
   context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.refreshDocker', () => {
+      dockerTreeProvider?.refresh()
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.refreshEnvironment', () => {
+      environmentTreeProvider?.refresh()
+    })
+  )
+
+  context.subscriptions.push(
     vscode.commands.registerCommand('devhub.refreshWorkspaces', () => {
       workspaceTreeProvider?.refresh()
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.refreshNotes', () => {
+      notesTreeProvider?.refresh()
+    })
+  )
+
+  // Show tab commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.showDashboard', () => {
+      panel.show('dashboard')
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.showDocker', () => {
+      panel.show('docker')
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.showEnvironment', () => {
+      panel.show('env')
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.showNotes', () => {
+      panel.show('notes')
     })
   )
 }

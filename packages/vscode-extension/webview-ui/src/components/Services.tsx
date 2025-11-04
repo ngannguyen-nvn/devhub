@@ -170,6 +170,9 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
         status: runningArray.find((r: Service) => r.id === s.id) ? 'running' : 'stopped'
       }))
 
+      // Sort by name alphabetically
+      servicesWithStatus.sort((a, b) => a.name.localeCompare(b.name))
+
       setServices(servicesWithStatus)
       setError(null)
     } catch (err) {
@@ -349,20 +352,38 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
   }
 
   const handleOpenImportModal = async () => {
+    console.log('[Services] ========== handleOpenImportModal CALLED ==========')
     try {
       // Get active workspace
       const workspace = await workspaceApi.getActive()
+      console.log('[Services] Active workspace:', workspace)
+
+      // Get existing services to filter out repos that are already services
+      const existingServices = await serviceApi.getAll()
+      const existingRepoPaths = new Set(existingServices.map((s: any) => s.repoPath))
+      console.log('[Services] Existing service repo paths:', existingRepoPaths.size)
 
       // Get snapshots to extract repos
       const snapshots = await workspaceApi.getSnapshots(workspace.id)
+      console.log('[Services] Snapshots:', snapshots)
 
       // Extract unique repos from all snapshots
       const reposMap = new Map()
       snapshots.forEach((snapshot: any) => {
-        const config = typeof snapshot.config === 'string' ? JSON.parse(snapshot.config) : snapshot.config
-        if (config.repositories) {
-          config.repositories.forEach((repo: any) => {
-            if (!reposMap.has(repo.path)) {
+        console.log('[Services] Processing snapshot:', snapshot.id)
+
+        // Repositories could be at snapshot.repositories (top-level) or snapshot.config.repositories
+        const repositories = snapshot.repositories ||
+          (snapshot.config && typeof snapshot.config === 'string'
+            ? JSON.parse(snapshot.config).repositories
+            : snapshot.config?.repositories)
+
+        console.log('[Services] Found repositories:', repositories?.length || 0)
+
+        if (repositories && Array.isArray(repositories)) {
+          repositories.forEach((repo: any) => {
+            // Only add repos that don't already have services
+            if (!reposMap.has(repo.path) && !existingRepoPaths.has(repo.path)) {
               reposMap.set(repo.path, {
                 path: repo.path,
                 name: repo.path.split('/').pop() || repo.path
@@ -372,9 +393,13 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
         }
       })
 
-      setWorkspaceRepos(Array.from(reposMap.values()))
+      console.log('[Services] Final repos map size:', reposMap.size)
+      const reposArray = Array.from(reposMap.values())
+      console.log('[Services] Repos array:', reposArray)
+      setWorkspaceRepos(reposArray)
       setShowImportModal(true)
     } catch (err) {
+      console.error('[Services] Error in handleOpenImportModal:', err)
       setError(err instanceof Error ? err.message : 'Failed to load workspace repos')
     }
   }
@@ -389,8 +414,21 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
     try {
       const selectedRepoPaths = Array.from(selectedRepos)
 
+      // Get existing services to avoid duplicates
+      const existingServices = await serviceApi.getAll()
+      const existingRepoPaths = new Set(existingServices.map((s: any) => s.repoPath))
+
+      // Filter out repos that already have services
+      const newRepoPaths = selectedRepoPaths.filter(path => !existingRepoPaths.has(path))
+
+      if (newRepoPaths.length === 0) {
+        setError('All selected repositories already have services')
+        setImporting(false)
+        return
+      }
+
       // Analyze repos
-      const analyses = await repoApi.analyzeBatch(selectedRepoPaths)
+      const analyses = await repoApi.analyzeBatch(newRepoPaths)
 
       // Create services from successful analyses
       const successfulAnalyses = analyses.filter((a: any) => a.success)

@@ -29,7 +29,8 @@ export default function WorkspaceSwitcher() {
   const fetchWorkspaces = async () => {
     try {
       const result = await workspaceApi.getAll()
-      const workspaceList = result.workspaces || []
+      // Backend returns array directly, not { workspaces: [] }
+      const workspaceList = Array.isArray(result) ? result : []
       setWorkspaces(workspaceList)
 
       const active = workspaceList.find((w: Workspace) => w.active)

@@ -14,12 +14,20 @@ export class DevHubPanel {
   private messageHandler: MessageHandler
   private pendingMessages: any[] = []
   private isWebviewReady = false
+  private onRefreshWorkspacesTree?: () => void
 
   constructor(
     private context: vscode.ExtensionContext,
     private devhubManager: DevHubManager
   ) {
     this.messageHandler = new MessageHandler(devhubManager)
+  }
+
+  /**
+   * Set callback for refreshing workspaces tree view
+   */
+  setRefreshWorkspacesTreeCallback(callback: () => void): void {
+    this.onRefreshWorkspacesTree = callback
   }
 
   /**
@@ -60,6 +68,18 @@ export class DevHubPanel {
             this.panel?.webview.postMessage(msg)
           })
           this.pendingMessages = []
+          return
+        }
+
+        // Handle refresh workspaces tree request
+        if (message.type === 'refreshWorkspacesTree') {
+          console.log('[DevHubPanel] Received refreshWorkspacesTree message')
+          if (this.onRefreshWorkspacesTree) {
+            console.log('[DevHubPanel] Calling refresh callback')
+            this.onRefreshWorkspacesTree()
+          } else {
+            console.log('[DevHubPanel] No refresh callback set')
+          }
           return
         }
 

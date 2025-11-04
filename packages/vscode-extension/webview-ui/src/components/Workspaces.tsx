@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { workspaceApi } from '../messaging/vscodeApi'
+import { workspaceApi, vscode } from '../messaging/vscodeApi'
 import '../styles/Workspaces.css'
 
 interface Workspace {
@@ -98,7 +98,12 @@ export default function Workspaces() {
     setLoading(true)
     try {
       const response = await workspaceApi.getAll()
-      setWorkspaces(response.workspaces || [])
+      console.log('[Workspaces] Raw response:', response)
+      console.log('[Workspaces] Is array?', Array.isArray(response))
+      // Backend returns array directly, not { workspaces: [] }
+      const workspacesArray = Array.isArray(response) ? response : []
+      console.log('[Workspaces] Workspaces array:', workspacesArray)
+      setWorkspaces(workspacesArray)
     } catch (err) {
       console.error('[Workspaces] Error fetching workspaces:', err)
       setError('Failed to fetch workspaces')
@@ -112,7 +117,8 @@ export default function Workspaces() {
     setLoading(true)
     try {
       const response = await workspaceApi.getSnapshots(workspaceId)
-      setSnapshots(response.snapshots || [])
+      // Backend returns array directly, not { snapshots: [] }
+      setSnapshots(Array.isArray(response) ? response : [])
     } catch (err) {
       console.error('[Workspaces] Error fetching snapshots:', err)
       setError('Failed to fetch snapshots')
@@ -145,6 +151,22 @@ export default function Workspaces() {
       fetchSnapshotDetails(selectedSnapshotId)
     }
   }, [viewLevel, selectedWorkspaceId, selectedSnapshotId])
+
+  // Listen for messages from extension (e.g., snapshot deleted from tree view)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data
+      if (message.type === 'snapshotDeleted') {
+        // Refresh snapshots list if we're viewing snapshots
+        if (viewLevel === 'workspace-detail' && selectedWorkspaceId) {
+          fetchSnapshots(selectedWorkspaceId)
+        }
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [viewLevel, selectedWorkspaceId])
 
   // Navigation handlers
   const handleWorkspaceClick = (workspaceId: string) => {
@@ -234,18 +256,40 @@ export default function Workspaces() {
 
   // Quick snapshot
   const handleQuickSnapshot = () => {
+    console.log('[Workspaces] handleQuickSnapshot called')
+    console.log('[Workspaces] Setting showQuickSnapshotDialog to true')
     setShowQuickSnapshotDialog(true)
+    console.log('[Workspaces] showQuickSnapshotDialog should now be true')
   }
 
   const confirmQuickSnapshot = async () => {
+    console.log('[Workspaces] confirmQuickSnapshot called')
+    setLoading(true)
+    setError(null)
     try {
+      console.log('[Workspaces] Creating quick snapshot...')
       await workspaceApi.createQuickSnapshot()
+      console.log('[Workspaces] Quick snapshot created')
+
       if (selectedWorkspaceId) {
-        fetchSnapshots(selectedWorkspaceId)
+        console.log('[Workspaces] Fetching snapshots for workspace:', selectedWorkspaceId)
+        await fetchSnapshots(selectedWorkspaceId)
       }
+
       setShowQuickSnapshotDialog(false)
+      setQuickSnapshotOptions({ autoImportEnv: false })
+
+      // Refresh workspaces tree view
+      console.log('[Workspaces] About to send refreshWorkspacesTree message')
+      console.log('[Workspaces] vscode object:', vscode)
+      vscode.postMessage({ type: 'refreshWorkspacesTree' })
+      console.log('[Workspaces] Message sent')
     } catch (err) {
+      console.error('[Workspaces] Error creating quick snapshot:', err)
       setError(err instanceof Error ? err.message : 'Failed to create snapshot')
+    } finally {
+      console.log('[Workspaces] Setting loading to false')
+      setLoading(false)
     }
   }
 
@@ -288,7 +332,10 @@ export default function Workspaces() {
 
       setShowCreateSnapshotForm(false)
       setCreateSnapshotForm({ name: '', description: '', repoPaths: '', tags: '', autoImportEnv: false })
-      fetchSnapshots(selectedWorkspaceId)
+      await fetchSnapshots(selectedWorkspaceId)
+
+      // Refresh workspaces tree view
+      vscode.postMessage({ type: 'refreshWorkspacesTree' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create snapshot')
     }
@@ -485,9 +532,10 @@ export default function Workspaces() {
                   </div>
                   {workspace.description && <p className="workspace-description">{workspace.description}</p>}
                   {workspace.folderPath && <div className="workspace-path">{workspace.folderPath}</div>}
-                  <div className="workspace-actions">
+                  <div className="workspace-card-actions">
                     {workspace.active !== 1 && (
                       <button
+                        className="btn-success btn-small"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleActivateWorkspace(workspace.id)
@@ -497,6 +545,7 @@ export default function Workspaces() {
                       </button>
                     )}
                     <button
+                      className="btn-danger btn-small"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDeleteWorkspace(workspace.id, workspace.name)
@@ -594,8 +643,9 @@ export default function Workspaces() {
                     </span>
                   </div>
                   {snapshot.description && <p className="snapshot-description">{snapshot.description}</p>}
-                  <div className="snapshot-actions">
+                  <div className="snapshot-card-actions">
                     <button
+                      className="btn-success btn-small"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleRestoreSnapshot(snapshot.id)
@@ -604,6 +654,7 @@ export default function Workspaces() {
                       Restore
                     </button>
                     <button
+                      className="btn-secondary btn-small"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleExportSnapshot(snapshot.id)
@@ -612,6 +663,7 @@ export default function Workspaces() {
                       Export
                     </button>
                     <button
+                      className="btn-danger btn-small"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDeleteSnapshot(snapshot.id, snapshot.name)
@@ -673,8 +725,14 @@ export default function Workspaces() {
 
       {/* Quick Snapshot Dialog */}
       {showQuickSnapshotDialog && (
-        <div className="modal-overlay" onClick={() => setShowQuickSnapshotDialog(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => {
+          console.log('[Workspaces] Modal overlay clicked, closing dialog')
+          setShowQuickSnapshotDialog(false)
+        }}>
+          <div className="modal" onClick={(e) => {
+            console.log('[Workspaces] Modal content clicked, preventing close')
+            e.stopPropagation()
+          }}>
             <h3>Quick Snapshot</h3>
             <p>Capture current workspace state quickly</p>
             <label className="checkbox-label">
@@ -686,11 +744,19 @@ export default function Workspaces() {
               <span>Auto-import .env files</span>
             </label>
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowQuickSnapshotDialog(false)}>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowQuickSnapshotDialog(false)}
+                disabled={loading}
+              >
                 Cancel
               </button>
-              <button className="btn-primary" onClick={confirmQuickSnapshot}>
-                Create
+              <button
+                className="btn-primary"
+                onClick={confirmQuickSnapshot}
+                disabled={loading}
+              >
+                {loading ? 'Creating...' : 'Create'}
               </button>
             </div>
           </div>

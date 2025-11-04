@@ -126,12 +126,7 @@ export class WorkspaceTreeItem extends vscode.TreeItem {
         title: 'Activate Workspace',
         arguments: [workspaceId]
       }
-    } else if (snapshot) {
-      this.command = {
-        command: 'devhub.restoreSnapshot',
-        title: 'Restore Snapshot',
-        arguments: [snapshot.id]
-      }
     }
+    // Snapshots don't have click command - use inline menu button instead
   }
 }

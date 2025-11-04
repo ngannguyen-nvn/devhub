@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { repoApi, serviceApi, workspaceApi } from '../messaging/vscodeApi'
+import { repoApi, serviceApi, workspaceApi, vscode } from '../messaging/vscodeApi'
 import '../styles/Dashboard.css'
 
 interface Repository {
@@ -64,6 +64,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData()
+  }, [])
+
+  // Listen for messages from extension (e.g., snapshot deleted from tree view)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data
+      if (message.type === 'snapshotDeleted') {
+        console.log('[Dashboard] Snapshot deleted, refreshing data')
+        fetchDashboardData()
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
   }, [])
 
   const fetchDashboardData = async () => {
@@ -202,12 +216,22 @@ export default function Dashboard() {
   }
 
   const handleQuickSnapshot = async () => {
+    setLoading(true)
     try {
+      console.log('[Dashboard] Creating quick snapshot...')
       await workspaceApi.createQuickSnapshot()
+      console.log('[Dashboard] Quick snapshot created, fetching dashboard data...')
       await fetchDashboardData()
+      console.log('[Dashboard] Refreshing workspaces tree view...')
+
+      // Refresh workspaces tree view
+      vscode.postMessage({ type: 'refreshWorkspacesTree' })
+      console.log('[Dashboard] Tree view refresh message sent')
     } catch (err) {
       console.error('[Dashboard] Quick snapshot error:', err)
       setError(err instanceof Error ? err.message : 'Failed to create snapshot')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -246,8 +270,12 @@ export default function Dashboard() {
               <span>Latest: {new Date(recentSnapshots[0].createdAt).toLocaleDateString()}</span>
             </div>
           )}
-          <button className="btn-secondary" onClick={handleQuickSnapshot}>
-            Quick Snapshot
+          <button
+            className="btn-secondary"
+            onClick={handleQuickSnapshot}
+            disabled={loading}
+          >
+            {loading ? 'Creating...' : 'Quick Snapshot'}
           </button>
         </div>
       </div>

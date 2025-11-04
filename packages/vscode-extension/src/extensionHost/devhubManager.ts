@@ -268,6 +268,35 @@ export class DevHubManager {
   }
 
   /**
+   * Restore a snapshot with selective options
+   */
+  async restoreSnapshotSelective(
+    snapshotId: string,
+    options: {
+      restoreBranches?: boolean
+      restoreServices?: boolean
+      restoreDocker?: boolean
+      restoreEnvVars?: boolean
+    }
+  ): Promise<{
+    success: boolean
+    servicesStarted: number
+    branchesSwitched: number
+    containersStarted: number
+    envVarsApplied: number
+    errors: string[]
+  }> {
+    return await this.workspaceManager.restoreSnapshotSelective(snapshotId, options)
+  }
+
+  /**
+   * Delete a snapshot
+   */
+  async deleteSnapshot(snapshotId: string): Promise<void> {
+    await this.workspaceManager.deleteSnapshot(snapshotId)
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {
