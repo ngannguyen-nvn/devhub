@@ -13,7 +13,7 @@ This document contains everything needed to understand and continue developing D
 **Current Status:** v2.0 Complete ✅ | VSCode Extension Complete ✅
 **Tech Stack:** React + Vite (frontend), Express + TypeScript (backend), SQLite (database)
 **Repository:** https://github.com/ngannguyen-nvn/devhub
-**Branch:** `claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3`
+**Branch:** `main`
 
 **Versions:**
 - Web Application: v2.0.0 (Production Ready)
@@ -285,11 +285,12 @@ devhub/
 - Request/response handling
 - Imports from @devhub/core
 
-**VSCode Extension** (future - packages/vscode-extension):
+**VSCode Extension** (packages/vscode-extension) ✅ COMPLETE:
 - VSCode extension host
-- Webview UI
-- Message passing
-- Extension APIs
+- Webview UI with React
+- Message passing (40+ message types)
+- Extension APIs (10+ commands)
+- Tree views (Services, Workspaces)
 - Imports from @devhub/core
 
 ---
@@ -403,17 +404,17 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 
 ### Database Migration System
 
-**Location:** `backend/src/db/migrationRunner.ts`
+**Location:** `packages/core/src/db/migrationRunner.ts`
 
 **How it works:**
 - Migrations automatically execute on backend startup
 - Each migration has a unique name and runs only once
 - Migration execution tracked in `migrations` table
 - Transactions ensure all-or-nothing execution (rollback on error)
-- Migration files located in `backend/src/db/migrations/`
+- Migration files located in `packages/core/src/db/migrations/`
 
 **Migration 001: Workspace Hierarchy**
-- File: `backend/src/db/migrations/001_workspace_hierarchy.ts`
+- File: `packages/core/src/db/migrations/001_workspace_hierarchy.ts`
 - Purpose: Transform flat snapshot list into hierarchical workspace → snapshots structure
 - Changes:
   1. Rename `workspaces` table to `workspace_snapshots`
@@ -424,7 +425,7 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 - Result: Existing snapshots automatically migrated to new structure on startup
 
 **Migration 002: Workspace Scoping**
-- File: `backend/src/db/migrations/002_workspace_scoping.ts`
+- File: `packages/core/src/db/migrations/002_workspace_scoping.ts`
 - Purpose: Make all resources (services, env profiles, notes) workspace-scoped for complete isolation
 - Changes:
   1. Ensure default workspace exists
@@ -436,7 +437,7 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 - Result: All resources now belong to workspaces, complete isolation between projects
 
 **Creating New Migrations:**
-1. Create new file: `backend/src/db/migrations/00X_migration_name.ts`
+1. Create new file: `packages/core/src/db/migrations/00X_migration_name.ts`
 2. Export object with:
    - `name`: Unique migration name
    - `up(db)`: Function that applies the migration
@@ -557,7 +558,7 @@ GET    /api/notes/:id/links                      # Get linked notes
 GET    /api/notes/:id/backlinks                  # Get backlinks
 ```
 
-**Total API Endpoints:** 59 (Workspace system with full resource scoping)
+**Total API Endpoints:** 63 (includes v2.0 orchestration features + workspace system)
 
 ### Frontend State Management
 
@@ -664,7 +665,7 @@ export interface ServiceStats {
 }
 ```
 
-2. **Add backend logic** in `backend/src/services/serviceManager.ts`:
+2. **Add backend logic** in `packages/core/src/services/serviceManager.ts`:
 ```typescript
 getStats(): ServiceStats {
   const all = this.getAllServices()
@@ -729,13 +730,16 @@ import StatsCard from './StatsCard'
 
 **Example: Add new column to services table**
 
-Since we're using raw SQL, migrations are manual:
+Use the migration system:
 
-1. **Update schema** in `backend/src/db/index.ts`:
+1. **Create migration file** in `packages/core/src/db/migrations/`:
 ```typescript
-db.exec(`
-  ALTER TABLE services ADD COLUMN auto_restart INTEGER DEFAULT 0;
-`)
+export const migration008 = {
+  name: '008_add_auto_restart',
+  up: (db) => {
+    db.exec(`ALTER TABLE services ADD COLUMN auto_restart INTEGER DEFAULT 0;`);
+  },
+};
 ```
 
 2. **Update TypeScript types** in `shared/src/index.ts`:
@@ -797,80 +801,35 @@ useEffect(() => {
 
 ---
 
-## 🎯 Next Features to Build
+## 🎯 Current Feature Status
 
-Based on `DEVHUB_PLAN.md`, here are the planned features:
+All planned v1.0 and v2.0 features are **COMPLETE** ✅:
 
-### Priority 1: Docker Management
+### ✅ Core Features (v1.0)
+- **Repository Dashboard** - Git repository scanner with status tracking
+- **Service Manager** - Process management with real-time logs
+- **Docker Management** - Build images, manage containers, docker-compose generation
+- **Environment Variables** - Secure profiles with AES-256 encryption
+- **Hierarchical Workspaces** - Workspace → Snapshots with full resource scoping
+- **Wiki/Notes System** - Markdown documentation with bidirectional linking
 
-**What to build:**
-- Detect Dockerfiles (already done in repo scanner)
-- Build Docker images from UI
-- View built images (list, size, tags)
-- Run containers
-- Stop/start/remove containers
-- View container logs
-- Generate docker-compose.yml
+### ✅ Advanced Orchestration (v2.0)
+- **Health Checks** - HTTP/TCP/Command monitoring (~5 endpoints)
+- **Log Persistence** - Historical analysis with session tracking (~8 endpoints)
+- **Service Groups** - Batch operations and visual organization (~10 endpoints)
 
-**Where to add:**
-1. **Backend:** Create `backend/src/services/dockerManager.ts`
-   - Use `dockerode` package (already installed)
-   - Methods: buildImage(), listImages(), runContainer(), listContainers(), etc.
-2. **Backend:** Create `backend/src/routes/docker.ts`
-3. **Frontend:** Create `frontend/src/components/Docker.tsx`
-4. **Frontend:** Update `App.tsx` to show Docker component
+### ✅ VSCode Extension (v2.0)
+- **Full Implementation** - All 5 phases complete
+- **Tree Views** - Services + Workspaces with inline actions
+- **Webview UI** - 6 tabs (Dashboard, Services, Docker, Environment, Workspaces, Notes)
+- **Commands** - 10+ via command palette
+- **Production Ready** - 16.26 MB .vsix package
 
-**Key library:** `dockerode`
-```typescript
-import Docker from 'dockerode'
-const docker = new Docker()
-```
-
-### Priority 2: Environment Variables Manager
-
-**What to build:**
-- Read/write .env files for each service
-- Global env vars (shared across services)
-- Environment profiles (dev/staging/prod)
-- Secure storage for secrets (encrypt in database)
-
-**Where to add:**
-1. **Backend:** Create `backend/src/services/envManager.ts`
-2. **Backend:** Create `backend/src/routes/env.ts`
-3. **Frontend:** Create `frontend/src/components/Environment.tsx`
-4. **Database:** New table `env_vars` and `env_profiles`
-
-### Priority 3: Workspace Snapshots
-
-**What to build:**
-- Save current state (which services running, current branches)
-- Restore workspace
-- List saved workspaces
-- Export/import workspace configs
-
-**Where to add:**
-1. **Backend:** Update `backend/src/services/serviceManager.ts` with snapshot methods
-2. **Backend:** Create `backend/src/routes/workspaces.ts`
-3. **Frontend:** Add workspace UI to Services page or new page
-4. **Database:** Use existing `workspaces` table
-
-### Priority 4: Wiki/Notes
-
-**What to build:**
-- Markdown editor
-- List notes
-- Search notes
-- Link notes with [[note-name]] syntax
-
-**Where to add:**
-1. **Backend:** Create `backend/src/services/wikiManager.ts`
-2. **Backend:** Create `backend/src/routes/wiki.ts`
-3. **Frontend:** Create `frontend/src/components/Wiki.tsx`
-4. **Database:** New table `notes`
-
-**Suggested libraries:**
-- `react-markdown` for rendering
-- `react-simplemde-editor` or `react-mde` for editing
+**Total Implementation:**
+- 63 API endpoints
+- 9 service managers
+- 16 database tables
+- Complete shared core architecture
 
 ---
 
@@ -896,13 +855,13 @@ const docker = new Docker()
 
 ### Future Improvements:
 
-1. Add service groups/tags
-2. Add log search and filtering
-3. Add service health checks
-4. Add notification system
-5. Add metrics (CPU, memory usage)
-6. Add service dependencies (start order)
-7. Add custom env vars per service in UI (not just in form)
+1. Add notification system for service events
+2. Add metrics dashboard (CPU, memory usage)
+3. Add service dependencies and start order management
+4. Add authentication and multi-user support
+5. Add remote access capabilities
+6. Add CI/CD pipeline integration
+7. Add Kubernetes support
 
 ---
 
@@ -1015,8 +974,8 @@ npm run build -w shared
 
 ### Branch Strategy:
 
-- Main branch: `claude/create-private-repo-011CUTzeAJKig5m4aBqXWsUV`
-- All development happens on this branch (for now)
+- Main branch: `main`
+- Feature branches for new development
 
 ### Committing Changes:
 
@@ -1036,13 +995,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ```bash
 # Make sure remote is set correctly
 git remote -v
-# Should show: http://local_proxy@127.0.0.1:16047/git/ngannguyen-nvn/simple-express-ts
+# Should show: git@github.com:ngannguyen-nvn/devhub.git
 
 # Push
-git push -u origin claude/create-private-repo-011CUTzeAJKig5m4aBqXWsUV
+git push origin main
 ```
-
-**Note:** The repository was renamed to `devhub`, but git still works with the old URL due to GitHub's redirect.
 
 ---
 
@@ -1198,7 +1155,7 @@ backend/devhub.db
 
 **Current branch:**
 ```
-claude/review-code-docs-011CUhHcbnDcTiFt6kjKaGi3
+main
 ```
 
 **Repository:**
@@ -1237,7 +1194,7 @@ This document should give you everything needed to understand and continue devel
 - Removed UNIQUE constraint on env_profiles(workspace_id, name)
 - Profiles now differentiated by source_id instead of unique names
 - Enables clean profile names like "admin-api" across multiple snapshots
-- File: `backend/src/db/migrations/005_allow_duplicate_profile_names.ts`
+- File: `packages/core/src/db/migrations/005_allow_duplicate_profile_names.ts`
 
 **New Snapshot Architecture:**
 - **Clean profile names** without snapshot suffixes (e.g., "admin-api" not "admin-api (Snapshot X)")
@@ -1249,7 +1206,7 @@ This document should give you everything needed to understand and continue devel
 **Bug Fixes:**
 - Fixed service deletion error when service already stopped
 - Added try-catch around stopService() call in deleteService()
-- File: `backend/src/services/serviceManager.ts:154-160`
+- File: `packages/core/src/services/serviceManager.ts:154-160`
 
 ### Comprehensive Testing Completed:
 
