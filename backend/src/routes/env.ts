@@ -468,7 +468,7 @@ router.post('/profiles/:profileId/sync-to-service', async (req: Request, res: Re
 
     // Get service details
     const db = Database
-    const service = db.prepare('SELECT * FROM services WHERE id = ? AND workspace_id = ?').get(serviceId, workspaceId)
+    const service = db.prepare('SELECT * FROM services WHERE id = ? AND workspace_id = ?').get(serviceId, workspaceId) as any
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found' })
