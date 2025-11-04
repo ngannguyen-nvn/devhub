@@ -374,6 +374,14 @@ export default function Environment() {
     return a.name.localeCompare(b.name)
   })
 
+  // Auto-expand all groups on mount
+  useEffect(() => {
+    if (sortedGroups.length > 0 && expandedGroups.size === 1 && expandedGroups.has('Manual Profiles')) {
+      const allGroupNames = sortedGroups.map(g => g.name)
+      setExpandedGroups(new Set(allGroupNames))
+    }
+  }, [sortedGroups.length])
+
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups)
     if (newExpanded.has(groupName)) {
