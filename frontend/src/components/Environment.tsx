@@ -433,13 +433,17 @@ export default function Environment() {
     return a.name.localeCompare(b.name)
   })
 
-  // Auto-expand all groups on mount
+  // Auto-expand all groups (including newly created ones)
   useEffect(() => {
-    if (sortedGroups.length > 0 && expandedGroups.size === 0) {
+    if (sortedGroups.length > 0) {
       const allGroupNames = sortedGroups.map(g => g.name)
-      setExpandedGroups(new Set(allGroupNames))
+      // Only update if there are new groups that aren't expanded
+      const hasNewGroups = allGroupNames.some(name => !expandedGroups.has(name))
+      if (hasNewGroups) {
+        setExpandedGroups(new Set(allGroupNames))
+      }
     }
-  }, [sortedGroups.length])
+  }, [sortedGroups])
 
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups)
