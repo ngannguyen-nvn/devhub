@@ -32,11 +32,11 @@ export class DockerTreeProvider implements vscode.TreeDataProvider<DockerTreeIte
             return [new DockerTreeItem('No images', 'no-images', vscode.TreeItemCollapsibleState.None, 'info')]
           }
 
-          return images.map(image => {
-            const tag = image.RepoTags && image.RepoTags[0] ? image.RepoTags[0] : '<none>'
+          return images.map((image: any) => {
+            const tag = image.repoTags && image.repoTags[0] ? image.repoTags[0] : '<none>'
             return new DockerTreeItem(
               tag,
-              image.Id,
+              image.id,
               vscode.TreeItemCollapsibleState.None,
               'image',
               image
@@ -50,12 +50,12 @@ export class DockerTreeProvider implements vscode.TreeDataProvider<DockerTreeIte
             return [new DockerTreeItem('No containers', 'no-containers', vscode.TreeItemCollapsibleState.None, 'info')]
           }
 
-          return containers.map(container => {
-            const name = container.Names && container.Names[0] ? container.Names[0].replace(/^\//, '') : container.Id.substring(0, 12)
-            const isRunning = container.State === 'running'
+          return containers.map((container: any) => {
+            const name = container.name || container.id
+            const isRunning = container.state === 'running'
             return new DockerTreeItem(
               name,
-              container.Id,
+              container.id,
               vscode.TreeItemCollapsibleState.None,
               isRunning ? 'containerRunning' : 'containerStopped',
               container
@@ -89,13 +89,13 @@ export class DockerTreeItem extends vscode.TreeItem {
       this.iconPath = new vscode.ThemeIcon('package')
       this.contextValue = 'dockerImage'
       if (dockerItem) {
-        const size = dockerItem.Size ? `${(dockerItem.Size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'
+        const size = dockerItem.size ? `${(dockerItem.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'
         this.description = size
         this.tooltip = new vscode.MarkdownString()
-        this.tooltip.appendMarkdown(`**Image ID:** ${dockerItem.Id.substring(0, 12)}\n\n`)
+        this.tooltip.appendMarkdown(`**Image ID:** ${dockerItem.id}\n\n`)
         this.tooltip.appendMarkdown(`**Size:** ${size}\n\n`)
-        if (dockerItem.RepoTags) {
-          this.tooltip.appendMarkdown(`**Tags:** ${dockerItem.RepoTags.join(', ')}`)
+        if (dockerItem.repoTags) {
+          this.tooltip.appendMarkdown(`**Tags:** ${dockerItem.repoTags.join(', ')}`)
         }
       }
     } else if (itemType === 'containerRunning') {
@@ -104,9 +104,9 @@ export class DockerTreeItem extends vscode.TreeItem {
       this.description = 'Running'
       if (dockerItem) {
         this.tooltip = new vscode.MarkdownString()
-        this.tooltip.appendMarkdown(`**Container ID:** ${dockerItem.Id.substring(0, 12)}\n\n`)
-        this.tooltip.appendMarkdown(`**Image:** ${dockerItem.Image}\n\n`)
-        this.tooltip.appendMarkdown(`**Status:** ${dockerItem.Status}\n\n`)
+        this.tooltip.appendMarkdown(`**Container ID:** ${dockerItem.id}\n\n`)
+        this.tooltip.appendMarkdown(`**Image:** ${dockerItem.image}\n\n`)
+        this.tooltip.appendMarkdown(`**Status:** ${dockerItem.status}\n\n`)
         this.tooltip.appendMarkdown(`**State:** 🟢 Running`)
       }
     } else if (itemType === 'containerStopped') {
@@ -115,9 +115,9 @@ export class DockerTreeItem extends vscode.TreeItem {
       this.description = 'Stopped'
       if (dockerItem) {
         this.tooltip = new vscode.MarkdownString()
-        this.tooltip.appendMarkdown(`**Container ID:** ${dockerItem.Id.substring(0, 12)}\n\n`)
-        this.tooltip.appendMarkdown(`**Image:** ${dockerItem.Image}\n\n`)
-        this.tooltip.appendMarkdown(`**Status:** ${dockerItem.Status}\n\n`)
+        this.tooltip.appendMarkdown(`**Container ID:** ${dockerItem.id}\n\n`)
+        this.tooltip.appendMarkdown(`**Image:** ${dockerItem.image}\n\n`)
+        this.tooltip.appendMarkdown(`**Status:** ${dockerItem.status}\n\n`)
         this.tooltip.appendMarkdown(`**State:** ⚪ Stopped`)
       }
     } else if (itemType === 'info') {
