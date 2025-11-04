@@ -711,10 +711,15 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
 
     try {
       if (hasPsql) {
-        await execAsync(`psql "${connectionString}" < "${backupFilePath}"`)
+        // Use psql with -f flag to read from file
+        await execFileAsync('psql', [connectionString, '-f', backupFilePath])
       } else {
-        // Fallback to Docker (mount backup file)
-        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" postgres:alpine psql "${connectionString}" < "${backupFilePath}"`)
+        // Fallback to Docker (mount backup file as read-only)
+        await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host',
+          '-v', `${backupFilePath}:/backup.sql:ro`,
+          'postgres:alpine', 'psql', connectionString, '-f', '/backup.sql'
+        ])
       }
       return {
         success: true,
@@ -740,10 +745,24 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
 
     try {
       if (hasMysql) {
-        await execAsync(`mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+        // Use mysql with shell redirection (safe because backupFilePath is controlled)
+        const args = ['-h', host, '-P', port, '-u', user]
+        if (password) {
+          args.push(`-p${password}`)
+        }
+        args.push(dbName, '-e', `source ${backupFilePath}`)
+        await execFileAsync('mysql', args)
       } else {
-        // Fallback to Docker
-        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" mysql:latest mysql -h ${host} -P ${port} -u ${user} -p${password} ${dbName} < "${backupFilePath}"`)
+        // Fallback to Docker (mount backup file as read-only)
+        const dockerArgs = ['run', '--rm', '--network', 'host',
+          '-v', `${backupFilePath}:/backup.sql:ro`,
+          'mysql:latest', 'mysql',
+          '-h', host, '-P', port, '-u', user]
+        if (password) {
+          dockerArgs.push(`-p${password}`)
+        }
+        dockerArgs.push(dbName, '-e', 'source /backup.sql')
+        await execFileAsync('docker', dockerArgs)
       }
       return {
         success: true,
@@ -768,22 +787,48 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     try {
       // Extract tar.gz if needed
       if (backupFilePath.endsWith('.tar.gz') || backupFilePath.endsWith('.gz')) {
-        await execAsync(`mkdir -p "${extractPath}" && tar -xzf "${backupFilePath}" -C "${extractPath}"`)
+        // Create directory and extract
+        if (!fs.existsSync(extractPath)) {
+          fs.mkdirSync(extractPath, { recursive: true })
+        }
+        await execFileAsync('tar', ['-xzf', backupFilePath, '-C', extractPath])
 
         if (hasMongoRestore) {
-          await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+          await execFileAsync('mongorestore', [
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            `${extractPath}/${dbName}`
+          ])
         } else {
           // Fallback to Docker
-          await execAsync(`docker run --rm --network host -v /tmp:/tmp mongo:latest mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+          await execFileAsync('docker', [
+            'run', '--rm', '--network', 'host', '-v', '/tmp:/tmp',
+            'mongo:latest', 'mongorestore',
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            `${extractPath}/${dbName}`
+          ])
         }
 
-        await execAsync(`rm -rf "${extractPath}"`)
+        // Clean up extracted files
+        await execFileAsync('rm', ['-rf', extractPath])
       } else {
         if (hasMongoRestore) {
-          await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+          await execFileAsync('mongorestore', [
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            backupFilePath
+          ])
         } else {
           // Fallback to Docker
-          await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" mongo:latest mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+          await execFileAsync('docker', [
+            'run', '--rm', '--network', 'host',
+            '-v', `${backupFilePath}:${backupFilePath}:ro`,
+            'mongo:latest', 'mongorestore',
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            backupFilePath
+          ])
         }
       }
 
