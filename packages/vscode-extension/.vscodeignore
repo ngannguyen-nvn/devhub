@@ -1,0 +1,30 @@
+**/.git
+**/.gitignore
+**/.eslintrc.json
+.vscode-test
+*.vsix
+*.log
+src/
+webview-ui/src/
+webview-ui/node_modules/
+webview-ui/package-lock.json
+webview-ui/tsconfig.json
+webview-ui/vite.config.ts
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+esbuild.js
+DEVELOPMENT.md
+
+# Exclude parent directories and linked packages
+../../**
+../core/**
+
+# Exclude ALL node_modules (dependencies copied to dist/node_modules by prepare script)
+node_modules/**
+
+# Include dist (which contains bundled code + native modules) and docs
+!dist/**
+!webview-ui/dist/**
+!README.md
+!LICENSE.txt

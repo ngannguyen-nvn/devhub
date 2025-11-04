@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express'
-import { WorkspaceManager } from '../services/workspaceManager'
-import { DockerManager } from '../services/dockerManager'
-import { EnvManager } from '../services/envManager'
-import { NotesManager } from '../services/notesManager'
-import { RepoScanner } from '../services/repoScanner'
+import { WorkspaceManager } from '@devhub/core'
+import { DockerManager } from '@devhub/core'
+import { EnvManager } from '@devhub/core'
+import { NotesManager } from '@devhub/core'
+import { RepoScanner } from '@devhub/core'
 import { serviceManager } from './services'
 
 const router = Router()

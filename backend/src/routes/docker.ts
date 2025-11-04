@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { DockerManager } from '../services/dockerManager'
+import { DockerManager } from '@devhub/core'
 
 const router = Router()
 const dockerManager = new DockerManager()

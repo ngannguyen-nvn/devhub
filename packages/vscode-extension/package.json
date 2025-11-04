@@ -1,0 +1,294 @@
+{
+  "name": "devhub",
+  "displayName": "DevHub - Developer Mission Control",
+  "description": "Manage microservices, Docker, environment variables, and documentation from within VSCode",
+  "version": "2.0.0",
+  "publisher": "devhub",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "microservices",
+    "docker",
+    "developer-tools",
+    "devops",
+    "productivity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ngannguyen-nvn/devhub",
+    "directory": "packages/vscode-extension"
+  },
+  "license": "MIT",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:devhub.openPanel",
+    "onCommand:devhub.scanRepos",
+    "onCommand:devhub.createSnapshot",
+    "onView:devhubServices",
+    "onView:devhubWorkspaces"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devhub.openPanel",
+        "title": "DevHub: Open Dashboard",
+        "icon": "$(server)"
+      },
+      {
+        "command": "devhub.scanRepos",
+        "title": "DevHub: Scan Workspace for Repositories"
+      },
+      {
+        "command": "devhub.createSnapshot",
+        "title": "DevHub: Create Quick Snapshot"
+      },
+      {
+        "command": "devhub.startService",
+        "title": "Start Service",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "devhub.startServiceFromTree",
+        "title": "Start Service",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "devhub.stopService",
+        "title": "Stop Service",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "devhub.stopServiceFromTree",
+        "title": "Stop Service",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "devhub.showServiceDetails",
+        "title": "Show Details",
+        "icon": "$(info)"
+      },
+      {
+        "command": "devhub.activateWorkspace",
+        "title": "Activate Workspace",
+        "icon": "$(check)"
+      },
+      {
+        "command": "devhub.restoreSnapshot",
+        "title": "Restore Snapshot Options",
+        "icon": "$(ellipsis)"
+      },
+      {
+        "command": "devhub.refreshDashboard",
+        "title": "Refresh Dashboard",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshServices",
+        "title": "Refresh Services",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshDocker",
+        "title": "Refresh Docker",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshEnvironment",
+        "title": "Refresh Environment",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshWorkspaces",
+        "title": "Refresh Workspaces",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.refreshNotes",
+        "title": "Refresh Notes",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.showDashboard",
+        "title": "Show Dashboard"
+      },
+      {
+        "command": "devhub.showDocker",
+        "title": "Show Docker"
+      },
+      {
+        "command": "devhub.showEnvironment",
+        "title": "Show Environment"
+      },
+      {
+        "command": "devhub.showNotes",
+        "title": "Show Notes"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devhub",
+          "title": "DevHub",
+          "icon": "$(server)"
+        }
+      ]
+    },
+    "views": {
+      "devhub": [
+        {
+          "id": "devhubDashboard",
+          "name": "Dashboard",
+          "icon": "$(dashboard)",
+          "contextualTitle": "DevHub Dashboard"
+        },
+        {
+          "id": "devhubServices",
+          "name": "Services",
+          "icon": "$(server)",
+          "contextualTitle": "DevHub Services"
+        },
+        {
+          "id": "devhubDocker",
+          "name": "Docker",
+          "icon": "$(package)",
+          "contextualTitle": "DevHub Docker"
+        },
+        {
+          "id": "devhubEnvironment",
+          "name": "Environment",
+          "icon": "$(gear)",
+          "contextualTitle": "DevHub Environment"
+        },
+        {
+          "id": "devhubWorkspaces",
+          "name": "Workspaces",
+          "icon": "$(folder)",
+          "contextualTitle": "DevHub Workspaces"
+        },
+        {
+          "id": "devhubNotes",
+          "name": "Notes",
+          "icon": "$(note)",
+          "contextualTitle": "DevHub Notes"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "devhub.refreshDashboard",
+          "when": "view == devhubDashboard",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshServices",
+          "when": "view == devhubServices",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshDocker",
+          "when": "view == devhubDocker",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshEnvironment",
+          "when": "view == devhubEnvironment",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshWorkspaces",
+          "when": "view == devhubWorkspaces",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.refreshNotes",
+          "when": "view == devhubNotes",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "devhub.startServiceFromTree",
+          "when": "view == devhubServices && viewItem == serviceStopped",
+          "group": "inline"
+        },
+        {
+          "command": "devhub.stopServiceFromTree",
+          "when": "view == devhubServices && viewItem == serviceRunning",
+          "group": "inline"
+        },
+        {
+          "command": "devhub.showServiceDetails",
+          "when": "view == devhubServices && viewItem =~ /service/",
+          "group": "navigation"
+        },
+        {
+          "command": "devhub.activateWorkspace",
+          "when": "view == devhubWorkspaces && viewItem == workspaceInactive",
+          "group": "inline"
+        },
+        {
+          "command": "devhub.restoreSnapshot",
+          "when": "view == devhubWorkspaces && viewItem == snapshot",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DevHub",
+      "properties": {
+        "devhub.autoStartServices": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start services when workspace opens"
+        },
+        "devhub.scanDepth": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum depth for repository scanning"
+        },
+        "devhub.logRetentionDays": {
+          "type": "number",
+          "default": 7,
+          "description": "Number of days to keep service logs"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:webview && npm run build:extension",
+    "build:extension": "node esbuild.js",
+    "build:webview": "cd webview-ui && npm run build",
+    "watch": "node esbuild.js --watch",
+    "watch:webview": "cd webview-ui && npm run dev",
+    "prepackage": "node scripts/prepare-package.js",
+    "package": "npm run build -- --production && npm run prepackage && vsce package --no-dependencies",
+    "package:linux-x64": "VSCE_TARGET=linux-x64 npm run build -- --production && npm run prepackage && vsce package --target linux-x64 --no-dependencies",
+    "package:linux-arm64": "VSCE_TARGET=linux-arm64 npm run build -- --production && npm run prepackage && vsce package --target linux-arm64 --no-dependencies",
+    "package:darwin-x64": "VSCE_TARGET=darwin-x64 npm run build -- --production && npm run prepackage && vsce package --target darwin-x64 --no-dependencies",
+    "package:darwin-arm64": "VSCE_TARGET=darwin-arm64 npm run build -- --production && npm run prepackage && vsce package --target darwin-arm64 --no-dependencies",
+    "package:win32-x64": "VSCE_TARGET=win32-x64 npm run build -- --production && npm run prepackage && vsce package --target win32-x64 --no-dependencies",
+    "package:win32-arm64": "VSCE_TARGET=win32-arm64 npm run build -- --production && npm run prepackage && vsce package --target win32-arm64 --no-dependencies",
+    "package:all": "npm run package:linux-x64 && npm run package:linux-arm64 && npm run package:darwin-x64 && npm run package:darwin-arm64 && npm run package:win32-x64 && npm run package:win32-arm64",
+    "compile": "tsc -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "dockerode": "^4.0.9"
+  },
+  "devDependencies": {
+    "@devhub/core": "^2.0.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.25.11",
+    "typescript": "^5.3.3"
+  }
+}

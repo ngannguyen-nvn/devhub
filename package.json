@@ -4,6 +4,8 @@
   "private": true,
   "description": "Developer Mission Control - Manage your microservices ecosystem",
   "workspaces": [
+    "packages/core",
+    "packages/vscode-extension",
     "frontend",
     "backend",
     "shared"

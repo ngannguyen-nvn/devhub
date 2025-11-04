@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { serviceManager } from '../services/serviceManager'
+import { serviceManager, Database } from '@devhub/core'
 import { spawn } from 'child_process'
 import os from 'os'
 
@@ -18,7 +18,7 @@ async function getWorkspaceId(req: Request): Promise<string> {
   }
 
   // Otherwise, use active workspace
-  const db = require('../db').default
+  const db = Database
   const stmt = db.prepare('SELECT id FROM workspaces WHERE active = 1 LIMIT 1')
   const row = stmt.get() as { id: string } | undefined
 
@@ -40,10 +40,10 @@ router.get('/', async (req: Request, res: Response) => {
     const running = serviceManager.getRunningServices()
 
     // Merge service definitions with running status
-    const servicesWithStatus = services.map(service => ({
+    const servicesWithStatus = services.map((service: any) => ({
       ...service,
-      status: running.find(r => r.id === service.id)?.status || 'stopped',
-      pid: running.find(r => r.id === service.id)?.pid,
+      status: running.find((r: any) => r.id === service.id)?.status || 'stopped',
+      pid: running.find((r: any) => r.id === service.id)?.pid,
     }))
 
     res.json({ success: true, services: servicesWithStatus, workspaceId })
@@ -64,7 +64,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const workspaceId = await getWorkspaceId(req)
     const services = serviceManager.getAllServices(workspaceId)
-    const service = services.find(s => s.id === req.params.id)
+    const service = services.find((s: any) => s.id === req.params.id)
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found' })
@@ -135,7 +135,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     // Verify service exists and belongs to a workspace the user has access to
     const workspaceId = await getWorkspaceId(req)
     const services = serviceManager.getAllServices(workspaceId)
-    const service = services.find(s => s.id === req.params.id)
+    const service = services.find((s: any) => s.id === req.params.id)
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
@@ -172,7 +172,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     // Verify service exists and belongs to a workspace the user has access to
     const workspaceId = await getWorkspaceId(req)
     const services = serviceManager.getAllServices(workspaceId)
-    const service = services.find(s => s.id === req.params.id)
+    const service = services.find((s: any) => s.id === req.params.id)
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
@@ -203,7 +203,7 @@ router.post('/:id/start', async (req: Request, res: Response) => {
     // Verify service exists and belongs to a workspace the user has access to
     const workspaceId = await getWorkspaceId(req)
     const services = serviceManager.getAllServices(workspaceId)
-    const service = services.find(s => s.id === req.params.id)
+    const service = services.find((s: any) => s.id === req.params.id)
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
@@ -229,7 +229,7 @@ router.post('/:id/stop', async (req: Request, res: Response) => {
     // Verify service exists and belongs to a workspace the user has access to
     const workspaceId = await getWorkspaceId(req)
     const services = serviceManager.getAllServices(workspaceId)
-    const service = services.find(s => s.id === req.params.id)
+    const service = services.find((s: any) => s.id === req.params.id)
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
@@ -257,7 +257,7 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
     // Verify service exists and belongs to a workspace the user has access to
     const workspaceId = await getWorkspaceId(req)
     const services = serviceManager.getAllServices(workspaceId)
-    const service = services.find(s => s.id === req.params.id)
+    const service = services.find((s: any) => s.id === req.params.id)
 
     if (!service) {
       console.log('❌ Service not found:', req.params.id)
@@ -275,8 +275,8 @@ router.post('/:id/terminal', async (req: Request, res: Response) => {
     console.log('   DISPLAY:', process.env.DISPLAY || 'not set')
     console.log('   PWD:', process.env.PWD)
 
-    let terminalCommand: string
-    let terminalArgs: string[]
+    let terminalCommand: string = ''
+    let terminalArgs: string[] = []
 
     // Check if we're in WSL (even though platform shows 'linux')
     let isWSL = false
@@ -506,7 +506,7 @@ router.get('/:id/logs', async (req: Request, res: Response) => {
     // Verify service exists and belongs to a workspace the user has access to
     const workspaceId = await getWorkspaceId(req)
     const services = serviceManager.getAllServices(workspaceId)
-    const service = services.find(s => s.id === req.params.id)
+    const service = services.find((s: any) => s.id === req.params.id)
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
@@ -546,7 +546,7 @@ router.post('/batch', async (req: Request, res: Response) => {
 
     // Get existing services to check for duplicates
     const existingServices = serviceManager.getAllServices(workspaceId)
-    const existingRepoPaths = new Set(existingServices.map(s => s.repoPath))
+    const existingRepoPaths = new Set(existingServices.map((s: any) => s.repoPath))
 
     const results = {
       created: [] as any[],

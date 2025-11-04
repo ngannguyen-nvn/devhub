@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { EnvManager } from '../services/envManager'
+import { EnvManager, Database } from '@devhub/core'
 
 const router = Router()
 const envManager = new EnvManager()
@@ -17,7 +17,7 @@ async function getWorkspaceId(req: Request): Promise<string> {
   }
 
   // Otherwise, use active workspace
-  const db = require('../db').default
+  const db = Database
   const stmt = db.prepare('SELECT id FROM workspaces WHERE active = 1 LIMIT 1')
   const row = stmt.get() as { id: string } | undefined
 
@@ -467,8 +467,8 @@ router.post('/profiles/:profileId/sync-to-service', async (req: Request, res: Re
     }
 
     // Get service details
-    const db = require('../db').default
-    const service = db.prepare('SELECT * FROM services WHERE id = ? AND workspace_id = ?').get(serviceId, workspaceId)
+    const db = Database
+    const service = db.prepare('SELECT * FROM services WHERE id = ? AND workspace_id = ?').get(serviceId, workspaceId) as any
 
     if (!service) {
       return res.status(404).json({ success: false, error: 'Service not found' })

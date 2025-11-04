@@ -1,0 +1,162 @@
+/* Workspace Switcher Component Styles */
+
+.workspace-switcher {
+  position: relative;
+}
+
+.workspace-switcher-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.workspace-switcher-button:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.workspace-switcher-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.workspace-icon {
+  font-size: 14px;
+}
+
+.workspace-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-icon {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Dropdown Overlay */
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+
+/* Dropdown Menu */
+.workspace-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 300px;
+  max-width: 400px;
+  max-height: 400px;
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.dropdown-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+}
+
+.dropdown-empty p {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dropdown-empty small {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Workspace List */
+.workspace-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.workspace-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.workspace-item:last-child {
+  border-bottom: none;
+}
+
+.workspace-item:hover:not(:disabled) {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.workspace-item:disabled {
+  cursor: default;
+}
+
+.workspace-item.active {
+  background: var(--vscode-list-activeSelectionBackground);
+}
+
+.workspace-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workspace-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-item-description {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-item-path {
+  font-size: 11px;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-indicator {
+  color: var(--vscode-testing-iconPassed);
+  font-size: 16px;
+  font-weight: bold;
+  margin-left: 8px;
+}

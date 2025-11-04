@@ -1,16 +1,38 @@
 import express, { Request, Response } from 'express'
-import db from '../db'
+import { Database } from '@devhub/core'
 import fs from 'fs'
 import path from 'path'
 import multer from 'multer'
-import { Client as PgClient } from 'pg'
-import mysql from 'mysql2/promise'
-import { MongoClient } from 'mongodb'
 import crypto from 'crypto'
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { promisify } from 'util'
 
-const execAsync = promisify(exec)
+// Optional database client imports (install if needed)
+let PgClient: any
+let mysql: any
+let MongoClient: any
+
+try {
+  PgClient = require('pg').Client
+} catch (e) {
+  // pg not installed
+}
+
+try {
+  mysql = require('mysql2/promise')
+} catch (e) {
+  // mysql2 not installed
+}
+
+try {
+  MongoClient = require('mongodb').MongoClient
+} catch (e) {
+  // mongodb not installed
+}
+
+const db = Database
+
+const execFileAsync = promisify(execFile)
 const router = express.Router()
 
 // Configure multer for file uploads
@@ -513,7 +535,7 @@ async function testDatabaseConnection(connectionString: string): Promise<any> {
 
       const db = client.db(dbName)
       const collections = await db.listCollections().toArray()
-      const collectionNames = collections.map(c => c.name)
+      const collectionNames = collections.map((c: any) => c.name)
 
       await client.close()
 
@@ -543,7 +565,7 @@ async function testDatabaseConnection(connectionString: string): Promise<any> {
 // Helper function to check if a command exists
 async function commandExists(command: string): Promise<boolean> {
   try {
-    await execAsync(`which ${command}`)
+    await execFileAsync('which', [command])
     return true
   } catch {
     return false
@@ -569,11 +591,16 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasPgDump) {
-        // Use PGPASSWORD environment variable to handle special characters
-        await execAsync(`PGPASSWORD='${password}' pg_dump -h ${host} -p ${port} -U ${user} -d ${dbName} > "${filePath}"`)
+        // Use PGPASSWORD environment variable with execFileAsync for security
+        const env = { ...process.env, PGPASSWORD: password }
+        await execFileAsync('pg_dump', ['-h', host, '-p', port, '-U', user, '-d', dbName, '-f', filePath], { env })
       } else {
         // Fallback to Docker with PGPASSWORD
-        await execAsync(`docker run --rm --network host -e PGPASSWORD='${password}' postgres:alpine pg_dump -h ${host} -p ${port} -U ${user} -d ${dbName} > "${filePath}"`)
+        const { stdout } = await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host', '-e', `PGPASSWORD=${password}`,
+          'postgres:alpine', 'pg_dump', '-h', host, '-p', port, '-U', user, '-d', dbName
+        ])
+        fs.writeFileSync(filePath, stdout)
       }
       return {
         success: true,
@@ -603,11 +630,16 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasMysqlDump) {
-        // Use MYSQL_PWD environment variable to handle special characters
-        await execAsync(`MYSQL_PWD='${password}' mysqldump -h ${host} -P ${port} -u ${user} ${dbName} > "${filePath}"`)
+        // Use MYSQL_PWD environment variable with execFileAsync for security
+        const env = { ...process.env, MYSQL_PWD: password }
+        await execFileAsync('mysqldump', ['-h', host, '-P', port, '-u', user, '--result-file=' + filePath, dbName], { env })
       } else {
         // Fallback to Docker with MYSQL_PWD
-        await execAsync(`docker run --rm --network host -e MYSQL_PWD='${password}' mysql:latest mysqldump -h ${host} -P ${port} -u ${user} ${dbName} > "${filePath}"`)
+        const { stdout } = await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host', '-e', `MYSQL_PWD=${password}`,
+          'mysql:latest', 'mysqldump', '-h', host, '-P', port, '-u', user, dbName
+        ])
+        fs.writeFileSync(filePath, stdout)
       }
       return {
         success: true,
@@ -633,17 +665,20 @@ async function backupDatabase(connectionString: string): Promise<any> {
 
     try {
       if (hasMongoDump) {
-        await execAsync(`mongodump --uri="${connectionString}" --out="${filePath}"`)
+        await execFileAsync('mongodump', ['--uri=' + connectionString, '--out=' + filePath])
       } else {
         // Fallback to Docker (mount /tmp to access output)
-        await execAsync(`docker run --rm --network host -v /tmp:/tmp mongo:latest mongodump --uri="${connectionString}" --out="${filePath}"`)
+        await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host', '-v', '/tmp:/tmp',
+          'mongo:latest', 'mongodump', '--uri=' + connectionString, '--out=' + filePath
+        ])
       }
 
       // Create tar.gz archive
       const archivePath = `${filePath}.tar.gz`
-      await execAsync(`tar -czf "${archivePath}" -C "${filePath}" .`)
+      await execFileAsync('tar', ['-czf', archivePath, '-C', filePath, '.'])
       // Clean up the dump directory
-      await execAsync(`rm -rf "${filePath}"`)
+      await execFileAsync('rm', ['-rf', filePath])
 
       return {
         success: true,
@@ -681,11 +716,17 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
 
     try {
       if (hasPsql) {
-        // Use PGPASSWORD environment variable to handle special characters
-        await execAsync(`PGPASSWORD='${password}' psql -h ${host} -p ${port} -U ${user} -d ${dbName} < "${backupFilePath}"`)
+        // Use PGPASSWORD environment variable with execFileAsync for security
+        const env = { ...process.env, PGPASSWORD: password }
+        await execFileAsync('psql', ['-h', host, '-p', port, '-U', user, '-d', dbName, '-f', backupFilePath], { env })
       } else {
-        // Fallback to Docker (mount backup file with PGPASSWORD)
-        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" -e PGPASSWORD='${password}' postgres:alpine psql -h ${host} -p ${port} -U ${user} -d ${dbName} < "${backupFilePath}"`)
+        // Fallback to Docker with PGPASSWORD
+        await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host',
+          '-v', `${backupFilePath}:/backup.sql:ro`,
+          '-e', `PGPASSWORD=${password}`,
+          'postgres:alpine', 'psql', '-h', host, '-p', port, '-U', user, '-d', dbName, '-f', '/backup.sql'
+        ])
       }
       return {
         success: true,
@@ -711,11 +752,17 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
 
     try {
       if (hasMysql) {
-        // Use MYSQL_PWD environment variable to handle special characters
-        await execAsync(`MYSQL_PWD='${password}' mysql -h ${host} -P ${port} -u ${user} ${dbName} < "${backupFilePath}"`)
+        // Use MYSQL_PWD environment variable with execFileAsync for security
+        const env = { ...process.env, MYSQL_PWD: password }
+        await execFileAsync('mysql', ['-h', host, '-P', port, '-u', user, dbName, '-e', `source ${backupFilePath}`], { env })
       } else {
         // Fallback to Docker with MYSQL_PWD
-        await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" -e MYSQL_PWD='${password}' mysql:latest mysql -h ${host} -P ${port} -u ${user} ${dbName} < "${backupFilePath}"`)
+        await execFileAsync('docker', [
+          'run', '--rm', '--network', 'host',
+          '-v', `${backupFilePath}:/backup.sql:ro`,
+          '-e', `MYSQL_PWD=${password}`,
+          'mysql:latest', 'mysql', '-h', host, '-P', port, '-u', user, dbName, '-e', 'source /backup.sql'
+        ])
       }
       return {
         success: true,
@@ -740,22 +787,48 @@ async function restoreDatabase(connectionString: string, backupFilePath: string)
     try {
       // Extract tar.gz if needed
       if (backupFilePath.endsWith('.tar.gz') || backupFilePath.endsWith('.gz')) {
-        await execAsync(`mkdir -p "${extractPath}" && tar -xzf "${backupFilePath}" -C "${extractPath}"`)
+        // Create directory and extract
+        if (!fs.existsSync(extractPath)) {
+          fs.mkdirSync(extractPath, { recursive: true })
+        }
+        await execFileAsync('tar', ['-xzf', backupFilePath, '-C', extractPath])
 
         if (hasMongoRestore) {
-          await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+          await execFileAsync('mongorestore', [
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            `${extractPath}/${dbName}`
+          ])
         } else {
           // Fallback to Docker
-          await execAsync(`docker run --rm --network host -v /tmp:/tmp mongo:latest mongorestore --uri="${connectionString}" --db="${dbName}" "${extractPath}/${dbName}"`)
+          await execFileAsync('docker', [
+            'run', '--rm', '--network', 'host', '-v', '/tmp:/tmp',
+            'mongo:latest', 'mongorestore',
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            `${extractPath}/${dbName}`
+          ])
         }
 
-        await execAsync(`rm -rf "${extractPath}"`)
+        // Clean up extracted files
+        await execFileAsync('rm', ['-rf', extractPath])
       } else {
         if (hasMongoRestore) {
-          await execAsync(`mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+          await execFileAsync('mongorestore', [
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            backupFilePath
+          ])
         } else {
           // Fallback to Docker
-          await execAsync(`docker run --rm --network host -v "${backupFilePath}:${backupFilePath}:ro" mongo:latest mongorestore --uri="${connectionString}" --db="${dbName}" "${backupFilePath}"`)
+          await execFileAsync('docker', [
+            'run', '--rm', '--network', 'host',
+            '-v', `${backupFilePath}:${backupFilePath}:ro`,
+            'mongo:latest', 'mongorestore',
+            '--uri=' + connectionString,
+            '--db=' + dbName,
+            backupFilePath
+          ])
         }
       }
 
