@@ -279,6 +279,42 @@
   gap: 20px;
 }
 
+.snapshot-details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+}
+
+.detail-section {
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.detail-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.config-json {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 500px;
+  overflow: auto;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--vscode-editor-foreground);
+  white-space: pre;
+  margin: 0;
+}
+
 .snapshot-info-card {
   background: var(--vscode-editor-background);
   border: 1px solid var(--vscode-panel-border);

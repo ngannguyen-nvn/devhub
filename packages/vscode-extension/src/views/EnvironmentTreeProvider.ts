@@ -27,7 +27,7 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<Environm
           return [new EnvironmentTreeItem('No profiles found', '', vscode.TreeItemCollapsibleState.None, 'info')]
         }
 
-        return profiles.map(profile => {
+        return profiles.map((profile: any) => {
           return new EnvironmentTreeItem(
             profile.name,
             profile.id,
@@ -44,13 +44,13 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<Environm
       // Show variables for this profile
       try {
         const envManager = this.devhubManager.getEnvManager()
-        const variables = await envManager.getProfileVariables(element.id)
+        const variables = await envManager.getVariables(element.id)
 
         if (variables.length === 0) {
           return [new EnvironmentTreeItem('No variables', '', vscode.TreeItemCollapsibleState.None, 'info')]
         }
 
-        return variables.map(variable => {
+        return variables.map((variable: any) => {
           return new EnvironmentTreeItem(
             variable.key,
             variable.id,

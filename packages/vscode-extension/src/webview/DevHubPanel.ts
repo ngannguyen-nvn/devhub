@@ -33,10 +33,18 @@ export class DevHubPanel {
   /**
    * Show the DevHub panel
    * Creates panel if it doesn't exist, reveals if it does
+   * Optionally navigates to a specific tab
    */
-  show(): void {
+  show(tab?: string): void {
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.One)
+      // Navigate to tab if specified
+      if (tab) {
+        this.postMessage({
+          type: 'navigate',
+          payload: { tab }
+        })
+      }
       return
     }
 
@@ -113,6 +121,14 @@ export class DevHubPanel {
       undefined,
       this.context.subscriptions
     )
+
+    // Navigate to tab if specified
+    if (tab) {
+      this.postMessage({
+        type: 'navigate',
+        payload: { tab }
+      })
+    }
   }
 
   /**
