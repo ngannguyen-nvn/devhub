@@ -97,21 +97,28 @@ for (const { platform, arches } of platforms) {
       fs.mkdirSync(versionBuildDir, { recursive: true });
 
       try {
-        const tmpFile = path.join('/tmp', `${prebuildName}-${Date.now()}`);
-        const tmpExtractDir = path.join('/tmp', `better-sqlite3-extract-${Date.now()}`);
-        fs.mkdirSync(tmpExtractDir, { recursive: true });
+        // Use prebuild-install to download (handles GitHub authentication properly)
+        const runtime = runtimeVersion.split('-')[0]; // 'electron' or 'node'
+        const target = runtimeVersion.split('-v')[1]; // version number like '127'
 
-        execSync(`curl -f -sS -L -o "${tmpFile}" "${downloadUrl}"`, { stdio: 'pipe' });
-        execSync(`tar -xzf "${tmpFile}" -C "${tmpExtractDir}"`, { stdio: 'pipe' });
+        const tmpDir = path.join('/tmp', `better-sqlite3-download-${Date.now()}`);
+        fs.mkdirSync(tmpDir, { recursive: true });
 
-        const nodeFiles = execSync(`find "${tmpExtractDir}" -name "*.node"`, { encoding: 'utf-8' }).trim().split('\n');
-        if (nodeFiles.length > 0 && nodeFiles[0]) {
-          fs.copyFileSync(nodeFiles[0], path.join(versionBuildDir, 'better_sqlite3.node'));
-          successCount++;
+        const prebuildInstallCmd = `cd "${tmpDir}" && npx --yes prebuild-install --download --runtime ${runtime} --target ${target} --arch ${arch} --platform ${platform} --tag-prefix v --path "${path.join(rootNodeModules, 'better-sqlite3')}" 2>&1`;
+
+        try {
+          execSync(prebuildInstallCmd, { stdio: 'pipe', encoding: 'utf-8' });
+
+          // Find the downloaded .node file
+          const nodeFiles = execSync(`find "${tmpDir}" -name "*.node" 2>/dev/null || true`, { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
+
+          if (nodeFiles.length > 0 && nodeFiles[0] && fs.existsSync(nodeFiles[0])) {
+            fs.copyFileSync(nodeFiles[0], path.join(versionBuildDir, 'better_sqlite3.node'));
+            successCount++;
+          }
+        } finally {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
         }
-
-        fs.unlinkSync(tmpFile);
-        fs.rmSync(tmpExtractDir, { recursive: true, force: true });
       } catch (error) {
         // Silently skip unavailable prebuilds
       }
@@ -122,32 +129,40 @@ for (const { platform, arches } of platforms) {
 console.log(`✓ Downloaded ${successCount}/${totalCount} prebuilds for all platforms`);
 
 if (successCount === 0) {
-  console.log('⚠ Failed to download prebuilds, trying local build fallback...');
+  console.error('❌ Failed to download any prebuilds');
+  console.error('');
+  console.error('This usually means:');
+  console.error('  1. Network connectivity issues with GitHub releases');
+  console.error('  2. GitHub rate limiting');
+  console.error('');
+  console.error('Solutions:');
+  console.error('  • Wait a few minutes and try again');
+  console.error('  • Set VSCE_TARGET=<platform>-<arch> to build for specific platform only');
+  console.error('    Example: VSCE_TARGET=linux-x64 npm run package');
+  console.error('  • Or use locally built binary (current platform only):');
+  console.error('    SKIP_PREBUILD_DOWNLOAD=1 npm run package');
+  console.error('');
 
-  // Fallback: Copy the locally built .node file if it exists
-  const localNodeFile = path.join(rootNodeModules, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node');
+  // Check if user wants to skip prebuild download and use local build
+  if (process.env.SKIP_PREBUILD_DOWNLOAD) {
+    console.log('⚠ SKIP_PREBUILD_DOWNLOAD is set, using local build...');
 
-  if (fs.existsSync(localNodeFile)) {
-    console.log('✓ Found locally built better_sqlite3.node, copying for current platform...');
+    const localNodeFile = path.join(rootNodeModules, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node');
 
-    // Copy to build/Release for backward compatibility with older better-sqlite3 loading logic
-    fs.copyFileSync(localNodeFile, path.join(buildDir, 'better_sqlite3.node'));
+    if (fs.existsSync(localNodeFile)) {
+      console.log('✓ Found locally built better_sqlite3.node');
 
-    // Also copy to prebuilds structure for each runtime version
-    const currentPlatform = process.platform;
-    const currentArch = process.arch;
+      // Only copy to build/Release (for current Node.js version)
+      fs.copyFileSync(localNodeFile, path.join(buildDir, 'better_sqlite3.node'));
 
-    for (const runtimeVersion of runtimeVersions) {
-      const versionBuildDir = path.join(betterSqliteDest, 'prebuilds', runtimeVersion, currentPlatform, currentArch);
-      fs.mkdirSync(versionBuildDir, { recursive: true });
-      fs.copyFileSync(localNodeFile, path.join(versionBuildDir, 'better_sqlite3.node'));
-      successCount++;
+      console.log('✓ Using local build - extension will only work on similar Node.js versions');
+      console.log('  Note: This is NOT recommended for distribution');
+    } else {
+      console.error('❌ No locally built better_sqlite3.node found');
+      console.error('Run "npm rebuild better-sqlite3" first');
+      throw new Error('No compatible better-sqlite3 binaries available');
     }
-
-    console.log(`✓ Copied local build to ${runtimeVersions.length} runtime version directories`);
   } else {
-    console.error('❌ No locally built better_sqlite3.node found');
-    console.error('Run "npm rebuild better-sqlite3" to build it for your platform');
     throw new Error('No compatible better-sqlite3 binaries available');
   }
 }

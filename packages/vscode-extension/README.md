@@ -4,6 +4,28 @@
 
 DevHub brings powerful developer productivity tools into your VSCode workspace, helping you manage complex microservices ecosystems without leaving your editor.
 
+## ⚠️ Important: Native Dependencies
+
+DevHub uses `better-sqlite3`, which requires native binaries compiled for specific platforms and Node.js versions.
+
+### Packaging Commands
+
+**For local development/testing:**
+```bash
+npm run package:dev  # Uses your locally built binary (4 MB)
+```
+
+**For distribution (platform-specific):**
+```bash
+npm run package:linux-x64      # Linux x64
+npm run package:darwin-x64     # macOS Intel
+npm run package:darwin-arm64   # macOS Apple Silicon
+npm run package:win32-x64      # Windows
+npm run package:all            # All platforms
+```
+
+📖 **See [PACKAGING.md](./PACKAGING.md) for detailed instructions and troubleshooting.**
+
 ## ✨ Features
 
 ### 🚀 Service Management
