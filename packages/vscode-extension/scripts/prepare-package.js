@@ -171,9 +171,22 @@ if (successCount === 0) {
     if (fs.existsSync(localNodeFile)) {
       console.log('✓ Found locally built better_sqlite3.node');
 
-      // Only copy to build/Release (for current Node.js version)
+      // Get current Node.js MODULE_VERSION
+      const moduleVersion = process.versions.modules;
+      const currentPlatform = process.platform;
+      const currentArch = process.arch;
+
+      console.log(`  Detected: Node.js MODULE_VERSION ${moduleVersion} (${currentPlatform}-${currentArch})`);
+
+      // Copy to build/Release for backward compatibility
       fs.copyFileSync(localNodeFile, path.join(buildDir, 'better_sqlite3.node'));
 
+      // IMPORTANT: Also copy to prebuilds structure so it can be found at runtime
+      const prebuildDir = path.join(betterSqliteDest, 'prebuilds', `node-v${moduleVersion}`, currentPlatform, currentArch);
+      fs.mkdirSync(prebuildDir, { recursive: true });
+      fs.copyFileSync(localNodeFile, path.join(prebuildDir, 'better_sqlite3.node'));
+
+      console.log(`✓ Copied to build/Release/ and prebuilds/node-v${moduleVersion}/${currentPlatform}/${currentArch}/`);
       console.log('✓ Using local build - extension will only work on similar Node.js versions');
       console.log('  Note: This is NOT recommended for distribution');
     } else {
