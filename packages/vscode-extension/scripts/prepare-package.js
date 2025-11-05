@@ -80,47 +80,50 @@ const runtimeVersions = [
   'node-v131', // Node.js 23
 ];
 
-console.log(`Downloading better-sqlite3 prebuilds for ${targetPlatform || 'current platform'}...`);
-
+// Skip prebuild downloads if SKIP_PREBUILD_DOWNLOAD is set (dev mode)
 let successCount = 0;
 let totalCount = 0;
 
-for (const { platform, arches } of platforms) {
-  for (const arch of arches) {
-    for (const runtimeVersion of runtimeVersions) {
-      totalCount++;
-      const prebuildName = `better-sqlite3-v${version}-${runtimeVersion}-${platform}-${arch}.tar.gz`;
-      const downloadUrl = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${version}/${prebuildName}`;
+if (process.env.SKIP_PREBUILD_DOWNLOAD) {
+  console.log('⚠️  SKIP_PREBUILD_DOWNLOAD is set, skipping downloads...');
+} else {
+  console.log(`Downloading better-sqlite3 prebuilds for ${targetPlatform || 'current platform'}...`);
 
-      // Create version-specific directory
-      const versionBuildDir = path.join(betterSqliteDest, 'prebuilds', runtimeVersion, platform, arch);
-      fs.mkdirSync(versionBuildDir, { recursive: true });
+  for (const { platform, arches } of platforms) {
+    for (const arch of arches) {
+      for (const runtimeVersion of runtimeVersions) {
+        totalCount++;
 
-      try {
-        // Use prebuild-install to download (handles GitHub authentication properly)
-        const runtime = runtimeVersion.split('-')[0]; // 'electron' or 'node'
-        const target = runtimeVersion.split('-v')[1]; // version number like '127'
-
-        const tmpDir = path.join('/tmp', `better-sqlite3-download-${Date.now()}`);
-        fs.mkdirSync(tmpDir, { recursive: true });
-
-        const prebuildInstallCmd = `cd "${tmpDir}" && npx --yes prebuild-install --download --runtime ${runtime} --target ${target} --arch ${arch} --platform ${platform} --tag-prefix v --path "${path.join(rootNodeModules, 'better-sqlite3')}" 2>&1`;
+        // Create version-specific directory
+        const versionBuildDir = path.join(betterSqliteDest, 'prebuilds', runtimeVersion, platform, arch);
+        fs.mkdirSync(versionBuildDir, { recursive: true });
 
         try {
-          execSync(prebuildInstallCmd, { stdio: 'pipe', encoding: 'utf-8' });
+          // Use prebuild-install to download with timeout
+          const runtime = runtimeVersion.split('-')[0]; // 'electron' or 'node'
+          const target = runtimeVersion.split('-v')[1]; // version number like '127'
 
-          // Find the downloaded .node file
-          const nodeFiles = execSync(`find "${tmpDir}" -name "*.node" 2>/dev/null || true`, { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
+          const tmpDir = path.join('/tmp', `better-sqlite3-download-${Date.now()}`);
+          fs.mkdirSync(tmpDir, { recursive: true });
 
-          if (nodeFiles.length > 0 && nodeFiles[0] && fs.existsSync(nodeFiles[0])) {
-            fs.copyFileSync(nodeFiles[0], path.join(versionBuildDir, 'better_sqlite3.node'));
-            successCount++;
+          const prebuildInstallCmd = `cd "${tmpDir}" && timeout 10 npx --yes prebuild-install --download --runtime ${runtime} --target ${target} --arch ${arch} --platform ${platform} --tag-prefix v --path "${path.join(rootNodeModules, 'better-sqlite3')}" 2>&1`;
+
+          try {
+            execSync(prebuildInstallCmd, { stdio: 'pipe', encoding: 'utf-8', timeout: 15000 });
+
+            // Find the downloaded .node file
+            const nodeFiles = execSync(`find "${tmpDir}" -name "*.node" 2>/dev/null || true`, { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
+
+            if (nodeFiles.length > 0 && nodeFiles[0] && fs.existsSync(nodeFiles[0])) {
+              fs.copyFileSync(nodeFiles[0], path.join(versionBuildDir, 'better_sqlite3.node'));
+              successCount++;
+            }
+          } finally {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
           }
-        } finally {
-          fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch (error) {
+          // Silently skip unavailable prebuilds or timeouts
         }
-      } catch (error) {
-        // Silently skip unavailable prebuilds
       }
     }
   }
