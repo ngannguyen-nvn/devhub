@@ -127,6 +127,21 @@
       {
         "command": "devhub.showNotes",
         "title": "Show Notes"
+      },
+      {
+        "command": "devhub.copyVariable",
+        "title": "Copy Variable",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "devhub.editVariable",
+        "title": "Edit Variable",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "devhub.deleteVariable",
+        "title": "Delete Variable",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -236,6 +251,21 @@
           "command": "devhub.restoreSnapshot",
           "when": "view == devhubWorkspaces && viewItem == snapshot",
           "group": "inline"
+        },
+        {
+          "command": "devhub.copyVariable",
+          "when": "view == devhubEnvironment && viewItem == envVariable",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "devhub.editVariable",
+          "when": "view == devhubEnvironment && viewItem == envVariable",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "devhub.deleteVariable",
+          "when": "view == devhubEnvironment && viewItem == envVariable",
+          "group": "1_actions@3"
         }
       ]
     },

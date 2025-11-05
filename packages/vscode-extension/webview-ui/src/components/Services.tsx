@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { serviceApi, repoApi, groupApi, workspaceApi } from '../messaging/vscodeApi'
+import { serviceApi, repoApi, groupApi, workspaceApi, vscode } from '../messaging/vscodeApi'
 import '../styles/Services.css'
 
 interface Service {
@@ -280,6 +280,15 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
       setError(err instanceof Error ? err.message : 'Failed to stop service')
       // Revert on error
       fetchServices()
+    }
+  }
+
+  const handleOpenTerminal = async (serviceId: string) => {
+    try {
+      await serviceApi.openTerminal(serviceId)
+      // Terminal will open visibly, no need for success message
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to open terminal')
     }
   }
 
@@ -702,6 +711,16 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
                       Start
                     </button>
                   )}
+                  <button
+                    className="btn-primary"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenTerminal(service.id)
+                    }}
+                    title="Open in terminal"
+                  >
+                    <span className="terminal-icon">&gt;_</span>
+                  </button>
                   <button
                     className="btn-secondary"
                     onClick={(e) => {

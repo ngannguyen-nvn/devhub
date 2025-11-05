@@ -581,6 +581,14 @@
   cursor: not-allowed;
 }
 
+/* Terminal Icon */
+.terminal-icon {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  font-weight: bold;
+  display: inline-block;
+}
+
 /* Error Banner */
 .error-banner {
   background: var(--vscode-inputValidation-errorBackground);
