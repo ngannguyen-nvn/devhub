@@ -99,30 +99,46 @@ if (process.env.SKIP_PREBUILD_DOWNLOAD) {
         fs.mkdirSync(versionBuildDir, { recursive: true });
 
         try {
-          // Use prebuild-install to download with timeout
-          const runtime = runtimeVersion.split('-')[0]; // 'electron' or 'node'
-          const target = runtimeVersion.split('-v')[1]; // version number like '127'
+          // Try direct download with wget (more reliable than curl for GitHub releases)
+          const prebuildName = `better-sqlite3-v${version}-${runtimeVersion}-${platform}-${arch}.tar.gz`;
+          const downloadUrl = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${version}/${prebuildName}`;
 
-          const tmpDir = path.join('/tmp', `better-sqlite3-download-${Date.now()}`);
-          fs.mkdirSync(tmpDir, { recursive: true });
-
-          const prebuildInstallCmd = `cd "${tmpDir}" && timeout 10 npx --yes prebuild-install --download --runtime ${runtime} --target ${target} --arch ${arch} --platform ${platform} --tag-prefix v --path "${path.join(rootNodeModules, 'better-sqlite3')}" 2>&1`;
+          const tmpFile = path.join('/tmp', `${prebuildName}-${Date.now()}`);
+          const tmpExtractDir = path.join('/tmp', `better-sqlite3-extract-${Date.now()}`);
 
           try {
-            execSync(prebuildInstallCmd, { stdio: 'pipe', encoding: 'utf-8', timeout: 15000 });
+            fs.mkdirSync(tmpExtractDir, { recursive: true });
 
-            // Find the downloaded .node file
-            const nodeFiles = execSync(`find "${tmpDir}" -name "*.node" 2>/dev/null || true`, { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
+            // Try wget first (more reliable for GitHub), fall back to curl
+            try {
+              execSync(`wget -q --timeout=10 -O "${tmpFile}" "${downloadUrl}"`, {
+                stdio: 'pipe',
+                timeout: 15000
+              });
+            } catch (wgetError) {
+              // Fallback to curl with User-Agent
+              execSync(`curl -f -sS -L --max-time 10 -A "Mozilla/5.0" -o "${tmpFile}" "${downloadUrl}"`, {
+                stdio: 'pipe',
+                timeout: 15000
+              });
+            }
+
+            execSync(`tar -xzf "${tmpFile}" -C "${tmpExtractDir}"`, { stdio: 'pipe' });
+
+            const nodeFiles = execSync(`find "${tmpExtractDir}" -name "*.node" 2>/dev/null || true`, {
+              encoding: 'utf-8'
+            }).trim().split('\n').filter(Boolean);
 
             if (nodeFiles.length > 0 && nodeFiles[0] && fs.existsSync(nodeFiles[0])) {
               fs.copyFileSync(nodeFiles[0], path.join(versionBuildDir, 'better_sqlite3.node'));
               successCount++;
             }
           } finally {
-            fs.rmSync(tmpDir, { recursive: true, force: true });
+            if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+            if (fs.existsSync(tmpExtractDir)) fs.rmSync(tmpExtractDir, { recursive: true, force: true });
           }
         } catch (error) {
-          // Silently skip unavailable prebuilds or timeouts
+          // Silently skip unavailable prebuilds or download failures
         }
       }
     }

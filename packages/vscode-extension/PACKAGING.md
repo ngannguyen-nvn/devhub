@@ -1,15 +1,34 @@
 # Packaging DevHub VSCode Extension
 
+## ⚠️ IMPORTANT: Build on Your Target Machine
+
+**For best results, always build the extension on the machine where you'll use it.**
+
+This ensures the native binary matches your VSCode's Node.js version.
+
 ## The Native Dependency Challenge
 
 DevHub uses `better-sqlite3`, which requires native binaries (.node files) compiled for specific:
 - **Runtime**: Node.js or Electron
 - **Platform**: linux, darwin (macOS), win32 (Windows)
 - **Architecture**: x64, arm64, etc.
+- **Node.js MODULE_VERSION**: Must match exactly
 
 VSCode extensions can run in different environments (desktop, remote, web), each with different Node.js/Electron versions.
 
-## Recommended Approach: Platform-Specific Builds
+## Quick Start: Local Development
+
+**Build on your machine for immediate use:**
+
+```bash
+cd packages/vscode-extension
+npm install
+npm run package:dev
+```
+
+This creates `devhub-2.0.0.vsix` (4 MB) that works with YOUR Node.js version.
+
+## Production: Platform-Specific Builds
 
 The VSCode marketplace supports platform-specific extensions. This is the recommended way to distribute extensions with native dependencies.
 
