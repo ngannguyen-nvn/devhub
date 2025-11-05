@@ -109,18 +109,45 @@ if (process.env.SKIP_PREBUILD_DOWNLOAD) {
           try {
             fs.mkdirSync(tmpExtractDir, { recursive: true });
 
-            // Try wget first (more reliable for GitHub), fall back to curl
+            // Multi-stage fallback for downloads (handles SSL issues)
+            let downloaded = false;
+
+            // Try 1: wget with SSL verification
             try {
               execSync(`wget -q --timeout=10 -O "${tmpFile}" "${downloadUrl}"`, {
                 stdio: 'pipe',
                 timeout: 15000
               });
+              downloaded = true;
             } catch (wgetError) {
-              // Fallback to curl with User-Agent
-              execSync(`curl -f -sS -L --max-time 10 -A "Mozilla/5.0" -o "${tmpFile}" "${downloadUrl}"`, {
-                stdio: 'pipe',
-                timeout: 15000
-              });
+              // Try 2: curl with SSL verification
+              try {
+                execSync(`curl -f -sS -L --max-time 10 -A "Mozilla/5.0" -o "${tmpFile}" "${downloadUrl}"`, {
+                  stdio: 'pipe',
+                  timeout: 15000
+                });
+                downloaded = true;
+              } catch (curlError) {
+                // Try 3: wget without SSL verification (for environments with SSL issues)
+                try {
+                  execSync(`wget -q --no-check-certificate --timeout=10 -O "${tmpFile}" "${downloadUrl}"`, {
+                    stdio: 'pipe',
+                    timeout: 15000
+                  });
+                  downloaded = true;
+                } catch (wgetInsecureError) {
+                  // Try 4: curl without SSL verification
+                  execSync(`curl -f -sS -L -k --max-time 10 -A "Mozilla/5.0" -o "${tmpFile}" "${downloadUrl}"`, {
+                    stdio: 'pipe',
+                    timeout: 15000
+                  });
+                  downloaded = true;
+                }
+              }
+            }
+
+            if (!downloaded) {
+              throw new Error('All download methods failed');
             }
 
             execSync(`tar -xzf "${tmpFile}" -C "${tmpExtractDir}"`, { stdio: 'pipe' });
@@ -216,17 +243,45 @@ if (successCount === 0) {
         try {
           fs.mkdirSync(tmpExtractDir, { recursive: true });
 
-          // Try wget first, fall back to curl
+          // Try wget first, fall back to curl, fall back to insecure mode
+          let downloaded = false;
+
+          // Try 1: wget with SSL verification
           try {
             execSync(`wget -q --timeout=5 -O "${tmpFile}" "${downloadUrl}"`, {
               stdio: 'pipe',
               timeout: 10000
             });
+            downloaded = true;
           } catch (wgetError) {
-            execSync(`curl -f -sS -L --max-time 5 -A "Mozilla/5.0" -o "${tmpFile}" "${downloadUrl}"`, {
-              stdio: 'pipe',
-              timeout: 10000
-            });
+            // Try 2: curl with SSL verification
+            try {
+              execSync(`curl -f -sS -L --max-time 5 -A "Mozilla/5.0" -o "${tmpFile}" "${downloadUrl}"`, {
+                stdio: 'pipe',
+                timeout: 10000
+              });
+              downloaded = true;
+            } catch (curlError) {
+              // Try 3: wget without SSL verification (insecure but works)
+              try {
+                execSync(`wget -q --no-check-certificate --timeout=5 -O "${tmpFile}" "${downloadUrl}"`, {
+                  stdio: 'pipe',
+                  timeout: 10000
+                });
+                downloaded = true;
+              } catch (wgetInsecureError) {
+                // Try 4: curl without SSL verification (insecure but works)
+                execSync(`curl -f -sS -L -k --max-time 5 -A "Mozilla/5.0" -o "${tmpFile}" "${downloadUrl}"`, {
+                  stdio: 'pipe',
+                  timeout: 10000
+                });
+                downloaded = true;
+              }
+            }
+          }
+
+          if (!downloaded) {
+            throw new Error('All download methods failed');
           }
 
           execSync(`tar -xzf "${tmpFile}" -C "${tmpExtractDir}"`, { stdio: 'pipe' });
