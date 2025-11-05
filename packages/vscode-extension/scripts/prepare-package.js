@@ -122,8 +122,34 @@ for (const { platform, arches } of platforms) {
 console.log(`✓ Downloaded ${successCount}/${totalCount} prebuilds for all platforms`);
 
 if (successCount === 0) {
-  console.error('❌ Failed to download any prebuilds');
-  throw new Error('No compatible better-sqlite3 binaries available');
+  console.log('⚠ Failed to download prebuilds, trying local build fallback...');
+
+  // Fallback: Copy the locally built .node file if it exists
+  const localNodeFile = path.join(rootNodeModules, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node');
+
+  if (fs.existsSync(localNodeFile)) {
+    console.log('✓ Found locally built better_sqlite3.node, copying for current platform...');
+
+    // Copy to build/Release for backward compatibility with older better-sqlite3 loading logic
+    fs.copyFileSync(localNodeFile, path.join(buildDir, 'better_sqlite3.node'));
+
+    // Also copy to prebuilds structure for each runtime version
+    const currentPlatform = process.platform;
+    const currentArch = process.arch;
+
+    for (const runtimeVersion of runtimeVersions) {
+      const versionBuildDir = path.join(betterSqliteDest, 'prebuilds', runtimeVersion, currentPlatform, currentArch);
+      fs.mkdirSync(versionBuildDir, { recursive: true });
+      fs.copyFileSync(localNodeFile, path.join(versionBuildDir, 'better_sqlite3.node'));
+      successCount++;
+    }
+
+    console.log(`✓ Copied local build to ${runtimeVersions.length} runtime version directories`);
+  } else {
+    console.error('❌ No locally built better_sqlite3.node found');
+    console.error('Run "npm rebuild better-sqlite3" to build it for your platform');
+    throw new Error('No compatible better-sqlite3 binaries available');
+  }
 }
 
 // Copy better-sqlite3 dependencies
