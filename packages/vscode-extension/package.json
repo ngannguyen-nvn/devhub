@@ -127,6 +127,21 @@
       {
         "command": "devhub.showNotes",
         "title": "Show Notes"
+      },
+      {
+        "command": "devhub.copyVariable",
+        "title": "Copy Variable",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "devhub.editVariable",
+        "title": "Edit Variable",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "devhub.deleteVariable",
+        "title": "Delete Variable",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -236,6 +251,21 @@
           "command": "devhub.restoreSnapshot",
           "when": "view == devhubWorkspaces && viewItem == snapshot",
           "group": "inline"
+        },
+        {
+          "command": "devhub.copyVariable",
+          "when": "view == devhubEnvironment && viewItem == envVariable",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "devhub.editVariable",
+          "when": "view == devhubEnvironment && viewItem == envVariable",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "devhub.deleteVariable",
+          "when": "view == devhubEnvironment && viewItem == envVariable",
+          "group": "1_actions@3"
         }
       ]
     },
@@ -269,6 +299,7 @@
     "watch:webview": "cd webview-ui && npm run dev",
     "prepackage": "node scripts/prepare-package.js",
     "package": "npm run build -- --production && npm run prepackage && vsce package --no-dependencies",
+    "package:dev": "npm run build -- --production && node scripts/prepare-package-dev.js && vsce package --no-dependencies",
     "package:linux-x64": "VSCE_TARGET=linux-x64 npm run build -- --production && npm run prepackage && vsce package --target linux-x64 --no-dependencies",
     "package:linux-arm64": "VSCE_TARGET=linux-arm64 npm run build -- --production && npm run prepackage && vsce package --target linux-arm64 --no-dependencies",
     "package:darwin-x64": "VSCE_TARGET=darwin-x64 npm run build -- --production && npm run prepackage && vsce package --target darwin-x64 --no-dependencies",

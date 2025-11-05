@@ -35,14 +35,14 @@ export class DevHubPanel {
    * Creates panel if it doesn't exist, reveals if it does
    * Optionally navigates to a specific tab
    */
-  show(tab?: string): void {
+  show(tab?: string, data?: any): void {
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.One)
       // Navigate to tab if specified
       if (tab) {
         this.postMessage({
           type: 'navigate',
-          payload: { tab }
+          payload: { tab, ...data }
         })
       }
       return
@@ -87,6 +87,47 @@ export class DevHubPanel {
             this.onRefreshWorkspacesTree()
           } else {
             console.log('[DevHubPanel] No refresh callback set')
+          }
+          return
+        }
+
+        // Handle open terminal request (needs VSCode terminal API)
+        if (message.type === 'services.openTerminal') {
+          try {
+            const workspaceId = this.devhubManager.getActiveWorkspaceId()
+            const service = this.devhubManager.getServiceManager()
+              .getAllServices(workspaceId)
+              .find(s => s.id === message.payload.id)
+
+            if (!service) {
+              throw new Error('Service not found')
+            }
+
+            // Create a new terminal in VSCode
+            const terminal = vscode.window.createTerminal({
+              name: `DevHub: ${service.name}`,
+              cwd: service.repoPath
+            })
+
+            // Show the terminal
+            terminal.show()
+
+            // Send the command to the terminal
+            terminal.sendText(service.command)
+
+            // Send success response to webview
+            this.panel?.webview.postMessage({
+              id: message.id,
+              type: 'response',
+              response: { success: true }
+            })
+          } catch (error) {
+            console.error('[DevHubPanel] Error opening terminal:', error)
+            this.panel?.webview.postMessage({
+              id: message.id,
+              type: 'error',
+              error: error instanceof Error ? error.message : 'Failed to open terminal'
+            })
           }
           return
         }

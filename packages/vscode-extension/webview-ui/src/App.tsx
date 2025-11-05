@@ -20,6 +20,8 @@ type TabType = 'dashboard' | 'services' | 'docker' | 'env' | 'workspaces' | 'not
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
   const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>()
+  const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>()
+  const [selectedVariableId, setSelectedVariableId] = useState<string | undefined>()
 
   // Listen for navigation messages from extension host
   useEffect(() => {
@@ -29,12 +31,18 @@ function App() {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data
       if (message.type === 'navigate') {
-        const { tab, serviceId } = message.payload
+        const { tab, serviceId, profileId, variableId } = message.payload
         if (tab) {
           setActiveTab(tab as TabType)
         }
         if (serviceId) {
           setSelectedServiceId(serviceId)
+        }
+        if (profileId) {
+          setSelectedProfileId(profileId)
+        }
+        if (variableId) {
+          setSelectedVariableId(variableId)
         }
       }
     }
@@ -98,7 +106,7 @@ function App() {
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'services' && <Services initialSelectedServiceId={selectedServiceId} />}
         {activeTab === 'docker' && <Docker />}
-        {activeTab === 'env' && <Environment />}
+        {activeTab === 'env' && <Environment selectedProfileId={selectedProfileId} selectedVariableId={selectedVariableId} onProfileSelected={() => { setSelectedProfileId(undefined); setSelectedVariableId(undefined) }} />}
         {activeTab === 'workspaces' && <Workspaces />}
         {activeTab === 'notes' && <Wiki />}
       </main>

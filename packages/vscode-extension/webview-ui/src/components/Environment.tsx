@@ -10,7 +10,7 @@
  * - Search and filter
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { envApi, serviceApi } from '../messaging/vscodeApi'
 import '../styles/Environment.css'
 
@@ -36,21 +36,55 @@ interface EnvVariable {
   updatedAt: string
 }
 
-export default function Environment() {
+interface EnvironmentProps {
+  selectedProfileId?: string
+  selectedVariableId?: string
+  onProfileSelected?: () => void
+}
+
+export default function Environment({ selectedProfileId, selectedVariableId, onProfileSelected }: EnvironmentProps) {
   const [profiles, setProfiles] = useState<EnvProfile[]>([])
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null)
   const [variables, setVariables] = useState<EnvVariable[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Refs for scrolling
+  const profileRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const variableRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // Ref to track current selectedProfile (fixes stale closure in setInterval)
+  const selectedProfileRef = useRef<string | null>(selectedProfile)
+  useEffect(() => {
+    selectedProfileRef.current = selectedProfile
+  }, [selectedProfile])
+
+  // Track when to pause auto-refresh (after user interaction)
+  const [pauseAutoRefresh, setPauseAutoRefresh] = useState(false)
+  const autoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Helper to pause auto-refresh temporarily
+  const pauseAutoRefreshTemporarily = () => {
+    setPauseAutoRefresh(true)
+    if (autoRefreshTimeoutRef.current) {
+      clearTimeout(autoRefreshTimeoutRef.current)
+    }
+    autoRefreshTimeoutRef.current = setTimeout(() => {
+      setPauseAutoRefresh(false)
+    }, 30000) // Resume after 30 seconds
+  }
+
   // Forms
   const [showAddProfileForm, setShowAddProfileForm] = useState(false)
+  const [showCopyProfileForm, setShowCopyProfileForm] = useState(false)
+  const [copyProfileId, setCopyProfileId] = useState<string | null>(null)
   const [showAddVariableForm, setShowAddVariableForm] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
   const [showExportForm, setShowExportForm] = useState(false)
   const [showSyncModal, setShowSyncModal] = useState(false)
 
   const [profileForm, setProfileForm] = useState({ name: '', description: '' })
+  const [copyProfileForm, setCopyProfileForm] = useState({ name: '' })
   const [variableForm, setVariableForm] = useState({
     key: '',
     value: '',
@@ -71,7 +105,8 @@ export default function Environment() {
     isSecret: false,
     description: '',
   })
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['Manual Profiles']))
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [knownGroups, setKnownGroups] = useState<Set<string>>(new Set())
   const [services, setServices] = useState<any[]>([])
   const [syncing, setSyncing] = useState(false)
 
@@ -94,8 +129,8 @@ export default function Environment() {
       const response = await envApi.getProfiles()
       setProfiles(response.profiles || [])
 
-      // Auto-select first profile if none selected
-      if (!selectedProfile && response.profiles?.length > 0) {
+      // Auto-select first profile if none selected (use ref to avoid stale closure)
+      if (!selectedProfileRef.current && response.profiles?.length > 0) {
         setSelectedProfile(response.profiles[0].id)
       }
     } catch (err) {
@@ -122,10 +157,23 @@ export default function Environment() {
     fetchProfiles()
   }, [])
 
-  // Auto-refresh profiles every 5 seconds
+  // Auto-refresh profiles every 5 seconds (unless paused)
   useEffect(() => {
+    if (pauseAutoRefresh) {
+      return // Don't start interval when paused
+    }
+
     const interval = setInterval(fetchProfiles, 5000)
     return () => clearInterval(interval)
+  }, [pauseAutoRefresh])
+
+  // Cleanup auto-refresh timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoRefreshTimeoutRef.current) {
+        clearTimeout(autoRefreshTimeoutRef.current)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -135,6 +183,53 @@ export default function Environment() {
       setVariables([])
     }
   }, [selectedProfile])
+
+  // Handle incoming profile/variable selection from TreeView
+  useEffect(() => {
+    if (selectedProfileId && profiles.length > 0) {
+      // Check if profile exists in current list
+      const profile = profiles.find(p => p.id === selectedProfileId)
+      if (profile) {
+        // Pause auto-refresh to allow user interaction
+        pauseAutoRefreshTemporarily()
+
+        // Determine which group this profile belongs to
+        const groupKey = profile.sourceName ||
+                         (profile.sourceType === 'auto-import' ? 'Auto-imported' :
+                          profile.sourceType === 'snapshot-restore' ? 'Snapshot Restored' :
+                          'Manual Profiles')
+
+        // Expand the group containing this profile
+        setExpandedGroups(prev => new Set([...prev, groupKey]))
+
+        // Select the profile
+        setSelectedProfile(selectedProfileId)
+
+        // Scroll to profile after a short delay to ensure rendering
+        setTimeout(() => {
+          const profileEl = profileRefs.current[selectedProfileId]
+          if (profileEl) {
+            profileEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }
+
+          // If variableId is provided, wait for variables to load and scroll to it
+          if (selectedVariableId) {
+            setTimeout(() => {
+              const variableEl = variableRefs.current[selectedVariableId]
+              if (variableEl) {
+                variableEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }
+            }, 300)
+          }
+        }, 100)
+
+        // Notify parent that we've handled the selection
+        if (onProfileSelected) {
+          onProfileSelected()
+        }
+      }
+    }
+  }, [selectedProfileId, selectedVariableId, profiles, onProfileSelected])
 
   // Profile operations
   const handleAddProfile = async () => {
@@ -178,12 +273,22 @@ export default function Environment() {
     }
   }
 
-  const handleCopyProfile = async (profileId: string) => {
-    const name = prompt('Enter name for the new profile:')
-    if (!name) return
+  const handleCopyProfile = (profileId: string) => {
+    setCopyProfileId(profileId)
+    setShowCopyProfileForm(true)
+  }
+
+  const confirmCopyProfile = async () => {
+    if (!copyProfileForm.name.trim() || !copyProfileId) {
+      setError('Profile name is required')
+      return
+    }
 
     try {
-      await envApi.copyProfile(profileId, name)
+      await envApi.copyProfile(copyProfileId, copyProfileForm.name)
+      setShowCopyProfileForm(false)
+      setCopyProfileForm({ name: '' })
+      setCopyProfileId(null)
       fetchProfiles()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to copy profile')
@@ -259,6 +364,20 @@ export default function Environment() {
       setConfirmDialog({ isOpen: false, type: 'variable', id: null, name: '' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete variable')
+    }
+  }
+
+  const handleCopyVariable = async (variable: EnvVariable) => {
+    try {
+      const copyText = `${variable.key}=${variable.value}`
+      await navigator.clipboard.writeText(copyText)
+      setError(null)
+      // Show success feedback briefly
+      const successMsg = `Copied: ${variable.key}=...`
+      setError(successMsg)
+      setTimeout(() => setError(null), 2000)
+    } catch (err) {
+      setError('Failed to copy to clipboard')
     }
   }
 
@@ -374,6 +493,24 @@ export default function Environment() {
     return a.name.localeCompare(b.name)
   })
 
+  // Auto-expand only NEW groups (not manually collapsed ones)
+  useEffect(() => {
+    if (sortedGroups.length > 0) {
+      const allGroupNames = sortedGroups.map(g => g.name)
+
+      // Find groups that are truly new (not in knownGroups)
+      const newGroups = allGroupNames.filter(name => !knownGroups.has(name))
+
+      if (newGroups.length > 0) {
+        // Add new groups to known groups
+        setKnownGroups(prev => new Set([...prev, ...allGroupNames]))
+
+        // Expand all groups (existing expanded + new groups)
+        setExpandedGroups(prev => new Set([...prev, ...newGroups]))
+      }
+    }
+  }, [sortedGroups.map(g => g.name).join(',')]) // Stable dependency
+
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups)
     if (newExpanded.has(groupName)) {
@@ -463,6 +600,31 @@ export default function Environment() {
             </div>
           )}
 
+          {/* Copy Profile Form */}
+          {showCopyProfileForm && (
+            <div className="profile-form">
+              <h4>Copy Profile</h4>
+              <input
+                type="text"
+                value={copyProfileForm.name}
+                onChange={(e) => setCopyProfileForm({ name: e.target.value })}
+                placeholder="New profile name"
+              />
+              <div className="form-actions">
+                <button className="btn-primary" onClick={confirmCopyProfile}>
+                  Copy
+                </button>
+                <button className="btn-secondary" onClick={() => {
+                  setShowCopyProfileForm(false)
+                  setCopyProfileForm({ name: '' })
+                  setCopyProfileId(null)
+                }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Profiles List - Hierarchical */}
           <div className="profiles-list">
             {profiles.length === 0 ? (
@@ -493,6 +655,7 @@ export default function Environment() {
                         {group.profiles.map(profile => (
                           <div
                             key={profile.id}
+                            ref={(el) => { profileRefs.current[profile.id] = el }}
                             onClick={() => setSelectedProfile(profile.id)}
                             className={`profile-item ${selectedProfile === profile.id ? 'selected' : ''}`}
                           >
@@ -668,7 +831,7 @@ export default function Environment() {
                   </div>
                 ) : (
                   filteredVariables.map(variable => (
-                    <div key={variable.id} className="variable-item">
+                    <div key={variable.id} ref={(el) => { variableRefs.current[variable.id] = el }} className="variable-item">
                       {editingVariableId === variable.id ? (
                         <div className="variable-edit">
                           <input
@@ -732,6 +895,7 @@ export default function Environment() {
                           </div>
                           <div className="variable-actions">
                             <button onClick={() => handleEditVariable(variable)}>Edit</button>
+                            <button onClick={() => handleCopyVariable(variable)}>Copy</button>
                             <button onClick={() => handleDeleteVariable(variable.id)}>Delete</button>
                           </div>
                         </>

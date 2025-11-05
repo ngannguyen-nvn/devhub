@@ -732,6 +732,11 @@ export class WorkspaceManager {
     const snapshot = this.getSnapshot(snapshotId)
     if (!snapshot) return false
 
+    // Delete environment profiles linked to this snapshot (source_id = snapshotId)
+    // This also cascade deletes all env_variables due to FK constraint
+    const deleteProfiles = db.prepare('DELETE FROM env_profiles WHERE source_id = ?')
+    deleteProfiles.run(snapshotId)
+
     const stmt = db.prepare('DELETE FROM workspace_snapshots WHERE id = ?')
     const result = stmt.run(snapshotId)
 

@@ -563,14 +563,61 @@ function registerCommands(
   )
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('devhub.showEnvironment', () => {
-      panel.show('env')
+    vscode.commands.registerCommand('devhub.showEnvironment', (args?: { profileId?: string; variableId?: string }) => {
+      panel.show('env', args)
     })
   )
 
   context.subscriptions.push(
     vscode.commands.registerCommand('devhub.showNotes', () => {
       panel.show('notes')
+    })
+  )
+
+  // Environment variable context menu commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.copyVariable', async (item: EnvironmentTreeItem) => {
+      if (item.itemType !== 'variable' || !item.envItem) return
+
+      try {
+        const copyText = `${item.envItem.key}=${item.envItem.value}`
+        await vscode.env.clipboard.writeText(copyText)
+        vscode.window.showInformationMessage(`Copied: ${item.envItem.key}=...`)
+      } catch (error) {
+        vscode.window.showErrorMessage('Failed to copy to clipboard')
+      }
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.editVariable', async (item: EnvironmentTreeItem) => {
+      if (item.itemType !== 'variable' || !item.envItem || !item.parentProfileId) return
+
+      // Navigate to Environment tab with both profile and variable selected
+      panel.show('env', { profileId: item.parentProfileId, variableId: item.id })
+      vscode.window.showInformationMessage(`Editing variable: ${item.envItem.key}`)
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devhub.deleteVariable', async (item: EnvironmentTreeItem) => {
+      if (item.itemType !== 'variable' || !item.envItem) return
+
+      const confirmDelete = await vscode.window.showWarningMessage(
+        `Delete variable "${item.envItem.key}"?`,
+        { modal: true },
+        'Delete'
+      )
+
+      if (confirmDelete === 'Delete') {
+        try {
+          await manager.getEnvManager().deleteVariable(item.id)
+          environmentTreeProvider?.refresh()
+          vscode.window.showInformationMessage(`Deleted variable: ${item.envItem.key}`)
+        } catch (error) {
+          vscode.window.showErrorMessage(`Failed to delete variable: ${error}`)
+        }
+      }
     })
   )
 }

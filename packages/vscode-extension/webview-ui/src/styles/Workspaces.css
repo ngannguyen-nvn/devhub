@@ -19,6 +19,20 @@
   font-weight: 600;
 }
 
+/* View Header */
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.view-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
 /* Breadcrumb Navigation */
 .breadcrumb {
   display: flex;

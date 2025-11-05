@@ -91,6 +91,7 @@ export const serviceApi = {
   start: (id: string) => sendMessage('services.start', { id }),
   stop: (id: string) => sendMessage('services.stop', { id }),
   getLogs: (id: string) => sendMessage('services.getLogs', { id }),
+  openTerminal: (id: string) => sendMessage('services.openTerminal', { id }),
   createEnvProfile: (data: any) => sendMessage('env.createProfile', data),
   importEnvFile: (profileId: string, filePath: string) =>
     sendMessage('env.importFile', { profileId, filePath })

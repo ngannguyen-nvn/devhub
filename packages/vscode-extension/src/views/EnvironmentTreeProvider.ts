@@ -56,7 +56,8 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<Environm
             variable.id,
             vscode.TreeItemCollapsibleState.None,
             'variable',
-            variable
+            variable,
+            element.id // Pass parent profileId
           )
         })
       } catch (error) {
@@ -75,7 +76,8 @@ export class EnvironmentTreeItem extends vscode.TreeItem {
     public readonly id: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly itemType: 'profile' | 'variable' | 'info' | 'error',
-    public readonly envItem?: any
+    public readonly envItem?: any,
+    public readonly parentProfileId?: string
   ) {
     super(label, collapsibleState)
 
@@ -112,11 +114,17 @@ export class EnvironmentTreeItem extends vscode.TreeItem {
     }
 
     // Add click command to open Environment tab
-    if (itemType === 'profile' || itemType === 'variable') {
+    if (itemType === 'profile') {
       this.command = {
         command: 'devhub.showEnvironment',
         title: 'Open Environment',
-        arguments: []
+        arguments: [{ profileId: id }]
+      }
+    } else if (itemType === 'variable' && parentProfileId) {
+      this.command = {
+        command: 'devhub.showEnvironment',
+        title: 'Open Environment',
+        arguments: [{ profileId: parentProfileId, variableId: id }]
       }
     }
   }
