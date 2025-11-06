@@ -530,12 +530,6 @@ export class MessageHandler {
         )
       }
 
-      // Environment variables (stubbed for now)
-      if (type.startsWith('env.')) {
-        console.log('Environment operations not yet implemented:', type)
-        return { success: false, message: 'Not yet implemented' }
-      }
-
       throw new Error(`Unknown message type: ${type}`)
     } catch (error) {
       console.error(`Error handling message ${type}:`, error)

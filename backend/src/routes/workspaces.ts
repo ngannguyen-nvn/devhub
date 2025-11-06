@@ -438,25 +438,6 @@ router.get('/snapshots/:snapshotId/export', (req: Request, res: Response) => {
   }
 })
 
-/**
- * POST /api/workspaces/snapshots/import
- * Import snapshot from JSON
- */
-router.post('/snapshots/import', (req: Request, res: Response) => {
-  try {
-    const { jsonData } = req.body
-
-    if (!jsonData) {
-      return res.status(400).json({ success: false, error: 'jsonData is required' })
-    }
-
-    // TODO: Implement import logic
-    res.status(501).json({ success: false, error: 'Import not yet implemented' })
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
 // ==================== WORKSPACE-SPECIFIC ROUTES ====================
 
 /**
