@@ -24,6 +24,15 @@ export default function WorkspaceSwitcher() {
 
   useEffect(() => {
     fetchWorkspaces()
+
+    // Listen for workspace changes from other components
+    const handleWorkspaceChanged = () => {
+      console.log('[WorkspaceSwitcher] Workspace changed, refreshing...')
+      fetchWorkspaces()
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])
 
   const fetchWorkspaces = async () => {

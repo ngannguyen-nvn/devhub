@@ -214,6 +214,9 @@ export default function Workspaces() {
       setShowCreateWorkspaceForm(false)
       setCreateWorkspaceForm({ name: '', description: '', folderPath: '', tags: '' })
       fetchWorkspaces()
+
+      // Notify other components about workspace change
+      window.dispatchEvent(new CustomEvent('workspace-changed'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create workspace')
     }
@@ -224,6 +227,9 @@ export default function Workspaces() {
     try {
       await workspaceApi.setActive(workspaceId)
       fetchWorkspaces()
+
+      // Notify other components (like WorkspaceSwitcher) about workspace change
+      window.dispatchEvent(new CustomEvent('workspace-changed'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to activate workspace')
     }
@@ -249,6 +255,9 @@ export default function Workspaces() {
       }
       fetchWorkspaces()
       setConfirmDialog({ isOpen: false, type: 'delete-workspace', id: null, name: '' })
+
+      // Notify other components about workspace change
+      window.dispatchEvent(new CustomEvent('workspace-changed'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete workspace')
     }
