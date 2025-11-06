@@ -139,21 +139,10 @@ export class RepoScanner {
 
   /**
    * Find all .env files in the repository
-   * Checks for common patterns: .env, .env.local, .env.development, .env.production, etc.
+   * Scans for any file starting with .env (e.g., .env, .env.local, .env.development, etc.)
    */
   private async findEnvFiles(repoPath: string): Promise<string[]> {
     const envFiles: string[] = []
-    const commonEnvFiles = [
-      '.env',
-      '.env.local',
-      '.env.development',
-      '.env.dev',
-      '.env.staging',
-      '.env.production',
-      '.env.prod',
-      '.env.test',
-      '.env.example',
-    ]
 
     try {
       // Read all files in the repo root
