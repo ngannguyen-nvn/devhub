@@ -67,6 +67,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData()
+
+    // Listen for workspace changes
+    const handleWorkspaceChanged = () => {
+      console.log('[Dashboard] Workspace changed, refreshing...')
+      fetchDashboardData()
+      setRepos([])
+      setSelectedRepos(new Set())
+      setSelectedEnvFiles(new Map())
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])
 
   // Listen for messages from extension (e.g., snapshot deleted from tree view)

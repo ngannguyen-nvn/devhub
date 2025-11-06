@@ -91,7 +91,22 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
     fetchServices()
     fetchGroups()
     const interval = setInterval(fetchServices, 5000)
-    return () => clearInterval(interval)
+
+    // Listen for workspace changes
+    const handleWorkspaceChanged = () => {
+      console.log('[Services] Workspace changed, refreshing...')
+      fetchServices()
+      fetchGroups()
+      setSelectedService(null)
+      setLogs([])
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('workspace-changed', handleWorkspaceChanged)
+    }
   }, [])
 
   // Handle initial selected service from tree view navigation

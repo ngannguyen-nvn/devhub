@@ -155,6 +155,17 @@ export default function Environment({ selectedProfileId, selectedVariableId, onP
 
   useEffect(() => {
     fetchProfiles()
+
+    // Listen for workspace changes
+    const handleWorkspaceChanged = () => {
+      console.log('[Environment] Workspace changed, refreshing...')
+      fetchProfiles()
+      setSelectedProfile(null)
+      setVariables([])
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])
 
   // Auto-refresh profiles every 5 seconds (unless paused)

@@ -13,7 +13,7 @@ interface Workspace {
   name: string
   description?: string
   folderPath?: string
-  active: boolean
+  active: number // 0 or 1 (stored as INTEGER in database)
 }
 
 export default function WorkspaceSwitcher() {
@@ -42,7 +42,7 @@ export default function WorkspaceSwitcher() {
       const workspaceList = Array.isArray(result) ? result : []
       setWorkspaces(workspaceList)
 
-      const active = workspaceList.find((w: Workspace) => w.active)
+      const active = workspaceList.find((w: Workspace) => w.active === 1)
       setActiveWorkspace(active || null)
     } catch (err) {
       console.error('Failed to fetch workspaces:', err)
@@ -95,9 +95,9 @@ export default function WorkspaceSwitcher() {
                 {workspaces.map((workspace) => (
                   <button
                     key={workspace.id}
-                    className={`workspace-item ${workspace.active ? 'active' : ''}`}
+                    className={`workspace-item ${workspace.active === 1 ? 'active' : ''}`}
                     onClick={() => handleSwitchWorkspace(workspace.id)}
-                    disabled={workspace.active || loading}
+                    disabled={workspace.active === 1 || loading}
                   >
                     <div className="workspace-item-content">
                       <span className="workspace-item-name">{workspace.name}</span>
@@ -112,7 +112,7 @@ export default function WorkspaceSwitcher() {
                         </span>
                       )}
                     </div>
-                    {workspace.active && (
+                    {workspace.active === 1 && (
                       <span className="active-indicator">✓</span>
                     )}
                   </button>

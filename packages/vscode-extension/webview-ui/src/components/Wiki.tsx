@@ -120,6 +120,20 @@ export default function Wiki() {
   useEffect(() => {
     fetchNotes()
     fetchMetadata()
+
+    // Listen for workspace changes
+    const handleWorkspaceChanged = () => {
+      console.log('[Wiki] Workspace changed, refreshing...')
+      fetchNotes()
+      fetchMetadata()
+      setSelectedNote(null)
+      setSearchQuery('')
+      setSelectedCategory(null)
+      setSelectedTag(null)
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])
 
   useEffect(() => {
