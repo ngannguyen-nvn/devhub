@@ -253,15 +253,23 @@ export class WorkspaceManager {
    * Set a workspace as active (deactivates all others)
    */
   setActiveWorkspace(workspaceId: string): Workspace | null {
+    console.log('[workspaceManager] setActiveWorkspace called with:', workspaceId, typeof workspaceId)
     const workspace = this.getWorkspace(workspaceId)
-    if (!workspace) return null
+    if (!workspace) {
+      console.log('[workspaceManager] Workspace not found:', workspaceId)
+      return null
+    }
+
+    console.log('[workspaceManager] Found workspace, active field:', workspace.active, typeof workspace.active)
 
     // Deactivate all workspaces
     db.prepare('UPDATE workspaces SET active = 0').run()
 
     // Activate the specified workspace
-    db.prepare('UPDATE workspaces SET active = 1, updated_at = ? WHERE id = ?')
-      .run(new Date().toISOString(), workspaceId)
+    const updateStmt = db.prepare('UPDATE workspaces SET active = 1, updated_at = ? WHERE id = ?')
+    const timestamp = new Date().toISOString()
+    console.log('[workspaceManager] About to run UPDATE with:', timestamp, typeof timestamp, workspaceId, typeof workspaceId)
+    updateStmt.run(timestamp, workspaceId)
 
     return this.getWorkspace(workspaceId)
   }
