@@ -394,8 +394,12 @@ function registerCommands(
         }
 
         vscode.window.showInformationMessage('Workspace activated')
+        // Refresh all tree views to show data for the new workspace
         workspaceTreeProvider?.refresh()
         servicesTreeProvider?.refresh()
+        environmentTreeProvider?.refresh()
+        notesTreeProvider?.refresh()
+        dockerTreeProvider?.refresh()
       } catch (error) {
         vscode.window.showErrorMessage(
           `Failed to activate workspace: ${error instanceof Error ? error.message : 'Unknown error'}`
