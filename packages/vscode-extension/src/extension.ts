@@ -372,8 +372,17 @@ function registerCommands(
 
   // Activate workspace (from tree view)
   context.subscriptions.push(
-    vscode.commands.registerCommand('devhub.activateWorkspace', async (workspaceId: string) => {
+    vscode.commands.registerCommand('devhub.activateWorkspace', async (arg: any) => {
       try {
+        // When called from context menu, arg is the tree item
+        // When called from tree item click, arg is the workspace ID string
+        const workspaceId = typeof arg === 'string' ? arg : arg.workspaceId
+
+        if (!workspaceId) {
+          vscode.window.showErrorMessage('No workspace ID provided')
+          return
+        }
+
         await manager.activateWorkspace(workspaceId)
         vscode.window.showInformationMessage('Workspace activated')
         workspaceTreeProvider?.refresh()
