@@ -54,8 +54,19 @@ function App() {
 
   // Listen for workspace changes and update key to force remount
   useEffect(() => {
-    const handleWorkspaceChanged = async () => {
-      console.log('[App] Workspace changed, fetching active workspace...')
+    const handleWorkspaceChanged = async (event?: Event) => {
+      console.log('[App] Workspace changed event received')
+
+      // If event has workspace ID, use it directly to avoid race conditions
+      if (event && event instanceof CustomEvent && event.detail?.workspaceId) {
+        const workspaceId = event.detail.workspaceId
+        console.log('[App] Using workspace ID from event:', workspaceId)
+        setWorkspaceKey(workspaceId)
+        return
+      }
+
+      // Otherwise fetch the active workspace (e.g., on initial load)
+      console.log('[App] Fetching active workspace...')
       try {
         const workspace = await workspaceApi.getActive()
         if (workspace) {
@@ -67,10 +78,10 @@ function App() {
       }
     }
 
-    // Initial load
+    // Initial load (no event)
     handleWorkspaceChanged()
 
-    // Listen for changes
+    // Listen for changes (with event)
     window.addEventListener('workspace-changed', handleWorkspaceChanged)
     return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])

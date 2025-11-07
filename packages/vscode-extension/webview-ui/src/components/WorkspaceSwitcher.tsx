@@ -25,9 +25,16 @@ export default function WorkspaceSwitcher() {
   useEffect(() => {
     fetchWorkspaces()
 
-    // Listen for workspace changes from other components
-    const handleWorkspaceChanged = () => {
-      console.log('[WorkspaceSwitcher] Workspace changed, refreshing...')
+    // Listen for workspace changes from other components (like Workspaces tab)
+    // Note: Don't refetch here when we initiated the change, only when external changes occur
+    const handleWorkspaceChanged = (event: Event) => {
+      // Check if we initiated this change
+      const customEvent = event as CustomEvent
+      if (customEvent.detail?.source === 'WorkspaceSwitcher') {
+        console.log('[WorkspaceSwitcher] Ignoring our own workspace-changed event')
+        return
+      }
+      console.log('[WorkspaceSwitcher] External workspace changed, refreshing...')
       fetchWorkspaces()
     }
 
@@ -54,12 +61,23 @@ export default function WorkspaceSwitcher() {
 
     setLoading(true)
     try {
+      console.log('[WorkspaceSwitcher] Switching to workspace:', workspaceId)
       await workspaceApi.setActive(workspaceId)
+      console.log('[WorkspaceSwitcher] Successfully activated workspace:', workspaceId)
+
+      // Fetch workspaces to update our local state
       await fetchWorkspaces()
       setIsOpen(false)
 
-      // Trigger refresh event for other components
-      window.dispatchEvent(new CustomEvent('workspace-changed'))
+      // Trigger refresh event for other components with the new workspace ID
+      // This prevents race conditions where components fetch at different times
+      console.log('[WorkspaceSwitcher] Dispatching workspace-changed event with workspaceId:', workspaceId)
+      window.dispatchEvent(new CustomEvent('workspace-changed', {
+        detail: {
+          source: 'WorkspaceSwitcher',
+          workspaceId: workspaceId
+        }
+      }))
     } catch (err) {
       console.error('Failed to switch workspace:', err)
     } finally {
