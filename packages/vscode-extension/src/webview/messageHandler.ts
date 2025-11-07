@@ -165,7 +165,9 @@ export class MessageHandler {
       }
 
       if (type === 'workspaces.setActive') {
-        return this.devhubManager.getWorkspaceManager().setActiveWorkspace(payload.id)
+        // Update the active workspace in both the database AND the cached value
+        await this.devhubManager.activateWorkspace(payload.id)
+        return this.devhubManager.getWorkspaceManager().getWorkspace(payload.id)
       }
 
       if (type === 'workspaces.delete') {
