@@ -432,6 +432,34 @@
   font-weight: 600;
 }
 
+/* Direct styling for inputs and textareas in forms */
+.workspace-form input[type="text"],
+.snapshot-form input[type="text"],
+.snapshot-form textarea {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 4px;
+  color: var(--vscode-input-foreground);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.workspace-form input[type="text"]:focus,
+.snapshot-form input[type="text"]:focus,
+.snapshot-form textarea:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+}
+
+.snapshot-form textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
 .form-group {
   margin-bottom: 16px;
 }

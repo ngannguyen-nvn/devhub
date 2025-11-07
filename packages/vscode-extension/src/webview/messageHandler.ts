@@ -165,7 +165,9 @@ export class MessageHandler {
       }
 
       if (type === 'workspaces.setActive') {
-        return this.devhubManager.getWorkspaceManager().setActiveWorkspace(payload.id)
+        // Update the active workspace in both the database AND the cached value
+        await this.devhubManager.activateWorkspace(payload.id)
+        return this.devhubManager.getWorkspaceManager().getWorkspace(payload.id)
       }
 
       if (type === 'workspaces.delete') {
@@ -240,7 +242,8 @@ export class MessageHandler {
               command: null,
               port: null,
               packageJsonFound: false,
-              envFound: false
+              envFound: false,
+              envFiles: []
             }
 
             // Read package.json
@@ -271,21 +274,38 @@ export class MessageHandler {
               }
             }
 
-            // Read .env file
-            const envPath = path.join(repoPath, '.env')
-            if (fs.existsSync(envPath)) {
-              try {
-                const envContent = fs.readFileSync(envPath, 'utf-8')
-                analysis.envFound = true
+            // Find all .env files
+            try {
+              const entries = fs.readdirSync(repoPath, { withFileTypes: true })
+              const envFiles: string[] = []
 
-                // Parse PORT from .env
+              for (const entry of entries) {
+                if (entry.isFile() && entry.name.startsWith('.env')) {
+                  envFiles.push(entry.name)
+                }
+              }
+
+              // Sort to ensure consistent order (.env first, then alphabetically)
+              envFiles.sort((a, b) => {
+                if (a === '.env') return -1
+                if (b === '.env') return 1
+                return a.localeCompare(b)
+              })
+
+              analysis.envFiles = envFiles
+              analysis.envFound = envFiles.length > 0 // Backward compatibility
+
+              // Parse PORT from main .env file if it exists
+              if (envFiles.includes('.env')) {
+                const envPath = path.join(repoPath, '.env')
+                const envContent = fs.readFileSync(envPath, 'utf-8')
                 const portMatch = envContent.match(/^PORT\s*=\s*(\d+)/m)
                 if (portMatch && portMatch[1]) {
                   analysis.port = parseInt(portMatch[1], 10)
                 }
-              } catch (error) {
-                console.error(`Error reading .env file for ${repoPath}:`, error)
               }
+            } catch (error) {
+              console.error(`Error finding .env files for ${repoPath}:`, error)
             }
 
             results.push({ success: true, repoPath, analysis })
@@ -510,12 +530,6 @@ export class MessageHandler {
           payload.groupId,
           payload.serviceId
         )
-      }
-
-      // Environment variables (stubbed for now)
-      if (type.startsWith('env.')) {
-        console.log('Environment operations not yet implemented:', type)
-        return { success: false, message: 'Not yet implemented' }
       }
 
       throw new Error(`Unknown message type: ${type}`)

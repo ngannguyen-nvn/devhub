@@ -39,6 +39,8 @@ async function main() {
       'dockerode',
       'cpu-features',
       'ssh2',
+      'simple-git',
+      'tree-kill',
     ],
     nodePaths: [
       path.resolve(__dirname, '../../node_modules'),

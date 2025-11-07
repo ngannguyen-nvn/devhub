@@ -98,11 +98,8 @@ export default function Workspaces() {
     setLoading(true)
     try {
       const response = await workspaceApi.getAll()
-      console.log('[Workspaces] Raw response:', response)
-      console.log('[Workspaces] Is array?', Array.isArray(response))
       // Backend returns array directly, not { workspaces: [] }
       const workspacesArray = Array.isArray(response) ? response : []
-      console.log('[Workspaces] Workspaces array:', workspacesArray)
       setWorkspaces(workspacesArray)
     } catch (err) {
       console.error('[Workspaces] Error fetching workspaces:', err)
@@ -214,6 +211,9 @@ export default function Workspaces() {
       setShowCreateWorkspaceForm(false)
       setCreateWorkspaceForm({ name: '', description: '', folderPath: '', tags: '' })
       fetchWorkspaces()
+
+      // Notify other components about workspace change
+      window.dispatchEvent(new CustomEvent('workspace-changed'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create workspace')
     }
@@ -224,6 +224,9 @@ export default function Workspaces() {
     try {
       await workspaceApi.setActive(workspaceId)
       fetchWorkspaces()
+
+      // Notify other components (like WorkspaceSwitcher) about workspace change
+      window.dispatchEvent(new CustomEvent('workspace-changed'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to activate workspace')
     }
@@ -249,6 +252,9 @@ export default function Workspaces() {
       }
       fetchWorkspaces()
       setConfirmDialog({ isOpen: false, type: 'delete-workspace', id: null, name: '' })
+
+      // Notify other components about workspace change
+      window.dispatchEvent(new CustomEvent('workspace-changed'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete workspace')
     }
@@ -256,23 +262,16 @@ export default function Workspaces() {
 
   // Quick snapshot
   const handleQuickSnapshot = () => {
-    console.log('[Workspaces] handleQuickSnapshot called')
-    console.log('[Workspaces] Setting showQuickSnapshotDialog to true')
     setShowQuickSnapshotDialog(true)
-    console.log('[Workspaces] showQuickSnapshotDialog should now be true')
   }
 
   const confirmQuickSnapshot = async () => {
-    console.log('[Workspaces] confirmQuickSnapshot called')
     setLoading(true)
     setError(null)
     try {
-      console.log('[Workspaces] Creating quick snapshot...')
       await workspaceApi.createQuickSnapshot()
-      console.log('[Workspaces] Quick snapshot created')
 
       if (selectedWorkspaceId) {
-        console.log('[Workspaces] Fetching snapshots for workspace:', selectedWorkspaceId)
         await fetchSnapshots(selectedWorkspaceId)
       }
 
@@ -280,15 +279,11 @@ export default function Workspaces() {
       setQuickSnapshotOptions({ autoImportEnv: false })
 
       // Refresh workspaces tree view
-      console.log('[Workspaces] About to send refreshWorkspacesTree message')
-      console.log('[Workspaces] vscode object:', vscode)
       vscode.postMessage({ type: 'refreshWorkspacesTree' })
-      console.log('[Workspaces] Message sent')
     } catch (err) {
       console.error('[Workspaces] Error creating quick snapshot:', err)
       setError(err instanceof Error ? err.message : 'Failed to create snapshot')
     } finally {
-      console.log('[Workspaces] Setting loading to false')
       setLoading(false)
     }
   }
@@ -725,14 +720,8 @@ export default function Workspaces() {
 
       {/* Quick Snapshot Dialog */}
       {showQuickSnapshotDialog && (
-        <div className="modal-overlay" onClick={() => {
-          console.log('[Workspaces] Modal overlay clicked, closing dialog')
-          setShowQuickSnapshotDialog(false)
-        }}>
-          <div className="modal" onClick={(e) => {
-            console.log('[Workspaces] Modal content clicked, preventing close')
-            e.stopPropagation()
-          }}>
+        <div className="modal-overlay" onClick={() => setShowQuickSnapshotDialog(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Quick Snapshot</h3>
             <p>Capture current workspace state quickly</p>
             <label className="checkbox-label">

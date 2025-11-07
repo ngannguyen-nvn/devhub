@@ -13,7 +13,7 @@ interface Workspace {
   name: string
   description?: string
   folderPath?: string
-  active: boolean
+  active: number // 0 or 1 (stored as INTEGER in database)
 }
 
 export default function WorkspaceSwitcher() {
@@ -24,6 +24,22 @@ export default function WorkspaceSwitcher() {
 
   useEffect(() => {
     fetchWorkspaces()
+
+    // Listen for workspace changes from other components (like Workspaces tab)
+    // Note: Don't refetch here when we initiated the change, only when external changes occur
+    const handleWorkspaceChanged = (event: Event) => {
+      // Check if we initiated this change
+      const customEvent = event as CustomEvent
+      if (customEvent.detail?.source === 'WorkspaceSwitcher') {
+        console.log('[WorkspaceSwitcher] Ignoring our own workspace-changed event')
+        return
+      }
+      console.log('[WorkspaceSwitcher] External workspace changed, refreshing...')
+      fetchWorkspaces()
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])
 
   const fetchWorkspaces = async () => {
@@ -33,7 +49,7 @@ export default function WorkspaceSwitcher() {
       const workspaceList = Array.isArray(result) ? result : []
       setWorkspaces(workspaceList)
 
-      const active = workspaceList.find((w: Workspace) => w.active)
+      const active = workspaceList.find((w: Workspace) => w.active === 1)
       setActiveWorkspace(active || null)
     } catch (err) {
       console.error('Failed to fetch workspaces:', err)
@@ -45,12 +61,23 @@ export default function WorkspaceSwitcher() {
 
     setLoading(true)
     try {
+      console.log('[WorkspaceSwitcher] Switching to workspace:', workspaceId)
       await workspaceApi.setActive(workspaceId)
+      console.log('[WorkspaceSwitcher] Successfully activated workspace:', workspaceId)
+
+      // Fetch workspaces to update our local state
       await fetchWorkspaces()
       setIsOpen(false)
 
-      // Trigger refresh event for other components
-      window.dispatchEvent(new CustomEvent('workspace-changed'))
+      // Trigger refresh event for other components with the new workspace ID
+      // This prevents race conditions where components fetch at different times
+      console.log('[WorkspaceSwitcher] Dispatching workspace-changed event with workspaceId:', workspaceId)
+      window.dispatchEvent(new CustomEvent('workspace-changed', {
+        detail: {
+          source: 'WorkspaceSwitcher',
+          workspaceId: workspaceId
+        }
+      }))
     } catch (err) {
       console.error('Failed to switch workspace:', err)
     } finally {
@@ -86,9 +113,9 @@ export default function WorkspaceSwitcher() {
                 {workspaces.map((workspace) => (
                   <button
                     key={workspace.id}
-                    className={`workspace-item ${workspace.active ? 'active' : ''}`}
+                    className={`workspace-item ${workspace.active === 1 ? 'active' : ''}`}
                     onClick={() => handleSwitchWorkspace(workspace.id)}
-                    disabled={workspace.active || loading}
+                    disabled={workspace.active === 1 || loading}
                   >
                     <div className="workspace-item-content">
                       <span className="workspace-item-name">{workspace.name}</span>
@@ -103,7 +130,7 @@ export default function WorkspaceSwitcher() {
                         </span>
                       )}
                     </div>
-                    {workspace.active && (
+                    {workspace.active === 1 && (
                       <span className="active-indicator">✓</span>
                     )}
                   </button>

@@ -24,6 +24,7 @@ interface Repository {
   }
   hasDockerfile: boolean
   hasEnvFile: boolean
+  envFiles?: string[] // List of .env files found (.env, .env.development, etc.)
 }
 
 interface Workspace {
@@ -59,11 +60,25 @@ export default function Dashboard() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importEnvFiles, setImportEnvFiles] = useState(true)
+  // Map of repo path -> Set of selected env files
+  const [selectedEnvFiles, setSelectedEnvFiles] = useState<Map<string, Set<string>>>(new Map())
 
   const scanPathInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchDashboardData()
+
+    // Listen for workspace changes
+    const handleWorkspaceChanged = () => {
+      console.log('[Dashboard] Workspace changed, refreshing...')
+      fetchDashboardData()
+      setRepos([])
+      setSelectedRepos(new Set())
+      setSelectedEnvFiles(new Map())
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])
 
   // Listen for messages from extension (e.g., snapshot deleted from tree view)
@@ -129,8 +144,17 @@ export default function Dashboard() {
 
       setRepos(repositories)
 
-      // Select all by default
+      // Select all repos by default
       setSelectedRepos(new Set(repositories.map((r: Repository) => r.path)))
+
+      // Initialize selected env files (select all env files by default)
+      const envFilesMap = new Map<string, Set<string>>()
+      repositories.forEach((r: Repository) => {
+        if (r.envFiles && r.envFiles.length > 0) {
+          envFilesMap.set(r.path, new Set(r.envFiles))
+        }
+      })
+      setSelectedEnvFiles(envFilesMap)
     } catch (err) {
       console.error('[Dashboard] Scan error:', err)
       setError(err instanceof Error ? err.message : 'Failed to scan repositories')
@@ -155,6 +179,40 @@ export default function Dashboard() {
     } else {
       setSelectedRepos(new Set(repos.map(r => r.path)))
     }
+  }
+
+  const toggleEnvFile = (repoPath: string, envFile: string) => {
+    const newSelectedEnvFiles = new Map(selectedEnvFiles)
+    const repoEnvFiles = newSelectedEnvFiles.get(repoPath) || new Set()
+
+    if (repoEnvFiles.has(envFile)) {
+      repoEnvFiles.delete(envFile)
+    } else {
+      repoEnvFiles.add(envFile)
+    }
+
+    if (repoEnvFiles.size > 0) {
+      newSelectedEnvFiles.set(repoPath, repoEnvFiles)
+    } else {
+      newSelectedEnvFiles.delete(repoPath)
+    }
+
+    setSelectedEnvFiles(newSelectedEnvFiles)
+  }
+
+  const toggleAllEnvFilesForRepo = (repoPath: string, envFiles: string[]) => {
+    const newSelectedEnvFiles = new Map(selectedEnvFiles)
+    const repoEnvFiles = newSelectedEnvFiles.get(repoPath) || new Set()
+
+    if (repoEnvFiles.size === envFiles.length) {
+      // Deselect all
+      newSelectedEnvFiles.delete(repoPath)
+    } else {
+      // Select all
+      newSelectedEnvFiles.set(repoPath, new Set(envFiles))
+    }
+
+    setSelectedEnvFiles(newSelectedEnvFiles)
   }
 
   const handleImportServices = async () => {
@@ -184,21 +242,26 @@ export default function Dashboard() {
         await serviceApi.batchCreate(servicesToCreate)
       }
 
-      // Import .env files if enabled
+      // Import selected .env files if enabled
       if (importEnvFiles) {
-        const reposWithEnv = selectedRepoObjects.filter(r => r.hasEnvFile)
-        for (const repo of reposWithEnv) {
-          try {
-            // Create env profile for this repo
-            const profile = await serviceApi.createEnvProfile({
-              name: repo.name,
-              description: `Auto-imported from ${repo.path}`
-            })
+        for (const repo of selectedRepoObjects) {
+          const repoEnvFiles = selectedEnvFiles.get(repo.path)
+          if (repoEnvFiles && repoEnvFiles.size > 0) {
+            for (const envFile of repoEnvFiles) {
+              try {
+                // Create env profile for each env file
+                const profileName = envFile === '.env' ? repo.name : `${repo.name} (${envFile})`
+                const profile = await serviceApi.createEnvProfile({
+                  name: profileName,
+                  description: `Auto-imported from ${repo.path}/${envFile}`
+                })
 
-            // Import .env file
-            await serviceApi.importEnvFile(profile.id, `${repo.path}/.env`)
-          } catch (err) {
-            console.error(`[Dashboard] Failed to import .env from ${repo.path}:`, err)
+                // Import env file
+                await serviceApi.importEnvFile(profile.id, `${repo.path}/${envFile}`)
+              } catch (err) {
+                console.error(`[Dashboard] Failed to import ${envFile} from ${repo.path}:`, err)
+              }
+            }
           }
         }
       }
@@ -392,7 +455,7 @@ export default function Dashboard() {
             </p>
 
             <div className="import-options">
-              <label>
+              <label style={{ marginBottom: '16px' }}>
                 <input
                   type="checkbox"
                   checked={importEnvFiles}
@@ -400,9 +463,80 @@ export default function Dashboard() {
                 />
                 <span>Import .env files to environment profiles</span>
               </label>
-              <p className="import-note">
-                {repos.filter(r => selectedRepos.has(r.path) && r.hasEnvFile).length} .env files detected
-              </p>
+
+              {importEnvFiles && (
+                <div className="env-files-section" style={{ marginTop: '12px', maxHeight: '300px', overflowY: 'auto' }}>
+                  <p style={{ fontSize: '13px', marginBottom: '8px', color: 'var(--vscode-descriptionForeground)' }}>
+                    Select .env files to import:
+                  </p>
+                  {repos.filter(r => selectedRepos.has(r.path) && r.envFiles && r.envFiles.length > 0).map(repo => {
+                    const repoEnvFiles = repo.envFiles || []
+                    const selectedRepoEnvFiles = selectedEnvFiles.get(repo.path) || new Set()
+
+                    return (
+                      <div key={repo.path} style={{
+                        marginBottom: '12px',
+                        padding: '12px',
+                        background: 'var(--vscode-editor-background)',
+                        border: '1px solid var(--vscode-panel-border)',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: '8px'
+                        }}>
+                          <strong style={{ fontSize: '13px' }}>{repo.name}</strong>
+                          <button
+                            className="btn-secondary btn-small"
+                            onClick={() => toggleAllEnvFilesForRepo(repo.path, repoEnvFiles)}
+                            style={{ fontSize: '11px', padding: '4px 8px' }}
+                          >
+                            {selectedRepoEnvFiles.size === repoEnvFiles.length ? 'Deselect All' : 'Select All'}
+                          </button>
+                        </div>
+                        {repoEnvFiles.map(envFile => (
+                          <label
+                            key={envFile}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              marginBottom: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              padding: '4px 0'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedRepoEnvFiles.has(envFile)}
+                              onChange={() => toggleEnvFile(repo.path, envFile)}
+                              style={{ margin: 0 }}
+                            />
+                            <span style={{
+                              fontFamily: 'var(--vscode-editor-font-family)',
+                              color: 'var(--vscode-foreground)'
+                            }}>
+                              {envFile}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )
+                  })}
+                  {repos.filter(r => selectedRepos.has(r.path) && r.envFiles && r.envFiles.length > 0).length === 0 && (
+                    <p style={{
+                      fontSize: '12px',
+                      color: 'var(--vscode-descriptionForeground)',
+                      fontStyle: 'italic'
+                    }}>
+                      No .env files detected in selected repositories
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="modal-actions">

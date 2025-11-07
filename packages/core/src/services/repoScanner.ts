@@ -13,7 +13,8 @@ export interface Repository {
     author: string
   } | null
   hasDockerfile: boolean
-  hasEnvFile: boolean
+  hasEnvFile: boolean // Deprecated: kept for backward compatibility
+  envFiles: string[] // List of .env files found (.env, .env.development, etc.)
 }
 
 export class RepoScanner {
@@ -104,8 +105,9 @@ export class RepoScanner {
       // Check for Dockerfile
       const hasDockerfile = await this.checkFileExists(repoPath, 'Dockerfile')
 
-      // Check for .env file
-      const hasEnvFile = await this.checkFileExists(repoPath, '.env')
+      // Check for .env files (multiple variants)
+      const envFiles = await this.findEnvFiles(repoPath)
+      const hasEnvFile = envFiles.length > 0 // Backward compatibility
 
       return {
         name: path.basename(repoPath),
@@ -115,6 +117,7 @@ export class RepoScanner {
         lastCommit,
         hasDockerfile,
         hasEnvFile,
+        envFiles,
       }
     } catch (error) {
       console.error(`Error getting repo info for ${repoPath}:`, error)
@@ -131,6 +134,38 @@ export class RepoScanner {
       return true
     } catch {
       return false
+    }
+  }
+
+  /**
+   * Find all .env files in the repository
+   * Scans for any file starting with .env (e.g., .env, .env.local, .env.development, etc.)
+   */
+  private async findEnvFiles(repoPath: string): Promise<string[]> {
+    const envFiles: string[] = []
+
+    try {
+      // Read all files in the repo root
+      const entries = await fs.readdir(repoPath, { withFileTypes: true })
+
+      // Check each file
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.startsWith('.env')) {
+          envFiles.push(entry.name)
+        }
+      }
+
+      // Sort to ensure consistent order (.env first, then alphabetically)
+      envFiles.sort((a, b) => {
+        if (a === '.env') return -1
+        if (b === '.env') return 1
+        return a.localeCompare(b)
+      })
+
+      return envFiles
+    } catch (error) {
+      console.warn(`Error finding .env files in ${repoPath}:`, error)
+      return []
     }
   }
 }

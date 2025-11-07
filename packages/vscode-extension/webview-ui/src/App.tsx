@@ -12,7 +12,7 @@ import Environment from './components/Environment'
 import Workspaces from './components/Workspaces'
 import Wiki from './components/Wiki'
 import WorkspaceSwitcher from './components/WorkspaceSwitcher'
-import { vscode } from './messaging/vscodeApi'
+import { vscode, workspaceApi } from './messaging/vscodeApi'
 import './styles/App.css'
 
 type TabType = 'dashboard' | 'services' | 'docker' | 'env' | 'workspaces' | 'notes'
@@ -22,6 +22,7 @@ function App() {
   const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>()
   const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>()
   const [selectedVariableId, setSelectedVariableId] = useState<string | undefined>()
+  const [workspaceKey, setWorkspaceKey] = useState<string>('default')
 
   // Listen for navigation messages from extension host
   useEffect(() => {
@@ -44,11 +45,54 @@ function App() {
         if (variableId) {
           setSelectedVariableId(variableId)
         }
+      } else if (message.type === 'workspaceActivated') {
+        // When workspace is activated from tree view, trigger workspace-changed event
+        console.log('[App] Workspace activated from tree view:', message.workspaceId)
+        window.dispatchEvent(new CustomEvent('workspace-changed', {
+          detail: {
+            source: 'TreeView',
+            workspaceId: message.workspaceId
+          }
+        }))
       }
     }
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  // Listen for workspace changes and update key to force remount
+  useEffect(() => {
+    const handleWorkspaceChanged = async (event?: Event) => {
+      console.log('[App] Workspace changed event received')
+
+      // If event has workspace ID, use it directly to avoid race conditions
+      if (event && event instanceof CustomEvent && event.detail?.workspaceId) {
+        const workspaceId = event.detail.workspaceId
+        console.log('[App] Using workspace ID from event:', workspaceId)
+        setWorkspaceKey(workspaceId)
+        return
+      }
+
+      // Otherwise fetch the active workspace (e.g., on initial load)
+      console.log('[App] Fetching active workspace...')
+      try {
+        const workspace = await workspaceApi.getActive()
+        if (workspace) {
+          console.log('[App] New active workspace:', workspace.id)
+          setWorkspaceKey(workspace.id)
+        }
+      } catch (err) {
+        console.error('[App] Error fetching active workspace:', err)
+      }
+    }
+
+    // Initial load (no event)
+    handleWorkspaceChanged()
+
+    // Listen for changes (with event)
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
   }, [])
 
   return (
@@ -103,12 +147,12 @@ function App() {
       </nav>
 
       <main className="app-content">
-        {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'services' && <Services initialSelectedServiceId={selectedServiceId} />}
-        {activeTab === 'docker' && <Docker />}
-        {activeTab === 'env' && <Environment selectedProfileId={selectedProfileId} selectedVariableId={selectedVariableId} onProfileSelected={() => { setSelectedProfileId(undefined); setSelectedVariableId(undefined) }} />}
-        {activeTab === 'workspaces' && <Workspaces />}
-        {activeTab === 'notes' && <Wiki />}
+        {activeTab === 'dashboard' && <Dashboard key={workspaceKey} />}
+        {activeTab === 'services' && <Services key={workspaceKey} initialSelectedServiceId={selectedServiceId} />}
+        {activeTab === 'docker' && <Docker key={workspaceKey} />}
+        {activeTab === 'env' && <Environment key={workspaceKey} selectedProfileId={selectedProfileId} selectedVariableId={selectedVariableId} onProfileSelected={() => { setSelectedProfileId(undefined); setSelectedVariableId(undefined) }} />}
+        {activeTab === 'workspaces' && <Workspaces key={workspaceKey} />}
+        {activeTab === 'notes' && <Wiki key={workspaceKey} />}
       </main>
     </div>
   )

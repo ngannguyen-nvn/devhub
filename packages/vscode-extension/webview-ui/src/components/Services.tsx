@@ -88,10 +88,27 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
   const [newGroupName, setNewGroupName] = useState('')
 
   useEffect(() => {
+    console.log('[Services] Component mounted')
     fetchServices()
     fetchGroups()
     const interval = setInterval(fetchServices, 5000)
-    return () => clearInterval(interval)
+
+    // Listen for workspace changes
+    const handleWorkspaceChanged = () => {
+      console.log('[Services] Workspace changed, refreshing...')
+      fetchServices()
+      fetchGroups()
+      setSelectedService(null)
+      setLogs([])
+    }
+
+    window.addEventListener('workspace-changed', handleWorkspaceChanged)
+
+    return () => {
+      console.log('[Services] Component unmounting')
+      clearInterval(interval)
+      window.removeEventListener('workspace-changed', handleWorkspaceChanged)
+    }
   }, [])
 
   // Handle initial selected service from tree view navigation
@@ -156,6 +173,7 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
 
   const fetchServices = async () => {
     try {
+      console.log('[Services] Fetching services...')
       const [allServices, running] = await Promise.all([
         serviceApi.getAll(),
         serviceApi.getRunning()
@@ -163,6 +181,8 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
 
       const allServicesArray = Array.isArray(allServices) ? allServices : []
       const runningArray = Array.isArray(running) ? running : []
+
+      console.log('[Services] Fetched', allServicesArray.length, 'services')
 
       // Merge status from running services
       const servicesWithStatus = allServicesArray.map((s: Service) => ({
