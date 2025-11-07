@@ -126,8 +126,10 @@ export default function Environment({ selectedProfileId, selectedVariableId, onP
   // Fetch profiles
   const fetchProfiles = async () => {
     try {
+      console.log('[Environment] Fetching profiles...')
       const response = await envApi.getProfiles()
       setProfiles(response.profiles || [])
+      console.log('[Environment] Fetched', response.profiles?.length || 0, 'profiles')
 
       // Auto-select first profile if none selected (use ref to avoid stale closure)
       if (!selectedProfileRef.current && response.profiles?.length > 0) {
@@ -154,6 +156,7 @@ export default function Environment({ selectedProfileId, selectedVariableId, onP
   }
 
   useEffect(() => {
+    console.log('[Environment] Component mounted')
     fetchProfiles()
 
     // Listen for workspace changes
@@ -165,7 +168,10 @@ export default function Environment({ selectedProfileId, selectedVariableId, onP
     }
 
     window.addEventListener('workspace-changed', handleWorkspaceChanged)
-    return () => window.removeEventListener('workspace-changed', handleWorkspaceChanged)
+    return () => {
+      console.log('[Environment] Component unmounting')
+      window.removeEventListener('workspace-changed', handleWorkspaceChanged)
+    }
   }, [])
 
   // Auto-refresh profiles every 5 seconds (unless paused)
