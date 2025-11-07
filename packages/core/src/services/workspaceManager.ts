@@ -83,7 +83,7 @@ export class WorkspaceManager {
         name: row.name,
         description: row.description || undefined,
         folderPath: row.folder_path || undefined,
-        active: Boolean(row.active),
+        active: row.active, // Keep as number (0 or 1) for consistency with database
         activeSnapshotId: row.active_snapshot_id || undefined,
         tags: row.tags ? JSON.parse(row.tags) : undefined,
         createdAt: row.created_at,
@@ -126,7 +126,7 @@ export class WorkspaceManager {
       name: row.name,
       description: row.description || undefined,
       folderPath: row.folder_path || undefined,
-      active: Boolean(row.active),
+      active: row.active, // Keep as number (0 or 1) for consistency with database
       activeSnapshotId: row.active_snapshot_id || undefined,
       tags: row.tags ? JSON.parse(row.tags) : undefined,
       createdAt: row.created_at,
