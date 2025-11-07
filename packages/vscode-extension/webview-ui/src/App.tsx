@@ -45,6 +45,15 @@ function App() {
         if (variableId) {
           setSelectedVariableId(variableId)
         }
+      } else if (message.type === 'workspaceActivated') {
+        // When workspace is activated from tree view, trigger workspace-changed event
+        console.log('[App] Workspace activated from tree view:', message.workspaceId)
+        window.dispatchEvent(new CustomEvent('workspace-changed', {
+          detail: {
+            source: 'TreeView',
+            workspaceId: message.workspaceId
+          }
+        }))
       }
     }
 

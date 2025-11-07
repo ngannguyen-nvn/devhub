@@ -384,6 +384,15 @@ function registerCommands(
         }
 
         await manager.activateWorkspace(workspaceId)
+
+        // Notify webview to refresh with the new workspace
+        if (panel) {
+          panel.postMessage({
+            type: 'workspaceActivated',
+            workspaceId: workspaceId
+          })
+        }
+
         vscode.window.showInformationMessage('Workspace activated')
         workspaceTreeProvider?.refresh()
         servicesTreeProvider?.refresh()
