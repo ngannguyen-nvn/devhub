@@ -414,6 +414,15 @@ const dockerodeDeps = [
 console.log(`Copying ${dockerodeDeps.length} dockerode dependencies...`);
 dockerodeDeps.forEach(dep => copyEntirePackage(dep));
 
+// Copy simple-git and its dependencies (required by @devhub/core)
+copyEntirePackage('simple-git');
+copyEntirePackage('@kwsites/file-exists');
+copyEntirePackage('@kwsites/promise-deferred');
+// Note: 'debug' and 'ms' are already included in dockerode dependencies
+
+// Copy tree-kill (required by @devhub/core)
+copyEntirePackage('tree-kill');
+
 console.log('✓ Native dependencies prepared for packaging');
 
 function copyEntirePackage(packageName) {
