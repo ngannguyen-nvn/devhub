@@ -762,16 +762,15 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
                     <span className="terminal-icon">&gt;_</span>
                   </button>
                   <button
-                    className="btn-purple"
+                    className="btn-tags"
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedServiceForGroups(service)
                       setShowAssignGroupModal(true)
                     }}
                     title="Assign to groups"
-                    style={{ backgroundColor: '#8B5CF6', color: 'white' }}
                   >
-                    <span style={{ fontSize: '14px' }}>🏷️</span>
+                    🏷️
                   </button>
                   <button
                     className="btn-secondary"
@@ -883,72 +882,59 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
             <h3>Manage Service Groups</h3>
 
             {/* Create New Group */}
-            <div className="group-form" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-              <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>Create New Group</h4>
-              <div style={{ marginBottom: '10px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: '500' }}>
-                  Group Name *
-                </label>
+            <div className="group-form">
+              <h4>Create New Group</h4>
+              <div className="group-form-field">
+                <label>Group Name *</label>
                 <input
                   type="text"
                   placeholder="e.g., Backend Services"
                   value={newGroup.name}
                   onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
-                  style={{ width: '100%' }}
                 />
               </div>
-              <div style={{ marginBottom: '10px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: '500' }}>
-                  Description
-                </label>
+              <div className="group-form-field">
+                <label>Description</label>
                 <input
                   type="text"
                   placeholder="Optional description"
                   value={newGroup.description}
                   onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
-                  style={{ width: '100%' }}
                 />
               </div>
-              <div style={{ marginBottom: '10px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: '500' }}>
-                  Color
-                </label>
+              <div className="group-form-field">
+                <label>Color</label>
                 <input
                   type="color"
                   value={newGroup.color}
                   onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
-                  style={{ height: '40px', width: '80px', cursor: 'pointer', borderRadius: '4px' }}
                 />
               </div>
-              <button className="btn-primary" onClick={handleCreateGroup} style={{ width: '100%' }}>
+              <button className="btn-primary" onClick={handleCreateGroup}>
                 Create Group
               </button>
             </div>
 
             {/* Existing Groups */}
             <div className="groups-list">
-              <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>Existing Groups ({groups.length})</h4>
+              <h4>Existing Groups ({groups.length})</h4>
               {groups.length === 0 ? (
-                <p style={{ textAlign: 'center', padding: '30px 0', color: '#888' }}>No groups created yet</p>
+                <p className="groups-list-empty">No groups created yet</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="groups-list-items">
                   {groups.map(group => (
-                    <div key={group.id} className="group-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div key={group.id} className="group-item">
+                      <div className="group-item-info">
                         <div
-                          style={{
-                            width: '16px',
-                            height: '16px',
-                            borderRadius: '4px',
-                            backgroundColor: group.color || '#3B82F6'
-                          }}
+                          className="group-color-indicator"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
                         />
-                        <div>
-                          <div style={{ fontWeight: '500' }}>{group.name}</div>
+                        <div className="group-item-details">
+                          <div className="group-item-name">{group.name}</div>
                           {group.description && (
-                            <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>{group.description}</div>
+                            <div className="group-item-description">{group.description}</div>
                           )}
-                          <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                          <div className="group-item-count">
                             {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
                           </div>
                         </div>
@@ -983,59 +969,42 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Assign to Groups</h3>
 
-            <p style={{ marginBottom: '15px', color: '#666' }}>
+            <p className="assign-groups-modal-subtitle">
               Service: <strong>{selectedServiceForGroups.name}</strong>
             </p>
 
             {groups.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                <p style={{ color: '#888', marginBottom: '12px' }}>No groups available</p>
+              <div className="assign-groups-empty">
+                <p>No groups available</p>
                 <button
                   onClick={() => {
                     setShowAssignGroupModal(false)
                     setShowGroupsModal(true)
                   }}
                   className="btn-secondary"
-                  style={{ textDecoration: 'underline' }}
                 >
                   Create a group first
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="assign-groups-list">
                 {groups.map(group => {
                   const isInGroup = group.serviceIds.includes(selectedServiceForGroups.id)
                   return (
                     <button
                       key={group.id}
                       onClick={() => handleToggleServiceGroup(group.id, selectedServiceForGroups.id, isInGroup)}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: `2px solid ${isInGroup ? '#8B5CF6' : '#ddd'}`,
-                        backgroundColor: isInGroup ? '#F3E8FF' : 'transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      className={isInGroup ? '' : 'hover-border'}
+                      className={`assign-group-button ${isInGroup ? 'selected' : ''}`}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className="assign-group-button-content">
                         <div
-                          style={{
-                            width: '16px',
-                            height: '16px',
-                            borderRadius: '4px',
-                            backgroundColor: group.color || '#3B82F6'
-                          }}
+                          className="group-color-indicator"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
                         />
-                        <span style={{ fontWeight: '500' }}>{group.name}</span>
+                        <span className="assign-group-button-name">{group.name}</span>
                       </div>
                       {isInGroup && (
-                        <span style={{ color: '#8B5CF6', fontSize: '14px' }}>✓</span>
+                        <span className="assign-group-checkmark">✓</span>
                       )}
                     </button>
                   )
@@ -1043,7 +1012,7 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
               </div>
             )}
 
-            <div className="modal-actions" style={{ marginTop: '20px' }}>
+            <div className="modal-actions">
               <button
                 className="btn-secondary"
                 onClick={() => {
