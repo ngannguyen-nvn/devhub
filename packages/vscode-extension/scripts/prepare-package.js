@@ -24,15 +24,30 @@ if (fs.existsSync(betterSqliteDest)) {
 }
 fs.mkdirSync(betterSqliteDest, { recursive: true });
 
-// Copy lib/ and package.json
+// Copy lib/ and package.json (but modify package.json to remove install scripts)
 copyRecursive(
   path.join(rootNodeModules, 'better-sqlite3', 'lib'),
   path.join(betterSqliteDest, 'lib')
 );
-fs.copyFileSync(
-  path.join(rootNodeModules, 'better-sqlite3', 'package.json'),
-  path.join(betterSqliteDest, 'package.json')
+
+// Read, modify, and write package.json to remove install scripts
+const originalPackageJson = require(path.join(rootNodeModules, 'better-sqlite3', 'package.json'));
+const modifiedPackageJson = { ...originalPackageJson };
+
+// Remove install/postinstall scripts to prevent VSCode from rebuilding
+if (modifiedPackageJson.scripts) {
+  delete modifiedPackageJson.scripts.install;
+  delete modifiedPackageJson.scripts.postinstall;
+  delete modifiedPackageJson.scripts.preinstall;
+}
+
+// Write modified package.json
+fs.writeFileSync(
+  path.join(betterSqliteDest, 'package.json'),
+  JSON.stringify(modifiedPackageJson, null, 2)
 );
+
+console.log('✓ Removed install scripts from better-sqlite3 package.json');
 
 // Remove any existing build/Release directory (from previous builds or npm install)
 // This prevents loading the wrong version from build/Release
