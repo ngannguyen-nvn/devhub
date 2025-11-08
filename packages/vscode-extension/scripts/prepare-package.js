@@ -68,10 +68,16 @@ const runtimeVersions = [
   'electron-v128', // Electron 28.x - VSCode 1.85-1.86
   'electron-v130', // Electron 29.x - VSCode 1.87+
   'electron-v132', // Electron 29.x
-  'electron-v133', // Electron 30.x
-  'electron-v135', // Electron 31.x
-  'electron-v136', // Electron 32.x
-  'electron-v139', // Electron 33.x
+  'electron-v133', // Electron 30.x - VSCode 1.88
+  'electron-v135', // Electron 31.x - VSCode 1.89-1.90
+  'electron-v136', // Electron 32.x - VSCode 1.91-1.92
+  'electron-v137', // Electron 33.x - VSCode 1.93
+  'electron-v139', // Electron 34.x - VSCode 1.94-1.95
+  'electron-v140', // Electron 35.x - VSCode 1.96
+  'electron-v141', // Electron 36.x - VSCode 1.97
+  'electron-v142', // Electron 37.x - VSCode 1.98+
+  'electron-v143', // Electron 38.x - VSCode Insiders
+  'electron-v144', // Electron 39.x - Future
   // Node.js versions for remote/server VSCode
   'node-v108', // Node.js 18
   'node-v115', // Node.js 20
