@@ -66,26 +66,24 @@ The VSCode extension provides full DevHub functionality within VSCode:
    - Service database connection testing
    - Fully functional
 
-2. **Service Groups** - ⚠️ PARTIALLY INTEGRATED
-   - ✅ Basic group management built into `Services.tsx`
-   - ✅ Create/delete groups modal
+2. **Service Groups** - ✅ INTEGRATED into Services.tsx
+   - ✅ Full group management built into `Services.tsx`
+   - ✅ Create/delete groups modal with color picker
    - ✅ Filter services by group dropdown
-   - ✅ Assign services to groups
-   - ❌ Standalone `ServiceGroups.tsx` component exists but NOT used
-   - ❌ Advanced group visualization (colors, icons) not shown
+   - ✅ Assign services to groups via Tags icon
+   - ✅ Stop All filtered by group
+   - Note: Redundant ServiceGroups.tsx component was removed
 
-3. **Health Checks** - ❌ NOT INTEGRATED
-   - ✅ Component exists: `frontend/src/components/HealthChecks.tsx`
-   - ✅ Backend API fully working
-   - ❌ Component not imported in App.tsx
-   - ❌ Not in sidebar navigation
+3. **Health Checks** - ❌ REMOVED (not beneficial)
+   - Backend API exists but health monitoring not needed for local dev
+   - HealthChecks.tsx component was removed
 
 4. **Log Viewer** - ❌ NOT INTEGRATED
    - ✅ Component exists: `frontend/src/components/LogViewer.tsx`
-   - ✅ Backend API fully working
+   - ✅ Backend API fully working (8 endpoints)
    - ❌ Component not imported in App.tsx
    - ❌ Not in sidebar navigation
-   - Note: Services.tsx has basic log viewing built-in
+   - Note: Services.tsx has basic in-memory log viewing built-in
 
 **Database Schema (Migrations 006 & 007):**
 - ✅ `service_health_checks` table
@@ -203,27 +201,17 @@ The VSCode extension provides full DevHub functionality within VSCode:
 
 ### ❌ Orphaned Components (Exist but NOT used)
 
-1. **HealthChecks.tsx** (17.3 KB)
-   - Service health monitoring UI
-   - HTTP/TCP/Command check configuration
-   - Health status visualization
-   - Backend API ready, component not integrated
-
-2. **LogViewer.tsx** (11.6 KB)
+1. **LogViewer.tsx** (12 KB)
    - Session-based log viewer
    - Log filtering by level and search
    - Historical log analysis
    - Backend API ready, component not integrated
 
-3. **ServiceGroups.tsx** (16.0 KB)
-   - Advanced group management UI
-   - Group visualization with colors/icons
-   - Drag-and-drop service ordering
-   - Backend API ready, basic version in Services.tsx
+**Note:** HealthChecks.tsx and ServiceGroups.tsx were removed (not beneficial):
+- HealthChecks: Health monitoring not needed for local development
+- ServiceGroups: Services.tsx already has full group management
 
-**Total Components:** 17 (7 integrated main + 7 supporting + 3 orphaned)
-
----
+**Total Components:** 15 (7 integrated main + 7 supporting + 1 orphaned)
 
 ## 🏗 Architecture Overview
 
@@ -916,7 +904,7 @@ useEffect(() => {
 - ✅ Service Groups API - 10 endpoints fully implemented
 - ✅ Database Management API - 10+ endpoints fully implemented
 
-**Frontend (50% Complete):**
+**Frontend: 75% Complete (3 of 4 features integrated)):**
 - ✅ **Database.tsx** - INTEGRATED and working (backup, restore, stats, cleanup)
 - ⚠️ **Service Groups** - PARTIALLY INTEGRATED (basic features in Services.tsx, advanced component orphaned)
 - ❌ **HealthChecks.tsx** - NOT INTEGRATED (component exists, API ready, not in navigation)
@@ -1463,7 +1451,7 @@ Restructured entire backend to use shared core architecture enabling dual-versio
 - **Frontend:** ⚠️ 50% (1 of 4 features fully integrated)
   - Database Management: ✅ INTEGRATED
   - Service Groups: ⚠️ PARTIAL (basic features in Services.tsx)
-  - Health Checks: ❌ NOT INTEGRATED (component orphaned)
+  - Health Checks - ❌ REMOVED (not beneficial for local development) (component orphaned)
   - Log Viewer: ❌ NOT INTEGRATED (component orphaned)
 
 **Status:** Production ready for v1.0 features, v2.0 backend ready but frontend incomplete
@@ -1522,4 +1510,4 @@ Restructured entire backend to use shared core architecture enabling dual-versio
 **Status:**
 - v1.0 Complete ✅ (Web + VSCode)
 - v2.0 Backend Complete ✅ (Web)
-- v2.0 Frontend Partial ⚠️ (Web 50%, VSCode 0%)
+- v2.0 Frontend Partial ⚠️ (Web 75%, VSCode 0%)
