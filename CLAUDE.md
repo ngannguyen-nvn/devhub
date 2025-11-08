@@ -49,17 +49,53 @@ The VSCode extension provides full DevHub functionality within VSCode:
 
 ## 🎯 What's Been Built
 
-### v2.0 Features (Advanced Orchestration)
+### v2.0 Features (Advanced Orchestration) - ACTUAL STATUS
 
-**v2.0 adds advanced microservices orchestration capabilities:**
+**BACKEND:** ✅ 100% COMPLETE - All v2.0 backend APIs and database tables implemented
+**FRONTEND:** ⚠️ PARTIALLY COMPLETE - Some UI components not integrated
 
-1. **Health Checks** - HTTP/TCP/Command monitoring with automatic status updates
-2. **Log Persistence** - Historical log analysis with session tracking across service restarts
-3. **Service Groups** - Organize services into logical groups for batch operations
+**v2.0 Backend Implementation:**
+1. **Health Checks** - ✅ Full API (`/api/health-checks`) with 5 endpoints
+2. **Log Persistence** - ✅ Full API (`/api/logs`) with 8 endpoints
+3. **Service Groups** - ✅ Full API (`/api/groups`) with 10 endpoints
+4. **Database Management** - ✅ Full API (`/api/database`) with backup/restore
 
-**Total v2.0:** ~23 API endpoints | 3 service managers | 9 database tables | 3 UI components
+**v2.0 Frontend Status:**
+1. **Database.tsx** - ✅ INTEGRATED into webapp sidebar
+   - Database stats, backup/restore, log cleanup
+   - Service database connection testing
+   - Fully functional
 
-**Status:** ✅ COMPLETE - All planned v2.0 features implemented
+2. **Service Groups** - ⚠️ PARTIALLY INTEGRATED
+   - ✅ Basic group management built into `Services.tsx`
+   - ✅ Create/delete groups modal
+   - ✅ Filter services by group dropdown
+   - ✅ Assign services to groups
+   - ❌ Standalone `ServiceGroups.tsx` component exists but NOT used
+   - ❌ Advanced group visualization (colors, icons) not shown
+
+3. **Health Checks** - ❌ NOT INTEGRATED
+   - ✅ Component exists: `frontend/src/components/HealthChecks.tsx`
+   - ✅ Backend API fully working
+   - ❌ Component not imported in App.tsx
+   - ❌ Not in sidebar navigation
+
+4. **Log Viewer** - ❌ NOT INTEGRATED
+   - ✅ Component exists: `frontend/src/components/LogViewer.tsx`
+   - ✅ Backend API fully working
+   - ❌ Component not imported in App.tsx
+   - ❌ Not in sidebar navigation
+   - Note: Services.tsx has basic log viewing built-in
+
+**Database Schema (Migrations 006 & 007):**
+- ✅ `service_health_checks` table
+- ✅ `service_log_sessions` table
+- ✅ `service_logs` table
+- ✅ `service_groups` table
+- ✅ `service_group_members` table
+- ❌ Removed in migration 007: service_dependencies, service_templates, service_events, auto-restart columns
+
+**Total v2.0:** 23 API endpoints | 3 service managers | 5 active database tables (4 removed in cleanup)
 
 ---
 
@@ -90,7 +126,7 @@ The VSCode extension provides full DevHub functionality within VSCode:
 
 4. **Frontend UI**
    - React with Tailwind CSS
-   - Sidebar navigation (6 sections)
+   - Sidebar navigation (7 sections: Dashboard, Services, Workspaces, Docker, Environment, Wiki, Database)
    - Responsive layout
    - Located: `frontend/src/`
 
@@ -132,6 +168,60 @@ The VSCode extension provides full DevHub functionality within VSCode:
    - Category and tag organization
    - Live markdown preview
    - Located: `frontend/src/components/Wiki.tsx`, `packages/core/src/services/notesManager.ts`
+
+9. **Database Management** (v2.0 Feature)
+   - Database statistics (size, record counts)
+   - Backup and restore functionality
+   - Vacuum and optimize database
+   - Service database connection testing
+   - Log cleanup and maintenance
+   - Located: `frontend/src/components/Database.tsx`, `backend/src/routes/database.ts`
+
+---
+
+## 📦 Component Inventory
+
+### ✅ Integrated Components (In App.tsx + Sidebar)
+
+1. **Dashboard.tsx** - Repository scanner with git status
+2. **Services.tsx** - Service manager with built-in groups and logs
+3. **Workspaces.tsx** - Workspace and snapshot management
+4. **Docker.tsx** - Docker image and container management
+5. **Environment.tsx** - Environment variable profiles
+6. **Wiki.tsx** - Notes and documentation system
+7. **Database.tsx** - Database backup, stats, and maintenance
+
+### 🔧 Supporting Components (Used by main components)
+
+1. **WorkspaceSwitcher.tsx** - Header dropdown for workspace switching
+2. **Sidebar.tsx** - Main navigation sidebar
+3. **ErrorBoundary.tsx** - React error boundary wrapper
+4. **ConfirmDialog.tsx** - Reusable confirmation dialog
+5. **Loading.tsx** - Skeleton loader components
+6. **UncommittedChangesDialog.tsx** - Git uncommitted changes handler
+7. **StashManager.tsx** - Git stash management
+
+### ❌ Orphaned Components (Exist but NOT used)
+
+1. **HealthChecks.tsx** (17.3 KB)
+   - Service health monitoring UI
+   - HTTP/TCP/Command check configuration
+   - Health status visualization
+   - Backend API ready, component not integrated
+
+2. **LogViewer.tsx** (11.6 KB)
+   - Session-based log viewer
+   - Log filtering by level and search
+   - Historical log analysis
+   - Backend API ready, component not integrated
+
+3. **ServiceGroups.tsx** (16.0 KB)
+   - Advanced group management UI
+   - Group visualization with colors/icons
+   - Drag-and-drop service ordering
+   - Backend API ready, basic version in Services.tsx
+
+**Total Components:** 17 (7 integrated main + 7 supporting + 3 orphaned)
 
 ---
 
@@ -179,9 +269,10 @@ devhub/
 │   │   │   ├── env.ts             # Environment variables endpoints
 │   │   │   ├── workspaces.ts      # Workspace snapshots endpoints
 │   │   │   ├── notes.ts           # Wiki/Notes endpoints
-│   │   │   ├── healthChecks.ts    # Health check endpoints
-│   │   │   ├── logs.ts            # Log endpoints
-│   │   │   └── groups.ts          # Service group endpoints
+│   │   │   ├── healthChecks.ts    # Health check endpoints (v2.0)
+│   │   │   ├── logs.ts            # Log persistence endpoints (v2.0)
+│   │   │   ├── groups.ts          # Service group endpoints (v2.0)
+│   │   │   └── database.ts        # Database management endpoints (v2.0)
 │   │   └── index.ts               # Express app entry point
 │   ├── package.json               # Depends on @devhub/core
 │   ├── tsconfig.json
@@ -197,6 +288,10 @@ devhub/
 │   │   │   ├── Workspaces.tsx         # Workspace management UI
 │   │   │   ├── WorkspaceSwitcher.tsx  # Workspace dropdown in header
 │   │   │   ├── Wiki.tsx               # Wiki/Notes UI (workspace-scoped)
+│   │   │   ├── Database.tsx           # Database management UI (v2.0, integrated)
+│   │   │   ├── HealthChecks.tsx       # Health checks UI (v2.0, NOT integrated)
+│   │   │   ├── LogViewer.tsx          # Log viewer UI (v2.0, NOT integrated)
+│   │   │   ├── ServiceGroups.tsx      # Service groups UI (v2.0, NOT integrated)
 │   │   │   └── Sidebar.tsx            # Navigation sidebar
 │   │   ├── contexts/
 │   │   │   └── WorkspaceContext.tsx   # Global workspace state
@@ -803,33 +898,48 @@ useEffect(() => {
 
 ## 🎯 Current Feature Status
 
-All planned v1.0 and v2.0 features are **COMPLETE** ✅:
+**ACCURATE STATUS as of 2025-11-08:**
 
-### ✅ Core Features (v1.0)
-- **Repository Dashboard** - Git repository scanner with status tracking
-- **Service Manager** - Process management with real-time logs
-- **Docker Management** - Build images, manage containers, docker-compose generation
-- **Environment Variables** - Secure profiles with AES-256 encryption
-- **Hierarchical Workspaces** - Workspace → Snapshots with full resource scoping
-- **Wiki/Notes System** - Markdown documentation with bidirectional linking
+### ✅ Core Features (v1.0) - 100% COMPLETE
+- **Repository Dashboard** - Git repository scanner with status tracking ✅
+- **Service Manager** - Process management with real-time logs ✅
+- **Docker Management** - Build images, manage containers, docker-compose generation ✅
+- **Environment Variables** - Secure profiles with AES-256 encryption ✅
+- **Hierarchical Workspaces** - Workspace → Snapshots with full resource scoping ✅
+- **Wiki/Notes System** - Markdown documentation with bidirectional linking ✅
 
-### ✅ Advanced Orchestration (v2.0)
-- **Health Checks** - HTTP/TCP/Command monitoring (~5 endpoints)
-- **Log Persistence** - Historical analysis with session tracking (~8 endpoints)
-- **Service Groups** - Batch operations and visual organization (~10 endpoints)
+### ⚠️ Advanced Orchestration (v2.0) - BACKEND COMPLETE, FRONTEND PARTIAL
 
-### ✅ VSCode Extension (v2.0)
+**Backend (100% Complete):**
+- ✅ Health Checks API - 5 endpoints fully implemented
+- ✅ Log Persistence API - 8 endpoints fully implemented
+- ✅ Service Groups API - 10 endpoints fully implemented
+- ✅ Database Management API - 10+ endpoints fully implemented
+
+**Frontend (50% Complete):**
+- ✅ **Database.tsx** - INTEGRATED and working (backup, restore, stats, cleanup)
+- ⚠️ **Service Groups** - PARTIALLY INTEGRATED (basic features in Services.tsx, advanced component orphaned)
+- ❌ **HealthChecks.tsx** - NOT INTEGRATED (component exists, API ready, not in navigation)
+- ❌ **LogViewer.tsx** - NOT INTEGRATED (component exists, API ready, not in navigation)
+
+**Database (100% Complete):**
+- ✅ 7 migrations executed successfully
+- ✅ 5 v2.0 tables created (service_health_checks, service_log_sessions, service_logs, service_groups, service_group_members)
+- ✅ 4 unused features removed in migration 007 (dependencies, templates, events, auto-restart)
+
+### ✅ VSCode Extension (v2.0) - 100% COMPLETE
 - **Full Implementation** - All 5 phases complete
 - **Tree Views** - Services + Workspaces with inline actions
 - **Webview UI** - 6 tabs (Dashboard, Services, Docker, Environment, Workspaces, Notes)
-- **Commands** - 10+ via command palette
-- **Production Ready** - 16.26 MB .vsix package
+- **Commands** - 24 commands via command palette
+- **Production Ready** - 16.26 MB .vsix package with native dependencies
 
 **Total Implementation:**
-- 63 API endpoints
-- 9 service managers
-- 16 database tables
-- Complete shared core architecture
+- **Backend:** 70+ API endpoints (repos, services, docker, env, workspaces, notes, health-checks, logs, groups, database)
+- **Core Package:** 9 service managers (repo, service, docker, env, workspace, notes, health, log, group)
+- **Database:** 12 active tables + FTS5 index
+- **Frontend:** 7 integrated pages + 3 orphaned components
+- **Architecture:** Complete shared core architecture enabling dual deployment (web + VSCode)
 
 ---
 
@@ -838,13 +948,20 @@ All planned v1.0 and v2.0 features are **COMPLETE** ✅:
 ### Current Limitations:
 
 1. **No authentication** - Anyone with access can control services
-2. ~~**No service groups**~~ - ✅ FIXED in v2.0 - Service groups now available
-3. ~~**No port conflict detection**~~ - ✅ FIXED in v2.0 - Auto-detection and assignment
-4. ~~**Logs limited to 500 lines**~~ - ✅ FIXED in v2.0 - Persistent log storage
-5. ~~**No log search/filter**~~ - ✅ FIXED in v2.0 - Full filtering support
-6. **Services don't persist across backend restart** - Running services stop if backend crashes
-7. **No multi-user support** - Single SQLite database for all users
-8. **No remote access** - Must run on localhost
+2. **Service groups partially implemented** - ⚠️ Basic features work, advanced UI component orphaned
+3. **Health checks not integrated** - ❌ Backend API ready, frontend component not in navigation
+4. **Advanced log viewer not integrated** - ❌ Backend API ready, frontend component not in navigation
+5. **Services don't persist across backend restart** - Running services stop if backend crashes
+6. **No multi-user support** - Single SQLite database for all users
+7. **No remote access** - Must run on localhost
+8. **No real-time updates** - Frontend polls APIs instead of using WebSockets
+
+### v2.0 Backend Features Not Exposed in UI:
+
+1. **Health Check Monitoring** - `/api/health-checks` endpoints exist, `HealthChecks.tsx` component exists but not integrated
+2. **Session-Based Log Viewer** - `/api/logs` endpoints exist, `LogViewer.tsx` component exists but not integrated
+3. **Advanced Service Groups** - `/api/groups` endpoints exist, `ServiceGroups.tsx` component exists but only basic version in Services.tsx
+4. **Service Health Status** - Database field exists (`health_status`) but not displayed in Services UI
 
 ### Potential Bugs:
 
@@ -852,16 +969,27 @@ All planned v1.0 and v2.0 features are **COMPLETE** ✅:
 2. **Memory leak in long-running services** - Logs array grows unbounded until service stops
 3. **No graceful shutdown** - Killing backend doesn't stop child processes
 4. **Windows path compatibility** - Repo scanner uses Unix-style paths
+5. **Orphaned components increase bundle size** - 3 components (45 KB) built but unused
+
+### Quick Wins (Easy Integrations):
+
+1. **Add Health Checks to sidebar** - Import `HealthChecks.tsx` in App.tsx, add to Sidebar (1-2 hours)
+2. **Add Log Viewer to sidebar** - Import `LogViewer.tsx` in App.tsx, add to Sidebar (1-2 hours)
+3. **Replace basic groups with full ServiceGroups.tsx** - Swap Services.tsx groups modal with standalone component (2-3 hours)
+4. **Show health status in Services.tsx** - Add health badge column to services table (1 hour)
 
 ### Future Improvements:
 
-1. Add notification system for service events
-2. Add metrics dashboard (CPU, memory usage)
-3. Add service dependencies and start order management
-4. Add authentication and multi-user support
-5. Add remote access capabilities
-6. Add CI/CD pipeline integration
-7. Add Kubernetes support
+1. **Integrate orphaned v2.0 components** into webapp navigation
+2. Add notification system for service events
+3. Add metrics dashboard (CPU, memory usage)
+4. Add service dependencies and start order management (removed in migration 007, could re-add)
+5. Add authentication and multi-user support
+6. Add remote access capabilities
+7. Add CI/CD pipeline integration
+8. Add Kubernetes support
+9. Add WebSocket for real-time log streaming
+10. Port missing v2.0 features to VSCode extension
 
 ---
 
@@ -1319,3 +1447,79 @@ Restructured entire backend to use shared core architecture enabling dual-versio
 - Removed duplicate dependencies (better-sqlite3, dockerode, simple-git, ws)
 
 **Status:** Shared Core COMPLETE ✅ - Web app tested and working
+
+---
+
+## 📊 Deployment Status Summary
+
+### Web Application (DevHub Web)
+
+**v1.0 Features:** ✅ 100% Complete and Integrated
+- 7 main pages in navigation sidebar
+- All core features working (Dashboard, Services, Workspaces, Docker, Environment, Wiki, Database)
+
+**v2.0 Features:** ⚠️ 50% Complete
+- **Backend:** ✅ 100% (10 routes, 70+ endpoints, 3 managers, 5 database tables)
+- **Frontend:** ⚠️ 50% (1 of 4 features fully integrated)
+  - Database Management: ✅ INTEGRATED
+  - Service Groups: ⚠️ PARTIAL (basic features in Services.tsx)
+  - Health Checks: ❌ NOT INTEGRATED (component orphaned)
+  - Log Viewer: ❌ NOT INTEGRATED (component orphaned)
+
+**Status:** Production ready for v1.0 features, v2.0 backend ready but frontend incomplete
+
+### VSCode Extension (DevHub for VSCode)
+
+**v1.0 Features:** ✅ 100% Complete
+- All web app features ported to VSCode
+- 24 commands, 6 tree views, 6 webview tabs
+
+**v2.0 Features:** ❌ 0% Complete
+- Backend message handlers exist but no UI components
+- Missing: Health Checks, Log Viewer, Service Groups, Database Management tabs
+
+**Status:** Production ready for v1.0 features, v2.0 not started
+
+### What Needs to be Done
+
+**To Complete Web App v2.0 (Estimated: 1-2 days):**
+1. Import HealthChecks.tsx in App.tsx, add to Sidebar
+2. Import LogViewer.tsx in App.tsx, add to Sidebar
+3. Replace Services.tsx groups modal with ServiceGroups.tsx component
+4. Add health status badges to Services.tsx table
+5. Add navigation icons (Activity, FileText, FolderTree)
+
+**To Port v2.0 to VSCode Extension (Estimated: 3-5 days):**
+1. Port HealthChecks.tsx to webview-ui
+2. Port LogViewer.tsx to webview-ui
+3. Port ServiceGroups.tsx to webview-ui (or integrate into Services)
+4. Port Database.tsx to webview-ui
+5. Add message handlers for new components
+6. Update tree views to show health status
+7. Test native dependencies (better-sqlite3) work in packaged extension
+
+### Architecture Strengths
+
+✅ **Shared Core Architecture Working Perfectly**
+- 85-90% code reuse between web and VSCode
+- Single source of truth for business logic
+- No code duplication in service managers
+
+✅ **All Backend APIs Production Ready**
+- 70+ endpoints fully tested
+- 12 database tables with migrations
+- Complete CRUD operations for all features
+
+⚠️ **Frontend Integration Incomplete**
+- 3 orphaned components (45 KB) in build but unused
+- All v2.0 backend features ready, just need UI integration
+- Quick wins available (1-2 hour tasks)
+
+---
+
+**Last Updated:** 2025-11-08 (ACCURATE STATUS - Documentation synced with codebase)
+**Version:** v2.0.0 (Backend Complete, Frontend Partial)
+**Status:**
+- v1.0 Complete ✅ (Web + VSCode)
+- v2.0 Backend Complete ✅ (Web)
+- v2.0 Frontend Partial ⚠️ (Web 50%, VSCode 0%)
