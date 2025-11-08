@@ -56,9 +56,8 @@ The VSCode extension provides full DevHub functionality within VSCode:
 
 **v2.0 Backend Implementation:**
 1. **Health Checks** - ✅ Full API (`/api/health-checks`) with 5 endpoints
-2. **Log Persistence** - ✅ Full API (`/api/logs`) with 8 endpoints
-3. **Service Groups** - ✅ Full API (`/api/groups`) with 10 endpoints
-4. **Database Management** - ✅ Full API (`/api/database`) with backup/restore
+2. **Service Groups** - ✅ Full API (`/api/groups`) with 10 endpoints  
+3. **Database Management** - ✅ Full API (`/api/database`) with backup/restore
 
 **v2.0 Frontend Status:**
 1. **Database.tsx** - ✅ INTEGRATED into webapp sidebar
@@ -78,22 +77,23 @@ The VSCode extension provides full DevHub functionality within VSCode:
    - Backend API exists but health monitoring not needed for local dev
    - HealthChecks.tsx component was removed
 
-4. **Log Viewer** - ❌ NOT INTEGRATED
-   - ✅ Component exists: `frontend/src/components/LogViewer.tsx`
-   - ✅ Backend API fully working (8 endpoints)
-   - ❌ Component not imported in App.tsx
-   - ❌ Not in sidebar navigation
-   - Note: Services.tsx has basic in-memory log viewing built-in
+4. **Log Persistence** - ❌ REMOVED (not best practice)
+   - LogViewer.tsx component was removed
+   - Log persistence to database removed (causes DB bloat)
+   - Services.tsx provides in-memory logs (last 500 lines) - sufficient for local dev
+   - **Rationale:** Storing logs in SQLite causes database size explosion (GB/day),
+     performance issues, and is not industry best practice for a local dev tool.
+     Services should handle their own logging (winston/pino) or use system logs.
 
 **Database Schema (Migrations 006 & 007):**
-- ✅ `service_health_checks` table
-- ✅ `service_log_sessions` table
-- ✅ `service_logs` table
-- ✅ `service_groups` table
-- ✅ `service_group_members` table
+- ✅ `service_health_checks` table (exists, unused)
+- ✅ `service_log_sessions` table (exists, unused - log persistence removed)
+- ✅ `service_logs` table (exists, unused - log persistence removed)
+- ✅ `service_groups` table (fully functional)
+- ✅ `service_group_members` table (fully functional)
 - ❌ Removed in migration 007: service_dependencies, service_templates, service_events, auto-restart columns
 
-**Total v2.0:** 23 API endpoints | 3 service managers | 5 active database tables (4 removed in cleanup)
+**Total v2.0:** 20 API endpoints (logs endpoints unused) | 2 active service managers (groups, database) | 2 active database tables (3 unused)
 
 ---
 
@@ -201,18 +201,14 @@ The VSCode extension provides full DevHub functionality within VSCode:
 
 ### ❌ Orphaned Components (Exist but NOT used)
 
-1. **LogViewer.tsx** (12 KB)
-   - Session-based log viewer
-   - Log filtering by level and search
-   - Historical log analysis
-   - Backend API ready, component not integrated
+**None!** All orphaned components have been removed.
 
-**Note:** HealthChecks.tsx and ServiceGroups.tsx were removed (not beneficial):
-- HealthChecks: Health monitoring not needed for local development
-- ServiceGroups: Services.tsx already has full group management
+**Previously orphaned (now removed):**
+- HealthChecks.tsx (17 KB) - Health monitoring not needed for local dev
+- LogViewer.tsx (12 KB) - Log persistence causes DB bloat, not best practice
+- ServiceGroups.tsx (16 KB) - Services.tsx already has full group management
 
-**Total Components:** 15 (7 integrated main + 7 supporting + 1 orphaned)
-
+**Total Components:** 14 (7 integrated main + 7 supporting + 0 orphaned)
 ## 🏗 Architecture Overview
 
 ### Monorepo Structure
@@ -277,9 +273,6 @@ devhub/
 │   │   │   ├── WorkspaceSwitcher.tsx  # Workspace dropdown in header
 │   │   │   ├── Wiki.tsx               # Wiki/Notes UI (workspace-scoped)
 │   │   │   ├── Database.tsx           # Database management UI (v2.0, integrated)
-│   │   │   ├── HealthChecks.tsx       # Health checks UI (v2.0, NOT integrated)
-│   │   │   ├── LogViewer.tsx          # Log viewer UI (v2.0, NOT integrated)
-│   │   │   ├── ServiceGroups.tsx      # Service groups UI (v2.0, NOT integrated)
 │   │   │   └── Sidebar.tsx            # Navigation sidebar
 │   │   ├── contexts/
 │   │   │   └── WorkspaceContext.tsx   # Global workspace state
@@ -907,8 +900,6 @@ useEffect(() => {
 **Frontend: 75% Complete (3 of 4 features integrated)):**
 - ✅ **Database.tsx** - INTEGRATED and working (backup, restore, stats, cleanup)
 - ⚠️ **Service Groups** - PARTIALLY INTEGRATED (basic features in Services.tsx, advanced component orphaned)
-- ❌ **HealthChecks.tsx** - NOT INTEGRATED (component exists, API ready, not in navigation)
-- ❌ **LogViewer.tsx** - NOT INTEGRATED (component exists, API ready, not in navigation)
 
 **Database (100% Complete):**
 - ✅ 7 migrations executed successfully
