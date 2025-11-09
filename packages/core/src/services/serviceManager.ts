@@ -2,7 +2,6 @@ import { spawn, ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 import db from '../db'
 import { Service as SharedService } from '@devhub/shared'
-import { logManager } from './logManager'
 import { healthCheckManager } from './healthCheckManager'
 import kill from 'tree-kill'
 
@@ -18,7 +17,6 @@ export interface RunningService extends Service {
   stoppedAt?: Date
   exitCode?: number
   logs: string[]
-  logSessionId?: string // Track current log session
 }
 
 /**
@@ -255,8 +253,8 @@ export class ServiceManager extends EventEmitter {
   /**
    * Start a service by spawning a child process
    *
-   * Creates log session, starts health checks if configured,
-   * captures stdout/stderr and persists to database
+   * Starts health checks if configured and captures stdout/stderr to in-memory logs.
+   * Logs are kept for the last 500 lines only to prevent memory leaks.
    *
    * @param serviceId - Service ID
    * @throws Error if service not found or already running
@@ -301,16 +299,12 @@ export class ServiceManager extends EventEmitter {
       shell: true,
     })
 
-    // Create log session for persistence
-    const logSession = logManager.createSession(serviceId)
-
     const runningService: RunningService = {
       ...service,
       pid: childProcess.pid!,
       status: 'running',
       startedAt: new Date(),
       logs: [],
-      logSessionId: logSession.id,
     }
 
     // Capture stdout
@@ -320,18 +314,9 @@ export class ServiceManager extends EventEmitter {
       const lines = rawLines.map((line: string) => this.stripAnsiCodes(line))
       runningService.logs.push(...lines)
 
-      // Keep only last N lines
+      // Keep only last N lines to prevent memory leaks
       if (runningService.logs.length > this.maxLogLines) {
         runningService.logs = runningService.logs.slice(-this.maxLogLines)
-      }
-
-      // Persist logs to database
-      if (runningService.logSessionId) {
-        const logEntries = lines.map((line: string) => ({
-          message: line,
-          level: logManager.parseLogLevel(line) as 'info' | 'warn' | 'error' | 'debug',
-        }))
-        logManager.writeLogs(runningService.logSessionId, serviceId, logEntries)
       }
 
       this.emit('log', { serviceId, type: 'stdout', data: lines })
@@ -348,15 +333,6 @@ export class ServiceManager extends EventEmitter {
         runningService.logs = runningService.logs.slice(-this.maxLogLines)
       }
 
-      // Persist logs to database (stderr typically errors/warnings)
-      if (runningService.logSessionId) {
-        const logEntries = lines.map((line: string) => ({
-          message: line,
-          level: 'error' as const,
-        }))
-        logManager.writeLogs(runningService.logSessionId, serviceId, logEntries)
-      }
-
       this.emit('log', { serviceId, type: 'stderr', data: lines })
     })
 
@@ -367,12 +343,6 @@ export class ServiceManager extends EventEmitter {
       runningService.exitCode = code ?? undefined
       runningService.pid = undefined // Clear PID since process is gone
 
-      // End log session
-      if (runningService.logSessionId) {
-        const exitReason = code === 0 ? 'stopped' : (code === null ? 'killed' : 'crashed')
-        logManager.endSession(runningService.logSessionId, code ?? undefined, exitReason)
-      }
-
       // Stop health checks for this service
       const healthChecks = healthCheckManager.getHealthChecks(serviceId)
       for (const check of healthChecks) {
@@ -381,7 +351,7 @@ export class ServiceManager extends EventEmitter {
 
       // Keep logs and service info, only remove from active processes
       this.processes.delete(serviceId)
-      // DON'T delete from runningServices - keep logs visible
+      // DON'T delete from runningServices - keep in-memory logs visible
 
       this.emit('exit', { serviceId, code })
     })
@@ -407,7 +377,7 @@ export class ServiceManager extends EventEmitter {
    * Stop a running service
    *
    * Sends SIGTERM, then SIGKILL after 5 seconds if still running.
-   * Stops health checks and marks service as stopped (log session ends on exit)
+   * Stops health checks and marks service as stopped.
    *
    * @param serviceId - Service ID
    * @throws Error if service is not running

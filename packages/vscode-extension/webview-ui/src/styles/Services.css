@@ -448,36 +448,223 @@
 
 /* Group Management */
 .group-form {
-  display: flex;
-  gap: 12px;
   margin-bottom: 20px;
+  padding: 16px;
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 6px;
 }
 
-.group-form input {
-  flex: 1;
+.group-form h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.group-form-field {
+  margin-bottom: 12px;
+}
+
+.group-form-field:last-child {
+  margin-bottom: 0;
+}
+
+.group-form-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vscode-foreground);
+}
+
+.group-form-field input[type="text"] {
+  width: 100%;
   padding: 8px 12px;
   background: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border);
   border-radius: 4px;
   color: var(--vscode-input-foreground);
   font-size: 14px;
+  box-sizing: border-box;
+}
+
+.group-form-field input[type="text"]:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+}
+
+.group-form-field input[type="color"] {
+  height: 40px;
+  width: 80px;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-input-border);
+  background: var(--vscode-input-background);
+}
+
+.group-form .btn-primary {
+  width: 100%;
+  margin-top: 12px;
 }
 
 .groups-list {
+  margin-bottom: 20px;
+}
+
+.groups-list h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.groups-list-empty {
+  text-align: center;
+  padding: 30px 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 13px;
+}
+
+.groups-list-items {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
 }
 
 .group-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 12px;
   background: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border);
+  border-radius: 6px;
+}
+
+.group-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.group-color-indicator {
+  width: 16px;
+  height: 16px;
   border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.group-item-details {
+  flex: 1;
+}
+
+.group-item-name {
+  font-weight: 500;
+  color: var(--vscode-foreground);
+  margin-bottom: 2px;
+}
+
+.group-item-description {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 2px;
+}
+
+.group-item-count {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 2px;
+}
+
+/* Assign Groups Modal */
+.assign-groups-modal-subtitle {
+  margin: 0 0 16px 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 14px;
+}
+
+.assign-groups-empty {
+  text-align: center;
+  padding: 30px 0;
+}
+
+.assign-groups-empty p {
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 12px;
+}
+
+.assign-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.assign-group-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 6px;
+  border: 2px solid var(--vscode-input-border);
+  background: var(--vscode-input-background);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.assign-group-button:hover {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-hoverBackground);
+}
+
+.assign-group-button.selected {
+  border-color: #8B5CF6;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.assign-group-button-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.assign-group-button-name {
+  font-weight: 500;
+  color: var(--vscode-foreground);
+}
+
+.assign-group-checkmark {
+  color: #8B5CF6;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Service Tags Button */
+.btn-tags {
+  background: #8B5CF6;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-tags:hover:not(:disabled) {
+  background: #7C3AED;
+}
+
+.btn-tags:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .group-count {

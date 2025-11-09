@@ -24,19 +24,42 @@ if (fs.existsSync(betterSqliteDest)) {
 }
 fs.mkdirSync(betterSqliteDest, { recursive: true });
 
-// Copy lib/ and package.json
+// Copy lib/ and package.json (but modify package.json to remove install scripts)
 copyRecursive(
   path.join(rootNodeModules, 'better-sqlite3', 'lib'),
   path.join(betterSqliteDest, 'lib')
 );
-fs.copyFileSync(
-  path.join(rootNodeModules, 'better-sqlite3', 'package.json'),
-  path.join(betterSqliteDest, 'package.json')
+
+// Read, modify, and write package.json to remove install scripts
+const originalPackageJson = require(path.join(rootNodeModules, 'better-sqlite3', 'package.json'));
+const modifiedPackageJson = { ...originalPackageJson };
+
+// Remove install/postinstall scripts to prevent VSCode from rebuilding
+if (modifiedPackageJson.scripts) {
+  delete modifiedPackageJson.scripts.install;
+  delete modifiedPackageJson.scripts.postinstall;
+  delete modifiedPackageJson.scripts.preinstall;
+}
+
+// Write modified package.json
+fs.writeFileSync(
+  path.join(betterSqliteDest, 'package.json'),
+  JSON.stringify(modifiedPackageJson, null, 2)
 );
 
-// Create build/Release directory for the .node file
+console.log('✓ Removed install scripts from better-sqlite3 package.json');
+
+// Remove any existing build/Release directory (from previous builds or npm install)
+// This prevents loading the wrong version from build/Release
 const buildDir = path.join(betterSqliteDest, 'build', 'Release');
-fs.mkdirSync(buildDir, { recursive: true });
+if (fs.existsSync(buildDir)) {
+  fs.rmSync(buildDir, { recursive: true, force: true });
+  console.log('Removed existing build/Release directory');
+}
+
+// Note: We don't create build/Release for platform-specific builds
+// better-sqlite3 will automatically load from prebuilds/ directory
+// Only create build/Release if doing a local dev build (SKIP_PREBUILD_DOWNLOAD)
 
 // Download multiple prebuilds for different Electron versions
 // This ensures the extension works for all users regardless of their VSCode version
@@ -68,10 +91,16 @@ const runtimeVersions = [
   'electron-v128', // Electron 28.x - VSCode 1.85-1.86
   'electron-v130', // Electron 29.x - VSCode 1.87+
   'electron-v132', // Electron 29.x
-  'electron-v133', // Electron 30.x
-  'electron-v135', // Electron 31.x
-  'electron-v136', // Electron 32.x
-  'electron-v139', // Electron 33.x
+  'electron-v133', // Electron 30.x - VSCode 1.88
+  'electron-v135', // Electron 31.x - VSCode 1.89-1.90
+  'electron-v136', // Electron 32.x - VSCode 1.91-1.92
+  'electron-v137', // Electron 33.x - VSCode 1.93
+  'electron-v139', // Electron 34.x - VSCode 1.94-1.95
+  'electron-v140', // Electron 35.x - VSCode 1.96
+  'electron-v141', // Electron 36.x - VSCode 1.97
+  'electron-v142', // Electron 37.x - VSCode 1.98+
+  'electron-v143', // Electron 38.x - VSCode Insiders
+  'electron-v144', // Electron 39.x - Future
   // Node.js versions for remote/server VSCode
   'node-v108', // Node.js 18
   'node-v115', // Node.js 20
@@ -204,6 +233,10 @@ if (successCount === 0) {
       const currentArch = process.arch;
 
       console.log(`  Detected: Node.js MODULE_VERSION ${moduleVersion} (${currentPlatform}-${currentArch})`);
+
+      // Create build/Release directory for dev builds
+      const buildDir = path.join(betterSqliteDest, 'build', 'Release');
+      fs.mkdirSync(buildDir, { recursive: true });
 
       // Copy to build/Release for backward compatibility
       fs.copyFileSync(localNodeFile, path.join(buildDir, 'better_sqlite3.node'));

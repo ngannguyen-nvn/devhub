@@ -85,7 +85,9 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
   // Groups
   const [groups, setGroups] = useState<Group[]>([])
   const [showGroupsModal, setShowGroupsModal] = useState(false)
-  const [newGroupName, setNewGroupName] = useState('')
+  const [showAssignGroupModal, setShowAssignGroupModal] = useState(false)
+  const [selectedServiceForGroups, setSelectedServiceForGroups] = useState<Service | null>(null)
+  const [newGroup, setNewGroup] = useState({ name: '', description: '', color: '#3B82F6' })
 
   useEffect(() => {
     console.log('[Services] Component mounted')
@@ -483,14 +485,18 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
   }
 
   const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) {
+    if (!newGroup.name.trim()) {
       setError('Group name is required')
       return
     }
 
     try {
-      await groupApi.create({ name: newGroupName, description: '', color: '#3B82F6' })
-      setNewGroupName('')
+      await groupApi.create({
+        name: newGroup.name,
+        description: newGroup.description,
+        color: newGroup.color
+      })
+      setNewGroup({ name: '', description: '', color: '#3B82F6' })
       await fetchGroups()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create group')
@@ -513,6 +519,20 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
       await fetchServices()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete group')
+    }
+  }
+
+  const handleToggleServiceGroup = async (groupId: string, serviceId: string, isCurrentlyIn: boolean) => {
+    try {
+      if (isCurrentlyIn) {
+        await groupApi.removeService(groupId, serviceId)
+      } else {
+        await groupApi.addService(groupId, serviceId)
+      }
+      await fetchGroups()
+      await fetchServices()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update service group')
     }
   }
 
@@ -742,6 +762,17 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
                     <span className="terminal-icon">&gt;_</span>
                   </button>
                   <button
+                    className="btn-tags"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedServiceForGroups(service)
+                      setShowAssignGroupModal(true)
+                    }}
+                    title="Assign to groups"
+                  >
+                    🏷️
+                  </button>
+                  <button
                     className="btn-secondary"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -850,41 +881,145 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Manage Service Groups</h3>
 
+            {/* Create New Group */}
             <div className="group-form">
-              <input
-                type="text"
-                placeholder="New group name"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-              />
+              <h4>Create New Group</h4>
+              <div className="group-form-field">
+                <label>Group Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Backend Services"
+                  value={newGroup.name}
+                  onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                />
+              </div>
+              <div className="group-form-field">
+                <label>Description</label>
+                <input
+                  type="text"
+                  placeholder="Optional description"
+                  value={newGroup.description}
+                  onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                />
+              </div>
+              <div className="group-form-field">
+                <label>Color</label>
+                <input
+                  type="color"
+                  value={newGroup.color}
+                  onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
+                />
+              </div>
               <button className="btn-primary" onClick={handleCreateGroup}>
                 Create Group
               </button>
             </div>
 
+            {/* Existing Groups */}
             <div className="groups-list">
+              <h4>Existing Groups ({groups.length})</h4>
               {groups.length === 0 ? (
-                <p>No groups yet</p>
+                <p className="groups-list-empty">No groups created yet</p>
               ) : (
-                groups.map(group => (
-                  <div key={group.id} className="group-item">
-                    <div>
-                      <strong>{group.name}</strong>
-                      <span className="group-count"> ({group.serviceIds.length} services)</span>
+                <div className="groups-list-items">
+                  {groups.map(group => (
+                    <div key={group.id} className="group-item">
+                      <div className="group-item-info">
+                        <div
+                          className="group-color-indicator"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
+                        />
+                        <div className="group-item-details">
+                          <div className="group-item-name">{group.name}</div>
+                          {group.description && (
+                            <div className="group-item-description">{group.description}</div>
+                          )}
+                          <div className="group-item-count">
+                            {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        className="btn-danger-small"
+                        onClick={() => handleDeleteGroup(group.id)}
+                      >
+                        Delete
+                      </button>
                     </div>
-                    <button
-                      className="btn-danger-small"
-                      onClick={() => handleDeleteGroup(group.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
 
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShowGroupsModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Groups Modal */}
+      {showAssignGroupModal && selectedServiceForGroups && (
+        <div className="modal-overlay" onClick={() => {
+          setShowAssignGroupModal(false)
+          setSelectedServiceForGroups(null)
+        }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Assign to Groups</h3>
+
+            <p className="assign-groups-modal-subtitle">
+              Service: <strong>{selectedServiceForGroups.name}</strong>
+            </p>
+
+            {groups.length === 0 ? (
+              <div className="assign-groups-empty">
+                <p>No groups available</p>
+                <button
+                  onClick={() => {
+                    setShowAssignGroupModal(false)
+                    setShowGroupsModal(true)
+                  }}
+                  className="btn-secondary"
+                >
+                  Create a group first
+                </button>
+              </div>
+            ) : (
+              <div className="assign-groups-list">
+                {groups.map(group => {
+                  const isInGroup = group.serviceIds.includes(selectedServiceForGroups.id)
+                  return (
+                    <button
+                      key={group.id}
+                      onClick={() => handleToggleServiceGroup(group.id, selectedServiceForGroups.id, isInGroup)}
+                      className={`assign-group-button ${isInGroup ? 'selected' : ''}`}
+                    >
+                      <div className="assign-group-button-content">
+                        <div
+                          className="group-color-indicator"
+                          style={{ backgroundColor: group.color || '#3B82F6' }}
+                        />
+                        <span className="assign-group-button-name">{group.name}</span>
+                      </div>
+                      {isInGroup && (
+                        <span className="assign-group-checkmark">✓</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowAssignGroupModal(false)
+                  setSelectedServiceForGroups(null)
+                }}
+              >
                 Close
               </button>
             </div>
