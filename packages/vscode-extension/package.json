@@ -316,6 +316,12 @@
     "simple-git": "^3.21.0",
     "tree-kill": "^1.2.2"
   },
+  "bundledDependencies": [
+    "better-sqlite3",
+    "dockerode",
+    "simple-git",
+    "tree-kill"
+  ],
   "devDependencies": {
     "@devhub/core": "^2.0.0",
     "@types/node": "^20.0.0",
