@@ -4,7 +4,7 @@
 
 DevHub is a powerful desktop application that helps developers manage their local microservices ecosystem. It combines git repository management, intelligent service orchestration, Docker management, environment configuration, and documentation in one unified interface.
 
-**✅ v2.0 Production Ready!** Advanced orchestration features: health checks, log persistence, and service groups for professional microservices management.
+**✅ v2.0 Production Ready!** Advanced orchestration features: service groups, database management, and edit service functionality for professional microservices management.
 
 **🏗️ Dual-Version Architecture:** DevHub now supports both web app and VSCode extension versions using a shared core package, enabling code reuse and maintainable dual deployments.
 
@@ -46,13 +46,19 @@ Open **http://localhost:3000** in your browser.
 3. Reload VSCode
 
 **Features:**
+- **24 commands** via command palette
+- **6 tree views** with inline actions (Dashboard, Services, Docker, Environment, Workspaces, Notes)
+- **6 webview tabs** matching web app functionality
 - Service management from tree view with inline start/stop
-- Real-time logs viewer with filtering
+- **Edit services** inline with pencil button
+- Real-time logs viewer with auto-refresh
 - Docker integration (build, manage containers)
 - Environment profiles with AES-256 encryption
 - Workspace snapshots (capture and restore state)
+- **Auto-create workspace** when scanning repositories
+- **Import services** from scanned repositories
 - Wiki/Notes with markdown and [[bidirectional linking]]
-- Command palette integration (10+ commands)
+- **VSCode 1.108** (Electron 35) support
 
 See `packages/vscode-extension/README.md` for detailed documentation.
 
@@ -96,9 +102,9 @@ DevHub solves the chaos of managing multiple microservices locally:
 
 ### Advanced Orchestration (v2.0)
 
-- **Health Checks**: HTTP/TCP/Command monitoring with automatic status updates
-- **Log Persistence**: Historical log analysis with session tracking across service restarts
-- **Service Groups**: Organize services into logical groups for batch operations
+- **Service Groups**: Organize services into logical groups with custom colors for visual organization
+- **Database Management**: Backup, restore, vacuum, and maintenance operations
+- **Edit Services**: Update service configuration inline without recreating
 
 **Performance**: Handles 40+ repos in seconds with 97% fewer API calls
 
@@ -422,14 +428,15 @@ devhub/
 
 ### Sidebar Navigation
 
-6 main sections:
+7 main sections:
 
 1. **Dashboard** - Repository scanner with workspace integration
-2. **Services** - Service manager with logs and search
+2. **Services** - Service manager with logs, search, and groups
 3. **Workspaces** - Hierarchical workspace → snapshots management
 4. **Docker** - Container and image management
 5. **Environment** - Environment variables with encryption
 6. **Wiki** - Documentation and notes system
+7. **Database** - Backup, restore, and maintenance
 
 ---
 
@@ -521,7 +528,7 @@ npm install
 - `GET /api/notes/search/:query` - Full-text search
 - `GET /api/notes/:id/links` - Get linked notes
 
-**Total: 63 API endpoints** (including batch processing for performance)
+**Total: 70+ API endpoints** (including batch processing for performance)
 
 ---
 
@@ -540,16 +547,20 @@ npm install
 - Hierarchical workspace management with full resource scoping
 
 **v2.0 Advanced Orchestration:**
-- Health checks (HTTP/TCP/Command monitoring)
-- Log persistence (session-based historical analysis)
-- Service groups (batch operations)
+- Service groups (organize and batch operations)
+- Database management (backup, restore, maintenance)
+- Edit service functionality
 
 **VSCode Extension (v2.0):**
 - ✅ Complete implementation (all 5 phases)
-- ✅ Tree views (Services, Workspaces)
+- ✅ 6 tree views (Dashboard, Services, Docker, Environment, Workspaces, Notes)
 - ✅ React webview UI (6 tabs)
-- ✅ Command palette integration (10+ commands)
-- ✅ esbuild bundling (16.26 MB .vsix)
+- ✅ 24 commands via command palette
+- ✅ Edit services inline with pencil button
+- ✅ Auto-create workspace when scanning repositories
+- ✅ Import services from scanned repositories
+- ✅ esbuild bundling (~16 MB .vsix)
+- ✅ VSCode 1.108 (Electron 35) support
 - ✅ Production ready
 
 ### 📅 Future Enhancements
