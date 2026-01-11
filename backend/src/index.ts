@@ -7,8 +7,6 @@ import dockerRoutes from './routes/docker'
 import envRoutes from './routes/env'
 import workspaceRoutes from './routes/workspaces'
 import notesRoutes from './routes/notes'
-import healthCheckRoutes from './routes/healthChecks'
-import logRoutes from './routes/logs'
 import groupRoutes from './routes/groups'
 import databaseRoutes from './routes/database'
 // Initialize database from core package
@@ -30,8 +28,6 @@ app.use('/api/docker', dockerRoutes)
 app.use('/api/env', envRoutes)
 app.use('/api/workspaces', workspaceRoutes)
 app.use('/api/notes', notesRoutes)
-app.use('/api/health-checks', healthCheckRoutes)
-app.use('/api/logs', logRoutes)
 app.use('/api/groups', groupRoutes)
 app.use('/api/database', databaseRoutes)
 
