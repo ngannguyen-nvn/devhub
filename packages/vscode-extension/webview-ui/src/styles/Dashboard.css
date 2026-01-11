@@ -169,8 +169,29 @@
 
 .scanner-controls {
   display: flex;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+
+.scanner-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  margin-bottom: 16px;
+}
+
+.scanner-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.scanner-option span {
+  user-select: none;
 }
 
 .repo-actions {

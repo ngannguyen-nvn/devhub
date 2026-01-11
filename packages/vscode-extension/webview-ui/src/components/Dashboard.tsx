@@ -8,7 +8,7 @@
  * - Quick snapshot creation
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { repoApi, serviceApi, workspaceApi, vscode } from '../messaging/vscodeApi'
 import '../styles/Dashboard.css'
 
@@ -63,7 +63,8 @@ export default function Dashboard() {
   // Map of repo path -> Set of selected env files
   const [selectedEnvFiles, setSelectedEnvFiles] = useState<Map<string, Set<string>>>(new Map())
 
-  const scanPathInputRef = useRef<HTMLInputElement>(null)
+  // Scan options
+  const [createWorkspaceOnScan, setCreateWorkspaceOnScan] = useState(true)
 
   useEffect(() => {
     fetchDashboardData()
@@ -226,6 +227,29 @@ export default function Dashboard() {
       const selectedRepoPaths = Array.from(selectedRepos)
       const selectedRepoObjects = repos.filter(r => selectedRepoPaths.includes(r.path))
 
+      // Create new workspace if option is checked
+      if (createWorkspaceOnScan) {
+        // Find common parent folder for workspace name
+        const firstRepoPath = selectedRepoPaths[0]
+        const parentFolder = firstRepoPath.split('/').slice(0, -1).pop() || 'New Workspace'
+        const workspaceName = `${parentFolder} - ${new Date().toLocaleDateString()}`
+
+        const newWorkspace = await workspaceApi.create({
+          name: workspaceName,
+          description: `Auto-created from scan with ${selectedRepoPaths.length} repositories`,
+          folderPath: firstRepoPath.split('/').slice(0, -1).join('/')
+        })
+
+        // Activate the new workspace
+        await workspaceApi.setActive(newWorkspace.id)
+
+        // Refresh workspaces tree view
+        vscode.postMessage({ type: 'refreshWorkspacesTree' })
+
+        // Dispatch workspace changed event for other components
+        window.dispatchEvent(new CustomEvent('workspace-changed'))
+      }
+
       // Batch analyze repos
       const analyses = await repoApi.analyzeBatch(selectedRepoPaths)
 
@@ -377,6 +401,15 @@ export default function Dashboard() {
             {repos.length > 0 ? `${repos.length} repositories found` : 'No repositories scanned yet'}
           </span>
         </div>
+
+        <label className="scanner-option">
+          <input
+            type="checkbox"
+            checked={createWorkspaceOnScan}
+            onChange={(e) => setCreateWorkspaceOnScan(e.target.checked)}
+          />
+          <span>Automatically create new workspace for this scan</span>
+        </label>
 
         {error && (
           <div className="error-banner">

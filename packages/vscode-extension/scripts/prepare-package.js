@@ -57,6 +57,41 @@ if (fs.existsSync(buildDir)) {
   console.log('Removed existing build/Release directory');
 }
 
+// Patch database.js to use custom loader that checks prebuilds first
+// This ensures the correct binary is loaded based on NODE_MODULE_VERSION
+console.log('Patching better-sqlite3 to use prebuilds-first loader...');
+const databaseJsPath = path.join(betterSqliteDest, 'lib', 'database.js');
+let databaseJs = fs.readFileSync(databaseJsPath, 'utf-8');
+
+// Replace the require('bindings') call with our custom loader
+const bindingsPattern = /addon = DEFAULT_ADDON \|\| \(DEFAULT_ADDON = require\('bindings'\)\('better_sqlite3\.node'\)\);/;
+const customLoader = `addon = DEFAULT_ADDON || (DEFAULT_ADDON = (function() {
+      // Custom loader: check prebuilds first based on NODE_MODULE_VERSION
+      const nodeModuleVersion = process.versions.modules;
+      const platform = process.platform;
+      const arch = process.arch;
+      const prebuildPath = require('path').join(
+        __dirname, '..', 'prebuilds',
+        (typeof process.versions.electron !== 'undefined' ? 'electron-v' : 'node-v') + nodeModuleVersion,
+        platform, arch, 'better_sqlite3.node'
+      );
+      try {
+        if (require('fs').existsSync(prebuildPath)) {
+          return require(prebuildPath);
+        }
+      } catch (e) { /* fall through to bindings */ }
+      // Fallback to bindings (for dev mode)
+      return require('bindings')('better_sqlite3.node');
+    })());`;
+
+if (bindingsPattern.test(databaseJs)) {
+  databaseJs = databaseJs.replace(bindingsPattern, customLoader);
+  fs.writeFileSync(databaseJsPath, databaseJs);
+  console.log('✓ Patched database.js to use prebuilds-first loader');
+} else {
+  console.warn('⚠ Could not find bindings pattern in database.js - loader not patched');
+}
+
 // Note: We don't create build/Release for platform-specific builds
 // better-sqlite3 will automatically load from prebuilds/ directory
 // Only create build/Release if doing a local dev build (SKIP_PREBUILD_DOWNLOAD)
