@@ -6,13 +6,14 @@ DevHub brings powerful developer productivity tools into your VSCode workspace, 
 
 ## ⚠️ Important: Native Dependencies
 
-DevHub uses `better-sqlite3`, which requires native binaries compiled for specific platforms and Node.js versions.
+DevHub uses `better-sqlite3`, which requires native binaries compiled for specific platforms and Node.js/Electron versions.
 
 ### Packaging Commands
 
 **For local development/testing:**
 ```bash
-npm run package:dev  # Uses your locally built binary (4 MB)
+npm run package      # Universal package (current platform)
+npm run reinstall    # Package and reinstall extension
 ```
 
 **For distribution (platform-specific):**
@@ -20,7 +21,8 @@ npm run package:dev  # Uses your locally built binary (4 MB)
 npm run package:linux-x64      # Linux x64
 npm run package:darwin-x64     # macOS Intel
 npm run package:darwin-arm64   # macOS Apple Silicon
-npm run package:win32-x64      # Windows
+npm run package:win32-x64      # Windows x64
+npm run package:win32-arm64    # Windows ARM64
 npm run package:all            # All platforms
 ```
 
@@ -30,10 +32,11 @@ npm run package:all            # All platforms
 
 ### 🚀 Service Management
 - **Start/Stop services** with one click from the tree view
-- **Real-time logs** viewer with filtering
+- **Real-time logs** viewer with auto-refresh
 - **Auto-refresh** status indicators (running/stopped)
-- **Service groups** for batch operations
-- **Health checks** with HTTP/TCP/Command monitoring
+- **Service groups** for organization and batch operations
+- **Edit services** inline with pencil button
+- **Import from workspace** - scan repos and auto-create services
 
 ### 🐳 Docker Integration
 - Build Docker images from Dockerfiles
@@ -52,6 +55,7 @@ npm run package:all            # All platforms
 ### 💾 Workspace Snapshots
 - **Capture workspace state** (running services, git branches)
 - **Restore snapshots** to recreate environment
+- **Auto-create workspace** option when scanning repositories
 - Hierarchical workspace organization
 - Quick snapshot creation from command palette
 
@@ -63,8 +67,12 @@ npm run package:all            # All platforms
 - Category and tag organization
 
 ### 📊 Tree Views
+- **Dashboard** - Quick overview and stats
 - **Services tree** with inline start/stop buttons
+- **Docker** - Images and containers
+- **Environment** - Profiles and variables
 - **Workspaces tree** showing snapshots hierarchy
+- **Notes** - Documentation browser
 - Context menus for quick actions
 - Status indicators and tooltips
 
@@ -88,6 +96,11 @@ Search for "DevHub" in the VSCode Extensions marketplace.
 4. Click `...` → Install from VSIX
 5. Select the downloaded file
 
+Or via command line:
+```bash
+code --install-extension devhub-2.0.0.vsix --force
+```
+
 ## 🚀 Quick Start
 
 1. **Open DevHub Dashboard:**
@@ -98,25 +111,41 @@ Search for "DevHub" in the VSCode Extensions marketplace.
    - Click DevHub icon in Activity Bar (left sidebar)
    - Explore Services and Workspaces tree views
 
-3. **Create a Service:**
+3. **Scan & Import Repositories:**
    - Open Dashboard
-   - Go to Services tab
+   - Click "Scan Workspace" to find git repositories
+   - Select repositories and click "Import Selected"
+   - Services are automatically created with detected settings
+
+4. **Create a Service Manually:**
+   - Open Dashboard → Services tab
    - Click "Add Service"
-   - Fill in details (name, repo path, command)
+   - Fill in details (name, repo path, command, port)
 
 ## ⌨️ Commands
 
 All commands available via Command Palette (`Cmd/Ctrl + Shift + P`):
 
-- `DevHub: Open Dashboard` - Open main webview panel
-- `DevHub: Scan Workspace for Repositories` - Scan for git repos
-- `DevHub: Create Quick Snapshot` - Capture current state
-- `DevHub: Start Service` - Start a service
-- `DevHub: Stop Service` - Stop a service
+| Command | Description |
+|---------|-------------|
+| `DevHub: Open Dashboard` | Open main webview panel |
+| `DevHub: Scan Workspace for Repositories` | Scan for git repos |
+| `DevHub: Create Quick Snapshot` | Capture current workspace state |
+| `DevHub: Start Service` | Start a service |
+| `DevHub: Stop Service` | Stop a service |
+| `DevHub: Show Dashboard` | Switch to Dashboard tab |
+| `DevHub: Show Docker` | Switch to Docker tab |
+| `DevHub: Show Environment` | Switch to Environment tab |
+| `DevHub: Show Notes` | Switch to Notes tab |
+
+**Tree View Actions:**
+- `Activate Workspace` - Set workspace as active
+- `Restore Snapshot Options` - Restore a saved snapshot
+- `Copy Variable` / `Edit Variable` / `Delete Variable` - Environment variable actions
 
 ## 🔧 Requirements
 
-- **VSCode:** 1.85.0 or higher
+- **VSCode:** 1.85.0 or higher (tested up to 1.108)
 - **Node.js:** 16+ (for running services)
 - **Docker:** Optional (for Docker features)
 - **Git:** Optional (for repository scanning)
@@ -125,23 +154,26 @@ All commands available via Command Palette (`Cmd/Ctrl + Shift + P`):
 
 This extension contributes the following settings:
 
-- `devhub.autoStartServices` - Automatically start services when workspace opens
-- `devhub.scanDepth` - Maximum depth for repository scanning (0-5)
-- `devhub.logRetentionDays` - Number of days to keep service logs
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `devhub.autoStartServices` | `false` | Automatically start services when workspace opens |
+| `devhub.scanDepth` | `3` | Maximum depth for repository scanning (0-5) |
+| `devhub.logRetentionDays` | `7` | Number of days to keep service logs |
 
 ## 🏗️ Architecture
 
 DevHub uses a shared core architecture:
-- **@devhub/core** - Business logic (bundled in extension)
-- **SQLite database** - Local data storage
+- **@devhub/core** - Business logic, database operations, service managers
+- **SQLite database** - Local data storage with migrations
 - **React webview** - Modern UI with VSCode theming
-- **Message passing** - Secure extension ↔ webview communication
+- **Message passing** - Secure extension ↔ webview communication (40+ message types)
+- **esbuild** - Fast bundling for extension code
 
 ## 🤝 Contributing
 
 Contributions are welcome! See the [main repository](https://github.com/ngannguyen-nvn/devhub) for:
 - Development setup
-- Architecture documentation
+- Architecture documentation (CLAUDE.md)
 - Contribution guidelines
 
 ## 📄 License
@@ -153,17 +185,21 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ### Building from Source
 
 ```bash
-# Install dependencies
+# Install dependencies (from repo root)
 npm install
 
 # Build webview UI
+cd packages/vscode-extension
 npm run build:webview
 
 # Build extension
 npm run build:extension
 
 # Package extension
-npx vsce package
+npm run package
+
+# Package and reinstall (for testing)
+npm run reinstall
 ```
 
 ### Testing
@@ -175,19 +211,24 @@ npx vsce package
 
 **Method 2: Install VSIX**
 ```bash
-code --install-extension devhub-2.0.0.vsix
+code --install-extension devhub-2.0.0.vsix --force
 ```
 
 ### Database Location
 
-VSCode Extension:
+**macOS/Linux:**
+```
+~/.vscode/extensions/devhub.devhub-2.0.0/devhub.db
+```
+
+**VSCode Server (Remote):**
 ```
 ~/.vscode-server/data/User/globalStorage/devhub.devhub/devhub.db
 ```
 
 Access with sqlite3:
 ```bash
-sqlite3 ~/.vscode-server/data/User/globalStorage/devhub.devhub/devhub.db
+sqlite3 ~/.vscode/extensions/devhub.devhub-2.0.0/devhub.db
 ```
 
 ## 🐛 Issues & Support
@@ -197,23 +238,28 @@ sqlite3 ~/.vscode-server/data/User/globalStorage/devhub.devhub/devhub.db
 
 ## 📊 Stats
 
-- **Extension size:** 16.26 MB (includes all native dependencies)
-- **Bundled code:** 798 KB (extension.js)
-- **Webview UI:** 220 KB
-- **Commands:** 10+
-- **Tree views:** 2 (Services, Workspaces)
-- **Webview tabs:** 6 (Dashboard, Services, Docker, Environment, Workspaces, Notes)
+| Metric | Value |
+|--------|-------|
+| Extension size | ~16 MB (includes native dependencies) |
+| Bundled code | ~700 KB (extension.js) |
+| Webview UI | ~290 KB |
+| Commands | 24 |
+| Tree views | 6 (Dashboard, Services, Docker, Environment, Workspaces, Notes) |
+| Webview tabs | 6 (Dashboard, Services, Docker, Environment, Workspaces, Notes) |
+| Message types | 40+ |
 
 ## 🎉 What's New in v2.0.0
 
 - ✅ Complete VSCode extension implementation
-- ✅ Tree views with inline actions
+- ✅ 6 tree views with inline actions
 - ✅ Context menus for quick operations
 - ✅ esbuild bundling for fast loading
 - ✅ Full feature parity with web version
-- ✅ Service health checks and monitoring
-- ✅ Log persistence and filtering
-- ✅ Service groups for batch operations
+- ✅ Service groups for organization and filtering
+- ✅ Edit service functionality
+- ✅ Auto-create workspace on repository scan
+- ✅ Import services from scanned repositories
+- ✅ VSCode 1.108 (Electron 35) support
 
 ---
 
