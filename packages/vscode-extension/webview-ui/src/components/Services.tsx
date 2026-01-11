@@ -89,6 +89,16 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
   const [selectedServiceForGroups, setSelectedServiceForGroups] = useState<Service | null>(null)
   const [newGroup, setNewGroup] = useState({ name: '', description: '', color: '#3B82F6' })
 
+  // Edit service state
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingService, setEditingService] = useState<Service | null>(null)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    repoPath: '',
+    command: '',
+    port: ''
+  })
+
   useEffect(() => {
     console.log('[Services] Component mounted')
     fetchServices()
@@ -536,6 +546,38 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
     }
   }
 
+  const openEditModal = (service: Service) => {
+    setEditingService(service)
+    setEditForm({
+      name: service.name,
+      repoPath: service.repoPath,
+      command: service.command,
+      port: service.port?.toString() || ''
+    })
+    setShowEditModal(true)
+  }
+
+  const handleEditService = async () => {
+    if (!editingService) return
+    setLoading(true)
+    try {
+      await serviceApi.update(editingService.id, {
+        name: editForm.name,
+        repoPath: editForm.repoPath,
+        command: editForm.command,
+        port: editForm.port ? parseInt(editForm.port) : undefined
+      })
+      setShowEditModal(false)
+      setEditingService(null)
+      setEditForm({ name: '', repoPath: '', command: '', port: '' })
+      await fetchServices()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update service')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Filter services
   const filteredServices = services.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -771,6 +813,16 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
                     title="Assign to groups"
                   >
                     🏷️
+                  </button>
+                  <button
+                    className="btn-edit"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openEditModal(service)
+                    }}
+                    title="Edit service"
+                  >
+                    ✏️
                   </button>
                   <button
                     className="btn-secondary"
@@ -1056,6 +1108,77 @@ export default function Services({ initialSelectedServiceId }: ServicesProps) {
                 Confirm
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Service Modal */}
+      {showEditModal && editingService && (
+        <div className="modal-overlay" onClick={() => {
+          setShowEditModal(false)
+          setEditingService(null)
+        }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Service</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              handleEditService()
+            }}>
+              <div className="form-group">
+                <label>Service Name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  placeholder="e.g., API Server"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Repository Path</label>
+                <input
+                  type="text"
+                  value={editForm.repoPath}
+                  onChange={(e) => setEditForm({ ...editForm, repoPath: e.target.value })}
+                  placeholder="/path/to/repo"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Start Command</label>
+                <input
+                  type="text"
+                  value={editForm.command}
+                  onChange={(e) => setEditForm({ ...editForm, command: e.target.value })}
+                  placeholder="npm start"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Port (optional)</label>
+                <input
+                  type="number"
+                  value={editForm.port}
+                  onChange={(e) => setEditForm({ ...editForm, port: e.target.value })}
+                  placeholder="3000"
+                />
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditingService(null)
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

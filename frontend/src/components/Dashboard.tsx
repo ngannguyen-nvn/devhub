@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import UncommittedChangesDialog from './UncommittedChangesDialog'
+import { EmptyState } from './ui/EmptyState'
 
 interface DashboardProps {
   onViewChange: (view: 'dashboard' | 'services' | 'workspaces' | 'docker' | 'env' | 'wiki') => void
@@ -785,24 +786,16 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
           )}
         </>
       ) : (
-        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="text-yellow-600 mt-1" size={24} />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Workspace</h3>
-              <p className="text-gray-700 mb-4">
-                Create or activate a workspace to get started with DevHub.
-              </p>
-              <button
-                onClick={() => onViewChange('workspaces')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                data-testid="dashboard-go-to-workspaces-button"
-              >
-                Go to Workspaces
-              </button>
-            </div>
-          </div>
-        </div>
+        <EmptyState
+          icon={<AlertCircle size={48} className="text-amber-500" />}
+          title="No Active Workspace"
+          description="Create or activate a workspace to get started with DevHub."
+          action={{
+            label: 'Go to Workspaces',
+            onClick: () => onViewChange('workspaces'),
+          }}
+          className="mb-6"
+        />
       )}
 
       {/* Repository Scanner Section - Always Visible */}
@@ -946,10 +939,11 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
           )}
 
           {repos.length === 0 && !loading && (
-            <div className="text-center py-16 text-gray-500">
-              <Folder size={48} className="mx-auto mb-4 text-gray-400" />
-              <p>No repositories found. Try scanning a different path.</p>
-            </div>
+            <EmptyState
+              icon={<Folder size={48} className="text-gray-400" />}
+              title="No repositories found"
+              description="Try scanning a different path."
+            />
           )}
         </div>
       </div>

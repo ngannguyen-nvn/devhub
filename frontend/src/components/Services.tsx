@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Play, Square, Trash2, Plus, Terminal, RefreshCw, AlertCircle, FolderInput, CheckSquare, Square as SquareIcon, Search, Tags, X } from 'lucide-react'
+import { Play, Square, Trash2, Plus, Terminal, RefreshCw, FolderInput, CheckSquare, Square as SquareIcon, Search, Tags, AlertCircle, Pencil } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { SkeletonLoader } from './Loading'
 import ConfirmDialog from './ConfirmDialog'
 import { useWorkspace } from '../contexts/WorkspaceContext'
+import { ServiceStatusBadge } from './ui/StatusBadge'
+import { EmptyState, EmptyServices } from './ui/EmptyState'
+import { Button, IconButton } from './ui/Button'
+import { Modal } from './ui/Modal'
+
+declare module 'react' {
+  interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
+    webkitdirectory?: string
+    directory?: string
+  }
+}
 
 interface Service {
   id: string
@@ -67,6 +78,16 @@ export default function Services() {
   const [showAssignGroupModal, setShowAssignGroupModal] = useState(false)
   const [selectedServiceForGroups, setSelectedServiceForGroups] = useState<Service | null>(null)
   const [newGroup, setNewGroup] = useState({ name: '', description: '', color: '#3B82F6' })
+
+  // Edit service state
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingService, setEditingService] = useState<Service | null>(null)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    repoPath: '',
+    command: '',
+    port: '',
+  })
 
   const fetchServices = async () => {
     if (!activeWorkspace) {
@@ -230,6 +251,38 @@ export default function Services() {
     } catch (error) {
       console.error('Error adding service:', error)
       toast.error('Failed to add service')
+    }
+  }
+
+  const openEditModal = (service: Service) => {
+    setEditingService(service)
+    setEditForm({
+      name: service.name,
+      repoPath: service.repoPath,
+      command: service.command,
+      port: service.port?.toString() || '',
+    })
+    setShowEditModal(true)
+  }
+
+  const handleEditService = async () => {
+    if (!editingService) return
+
+    try {
+      await axios.put(`/api/services/${editingService.id}`, {
+        name: editForm.name,
+        repoPath: editForm.repoPath,
+        command: editForm.command,
+        port: editForm.port ? parseInt(editForm.port) : undefined,
+      })
+      setShowEditModal(false)
+      setEditingService(null)
+      setEditForm({ name: '', repoPath: '', command: '', port: '' })
+      fetchServices()
+      toast.success(`Service "${editForm.name}" updated successfully`)
+    } catch (error) {
+      console.error('Error updating service:', error)
+      toast.error('Failed to update service')
     }
   }
 
@@ -480,13 +533,12 @@ export default function Services() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* No Workspace Warning */}
       {!activeWorkspace && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
             <div>
-              <p className="text-sm text-yellow-700">
+              <p className="text-sm text-amber-800">
                 <strong className="font-medium">No active workspace.</strong> Please create or activate a workspace to manage services.
               </p>
             </div>
@@ -494,25 +546,25 @@ export default function Services() {
         </div>
       )}
 
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Service Manager</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Service Manager</h1>
+          <p className="text-gray-600 text-sm">
             Start, stop, and monitor your services
-            {activeWorkspace && <span className="text-blue-600 font-medium"> in {activeWorkspace.name}</span>}
+            {activeWorkspace && <span className="text-blue-600 font-medium ml-1">in {activeWorkspace.name}</span>}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
             onClick={fetchServices}
             disabled={loading}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-            data-testid="service-refresh-button"
+            icon={<RefreshCw size={16} className={loading ? 'animate-spin' : ''} />}
           >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             Refresh
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => {
               const filtered = services.filter(service => {
                 if (selectedGroup !== 'all' && !service.tags?.includes(selectedGroup)) {
@@ -536,239 +588,232 @@ export default function Services() {
               }
             }}
             disabled={!activeWorkspace}
-            className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            data-testid="service-stop-all-button"
+            icon={<Square size={16} />}
           >
-            <Square size={18} />
             Stop All
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => setShowGroupsModal(true)}
             disabled={!activeWorkspace}
-            className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            icon={<Tags size={16} />}
           >
-            <Tags size={18} />
-            Manage Groups
-          </button>
-          <button
+            Groups
+          </Button>
+          <Button
+            variant="outline"
             onClick={openImportModal}
             disabled={!activeWorkspace}
-            className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            data-testid="service-import-button"
+            icon={<FolderInput size={16} />}
           >
-            <FolderInput size={18} />
-            Import from Workspace
-          </button>
-          <button
+            Import
+          </Button>
+          <Button
             onClick={() => setShowAddForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            data-testid="service-add-button"
+            icon={<Plus size={16} />}
           >
-            <Plus size={18} />
             Add Service
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Add Service Modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md" data-testid="service-create-form">
-            <h2 className="text-xl font-bold mb-4">Add New Service</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Service Name
-                </label>
-                <input
-                  type="text"
-                  value={newService.name}
-                  onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                  placeholder="e.g., Auth Service"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="service-name-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Repository Path
-                </label>
-                <input
-                  type="text"
-                  value={newService.repoPath}
-                  onChange={(e) => setNewService({ ...newService, repoPath: e.target.value })}
-                  placeholder="/home/user/my-service"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="service-repoPath-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Command
-                </label>
-                <input
-                  type="text"
-                  value={newService.command}
-                  onChange={(e) => setNewService({ ...newService, command: e.target.value })}
-                  placeholder="npm start"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="service-command-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Port (optional)
-                </label>
-                <input
-                  type="number"
-                  value={newService.port}
-                  onChange={(e) => setNewService({ ...newService, port: e.target.value })}
-                  placeholder="3000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="service-port-input"
-                />
-              </div>
+      <Modal
+        isOpen={showAddForm}
+        onClose={() => setShowAddForm(false)}
+        title="Add New Service"
+        size="md"
+      >
+        <div className="p-6" data-testid="service-create-form">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Service Name
+              </label>
+              <input
+                type="text"
+                value={newService.name}
+                onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                placeholder="e.g., Auth Service"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-name-input"
+              />
             </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                data-testid="service-cancel-button"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddService}
-                disabled={!newService.name || !newService.repoPath || !newService.command}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                data-testid="service-create-button"
-              >
-                Add Service
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Repository Path
+              </label>
+              <input
+                type="text"
+                value={newService.repoPath}
+                onChange={(e) => setNewService({ ...newService, repoPath: e.target.value })}
+                placeholder="/home/user/my-service"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-repoPath-input"
+              />
+              <p className="text-xs text-gray-500 mt-1">Enter the absolute path to your service directory</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Start Command
+              </label>
+              <input
+                type="text"
+                value={newService.command}
+                onChange={(e) => setNewService({ ...newService, command: e.target.value })}
+                placeholder="npm start"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-command-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Port (optional)
+              </label>
+              <input
+                type="number"
+                value={newService.port}
+                onChange={(e) => setNewService({ ...newService, port: e.target.value })}
+                placeholder="3000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-port-input"
+              />
             </div>
           </div>
+          <div className="mt-6 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddForm(false)}
+              className="flex-1"
+              data-testid="service-cancel-button"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddService}
+              disabled={!newService.name || !newService.repoPath || !newService.command}
+              className="flex-1"
+              data-testid="service-create-button"
+            >
+              Add Service
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Import from Workspace Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="service-import-form">
-            <h2 className="text-xl font-bold mb-4">Import Services from Workspace</h2>
-            <p className="text-gray-600 mb-6">
-              Select repositories from <span className="font-medium text-blue-600">{activeWorkspace?.name}</span> to import as services.
-              Service details will be auto-detected from package.json and .env files.
-            </p>
-
-            {workspaceRepos.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <FolderInput size={48} className="mx-auto mb-4 text-gray-400" />
-                <p>No repositories found in this workspace.</p>
-                <p className="text-sm mt-2">Add repositories by creating a snapshot from the Dashboard.</p>
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false)
+          setSelectedRepos(new Set())
+        }}
+        title="Import Services from Workspace"
+        description={`Select repositories from ${activeWorkspace?.name} to import as services. Service details will be auto-detected from package.json and .env files.`}
+        size="lg"
+      >
+        <div className="p-6" data-testid="service-import-form">
+          {workspaceRepos.length === 0 ? (
+            <EmptyState
+              icon={<FolderInput size={48} className="text-gray-400" />}
+              title="No repositories found"
+              description="Add repositories by creating a snapshot from the Dashboard."
+            />
+          ) : (
+            <>
+              <div className="mb-4 flex items-center justify-between">
+                <button
+                  onClick={() => {
+                    if (selectedRepos.size === workspaceRepos.length) {
+                      setSelectedRepos(new Set())
+                    } else {
+                      setSelectedRepos(new Set(workspaceRepos.map(r => r.path)))
+                    }
+                  }}
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2"
+                  data-testid="service-select-all-button"
+                >
+                  {selectedRepos.size === workspaceRepos.length ? (
+                    <>
+                      <CheckSquare size={18} />
+                      Deselect All
+                    </>
+                  ) : (
+                    <>
+                      <SquareIcon size={18} />
+                      Select All
+                    </>
+                  )}
+                </button>
+                <span className="text-sm text-gray-600">
+                  {selectedRepos.size} of {workspaceRepos.length} selected
+                </span>
               </div>
-            ) : (
-              <>
-                <div className="mb-4 flex items-center justify-between">
-                  <button
-                    onClick={() => {
-                      if (selectedRepos.size === workspaceRepos.length) {
-                        setSelectedRepos(new Set())
-                      } else {
-                        setSelectedRepos(new Set(workspaceRepos.map(r => r.path)))
-                      }
-                    }}
-                    className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2"
-                    data-testid="service-select-all-button"
-                  >
-                    {selectedRepos.size === workspaceRepos.length ? (
-                      <>
-                        <CheckSquare size={18} />
-                        Deselect All
-                      </>
-                    ) : (
-                      <>
-                        <SquareIcon size={18} />
-                        Select All
-                      </>
-                    )}
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {selectedRepos.size} of {workspaceRepos.length} selected
-                  </span>
-                </div>
 
-                <div className="space-y-2 mb-6 max-h-96 overflow-y-auto" data-testid="service-import-repo-list">
-                  {workspaceRepos.map((repo) => {
-                    const isSelected = selectedRepos.has(repo.path)
-                    const alreadyExists = services.find(s => s.repoPath === repo.path)
-                    return (
-                      <div
-                        key={repo.path}
-                        onClick={() => toggleRepo(repo.path)}
-                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                          isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                        data-testid={`service-import-repo-${repo.path.replace(/\//g, '-')}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {isSelected ? (
-                            <CheckSquare size={20} className="text-blue-600 flex-shrink-0" />
-                          ) : (
-                            <SquareIcon size={20} className="text-gray-400 flex-shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-gray-900">{repo.name}</p>
-                              {alreadyExists && (
-                                <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
-                                  Already added
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-500 truncate">{repo.path}</p>
+              <div className="space-y-2 mb-6 max-h-96 overflow-y-auto" data-testid="service-import-repo-list">
+                {workspaceRepos.map((repo) => {
+                  const isSelected = selectedRepos.has(repo.path)
+                  const alreadyExists = services.find(s => s.repoPath === repo.path)
+                  return (
+                    <div
+                      key={repo.path}
+                      onClick={() => toggleRepo(repo.path)}
+                      className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                      data-testid={`service-import-repo-${repo.path.replace(/\//g, '-')}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isSelected ? (
+                          <CheckSquare size={20} className="text-blue-600 flex-shrink-0" />
+                        ) : (
+                          <SquareIcon size={20} className="text-gray-400 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{repo.name}</p>
+                            {alreadyExists && (
+                              <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                                Already added
+                              </span>
+                            )}
                           </div>
+                          <p className="text-sm text-gray-500 truncate">{repo.path}</p>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              </>
-            )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowImportModal(false)
-                  setSelectedRepos(new Set())
-                }}
-                disabled={importing}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                data-testid="service-import-cancel-button"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleImportFromWorkspace}
-                disabled={importing || selectedRepos.size === 0}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                data-testid="service-import-confirm-button"
-              >
-                {importing ? (
-                  <>
-                    <RefreshCw size={18} className="animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <FolderInput size={18} />
-                    Import {selectedRepos.size} Service{selectedRepos.size !== 1 ? 's' : ''}
-                  </>
-                )}
-              </button>
-            </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowImportModal(false)
+                setSelectedRepos(new Set())
+              }}
+              disabled={importing}
+              className="flex-1"
+              data-testid="service-import-cancel-button"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImportFromWorkspace}
+              disabled={importing || selectedRepos.size === 0}
+              loading={importing}
+              icon={!importing ? <FolderInput size={18} /> : undefined}
+              className="flex-1"
+              data-testid="service-import-confirm-button"
+            >
+              {importing ? 'Importing...' : `Import ${selectedRepos.size} Service${selectedRepos.size !== 1 ? 's' : ''}`}
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Group Filter Tabs & Search Bar */}
       {services.length > 0 && (
@@ -843,73 +888,34 @@ export default function Services() {
           )}
 
           {services.length === 0 && !loading && (
-            <div className="text-center py-12 text-gray-500">
-              <Terminal size={48} className="mx-auto mb-4 text-gray-400" />
-              <p>No services defined yet</p>
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="mt-4 text-blue-600 hover:underline"
-                data-testid="service-add-first-button"
-              >
-                Add your first service
-              </button>
-            </div>
+            <EmptyServices
+              onAddService={() => setShowAddForm(true)}
+              onImportFromWorkspace={openImportModal}
+            />
           )}
 
           {filteredServices.length === 0 && services.length > 0 && !loading && (
-            <div className="text-center py-12 text-gray-500">
-              <Terminal size={48} className="mx-auto mb-4 text-gray-400" />
-              <p>No services match your search</p>
-              <button
-                onClick={() => setSearchTerm('')}
-                className="mt-4 text-blue-600 hover:underline"
-              >
-                Clear search
-              </button>
-            </div>
+            <EmptyState
+              title="No services match your search"
+              description="Try adjusting your search or filters"
+              action={{ label: 'Clear search', onClick: () => setSearchTerm('') }}
+            />
           )}
 
           {filteredServices.map((service) => {
             const isRunning = service.status === 'running'
-            const isError = service.status === 'error'
 
             return (
               <div
                 key={service.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                 data-testid={`service-item-${service.id}`}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{service.name}</h3>
-                      <span
-                        className={`px-2 py-0.5 text-xs rounded-full ${
-                          isRunning
-                            ? 'bg-green-100 text-green-700'
-                            : isError
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {isRunning ? 'Running' : isError ? 'Error' : 'Stopped'}
-                      </span>
-                      {/* Health Status Badge */}
-                      {isRunning && service.healthStatus && (
-                        <span
-                          className={`text-xs ${
-                            service.healthStatus === 'healthy'
-                              ? '🟢'
-                              : service.healthStatus === 'unhealthy'
-                              ? '🔴'
-                              : '🟡'
-                          }`}
-                          title={`Health: ${service.healthStatus}`}
-                        >
-                          {service.healthStatus === 'healthy' ? '🟢' : service.healthStatus === 'unhealthy' ? '🔴' : '🟡'}
-                        </span>
-                      )}
-                      {/* Tags */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate">{service.name}</h3>
+                      <ServiceStatusBadge status={service.status} healthStatus={service.healthStatus as 'healthy' | 'unhealthy' | 'unknown' | null} />
                       {service.tags && service.tags.length > 0 && (
                         <div className="flex gap-1">
                           {service.tags.slice(0, 2).map((tag, idx) => (
@@ -918,91 +924,105 @@ export default function Services() {
                             </span>
                           ))}
                           {service.tags.length > 2 && (
-                            <span className="px-1.5 py-0.5 bg-gray-50 text-gray-600 text-xs rounded">
+                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
                               +{service.tags.length - 2}
                             </span>
                           )}
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 font-mono">{service.command}</p>
+                    <p className="text-sm text-gray-600 font-mono truncate">{service.command}</p>
                   </div>
                 </div>
 
-                <div className="text-xs text-gray-500 mb-3">
-                  <p className="truncate">{service.repoPath}</p>
-                  {service.port && <p>Port: {service.port}</p>}
-                  {service.pid && <p>PID: {service.pid}</p>}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-3">
+                  <span className="truncate max-w-full">{service.repoPath}</span>
+                  {service.port && <span>Port: {service.port}</span>}
+                  {service.pid && <span>PID: {service.pid}</span>}
                   {!isRunning && service.exitCode !== undefined && (
-                    <p className={service.exitCode === 0 ? 'text-gray-500' : 'text-red-600'}>
-                      Exit code: {service.exitCode}
-                    </p>
+                    <span className={service.exitCode === 0 ? '' : 'text-red-600'}>
+                      Exit: {service.exitCode}
+                    </span>
                   )}
                   {service.stoppedAt && (
-                    <p className="text-gray-500">
-                      Stopped: {new Date(service.stoppedAt).toLocaleTimeString()}
-                    </p>
+                    <span>Stopped: {new Date(service.stoppedAt).toLocaleTimeString()}</span>
                   )}
                 </div>
 
                 <div className="flex gap-2">
                   {isRunning ? (
-                    <button
+                    <Button
+                      variant="danger"
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleStopService(service.id)
                       }}
-                      className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center justify-center gap-2"
+                      className="flex-1"
                       data-testid={`service-stop-button-${service.id}`}
+                      icon={<Square size={14} />}
                     >
-                      <Square size={14} />
                       Stop
-                    </button>
+                    </Button>
                   ) : (
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleStartService(service.id)
                       }}
-                      className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center justify-center gap-2"
+                      className="flex-1"
                       data-testid={`service-start-button-${service.id}`}
+                      icon={<Play size={14} />}
                     >
-                      <Play size={14} />
                       Start
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <IconButton
+                    variant="secondary"
+                    size="md"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleOpenTerminal(service.id)
                     }}
-                    className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-sm hover:bg-blue-100 flex items-center gap-2"
+                    icon={<Terminal size={16} />}
                     title="Open in terminal"
                     data-testid={`service-terminal-button-${service.id}`}
-                  >
-                    <Terminal size={14} />
-                  </button>
-                  <button
+                  />
+                  <IconButton
+                    variant="secondary"
+                    size="md"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openEditModal(service)
+                    }}
+                    icon={<Pencil size={16} />}
+                    title="Edit service"
+                    data-testid={`service-edit-button-${service.id}`}
+                  />
+                  <IconButton
+                    variant="secondary"
+                    size="md"
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedServiceForGroups(service)
                       setShowAssignGroupModal(true)
                     }}
-                    className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded text-sm hover:bg-purple-100 flex items-center gap-2"
+                    icon={<Tags size={16} />}
                     title="Assign to groups"
-                  >
-                    <Tags size={14} />
-                  </button>
-                  <button
+                  />
+                  <IconButton
+                    variant="ghost"
+                    size="md"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteService(service.id)
                     }}
-                    className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 flex items-center gap-2"
+                    icon={<Trash2 size={16} />}
+                    title="Delete"
                     data-testid={`service-delete-button-${service.id}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  />
                 </div>
               </div>
             )
@@ -1106,174 +1126,250 @@ export default function Services() {
       </div>
 
       {/* Manage Groups Modal */}
-      {showGroupsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Manage Groups</h2>
-              <button
-                onClick={() => setShowGroupsModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Create New Group */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold mb-3">Create New Group</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Group Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newGroup.name}
-                    onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
-                    placeholder="e.g., Backend Services"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <input
-                    type="text"
-                    value={newGroup.description}
-                    onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
-                    placeholder="Optional description"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Color
-                  </label>
-                  <input
-                    type="color"
-                    value={newGroup.color}
-                    onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
-                    className="h-10 w-20 rounded cursor-pointer"
-                  />
-                </div>
-                <button
-                  onClick={handleCreateGroup}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                >
-                  Create Group
-                </button>
+      <Modal
+        isOpen={showGroupsModal}
+        onClose={() => setShowGroupsModal(false)}
+        title="Manage Groups"
+        size="lg"
+      >
+        <div className="p-6">
+          {/* Create New Group */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold mb-3">Create New Group</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Group Name *
+                </label>
+                <input
+                  type="text"
+                  value={newGroup.name}
+                  onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                  placeholder="e.g., Backend Services"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
               </div>
-            </div>
-
-            {/* Existing Groups */}
-            <div>
-              <h3 className="font-semibold mb-3">Existing Groups ({groups.length})</h3>
-              {groups.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No groups created yet</p>
-              ) : (
-                <div className="space-y-2">
-                  {groups.map(group => (
-                    <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-4 h-4 rounded"
-                          style={{ backgroundColor: group.color || '#3B82F6' }}
-                        />
-                        <div>
-                          <p className="font-medium">{group.name}</p>
-                          {group.description && (
-                            <p className="text-sm text-gray-500">{group.description}</p>
-                          )}
-                          <p className="text-xs text-gray-400">
-                            {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteGroup(group.id, group.name)}
-                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={newGroup.description}
+                  onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                  placeholder="Optional description"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Color
+                </label>
+                <input
+                  type="color"
+                  value={newGroup.color}
+                  onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
+                  className="h-10 w-20 rounded cursor-pointer"
+                />
+              </div>
+              <Button
+                onClick={handleCreateGroup}
+                fullWidth
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                Create Group
+              </Button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Assign Groups Modal */}
-      {showAssignGroupModal && selectedServiceForGroups && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Assign to Groups</h2>
-              <button
-                onClick={() => {
-                  setShowAssignGroupModal(false)
-                  setSelectedServiceForGroups(null)
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <p className="text-gray-600 mb-4">
-              Service: <span className="font-semibold">{selectedServiceForGroups.name}</span>
-            </p>
-
+          {/* Existing Groups */}
+          <div>
+            <h3 className="font-semibold mb-3">Existing Groups ({groups.length})</h3>
             {groups.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-3">No groups available</p>
-                <button
-                  onClick={() => {
-                    setShowAssignGroupModal(false)
-                    setShowGroupsModal(true)
-                  }}
-                  className="text-purple-600 hover:underline"
-                >
-                  Create a group first
-                </button>
-              </div>
+              <p className="text-gray-500 text-center py-8">No groups created yet</p>
             ) : (
               <div className="space-y-2">
-                {groups.map(group => {
-                  const isInGroup = group.serviceIds.includes(selectedServiceForGroups.id)
-                  return (
-                    <button
-                      key={group.id}
-                      onClick={() => handleToggleServiceGroup(group.id, selectedServiceForGroups.id, isInGroup)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors ${
-                        isInGroup
-                          ? 'border-purple-600 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-4 h-4 rounded"
-                          style={{ backgroundColor: group.color || '#3B82F6' }}
-                        />
-                        <span className="font-medium">{group.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isInGroup && (
-                          <CheckSquare size={20} className="text-purple-600" />
+                {groups.map(group => (
+                  <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: group.color || '#3B82F6' }}
+                      />
+                      <div>
+                        <p className="font-medium">{group.name}</p>
+                        {group.description && (
+                          <p className="text-sm text-gray-500">{group.description}</p>
                         )}
+                        <p className="text-xs text-gray-400">
+                          {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
+                        </p>
                       </div>
-                    </button>
-                  )
-                })}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteGroup(group.id, group.name)}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
-      )}
+      </Modal>
+
+      {/* Assign Groups Modal */}
+      <Modal
+        isOpen={showAssignGroupModal && !!selectedServiceForGroups}
+        onClose={() => {
+          setShowAssignGroupModal(false)
+          setSelectedServiceForGroups(null)
+        }}
+        title="Assign to Groups"
+        description={selectedServiceForGroups ? `Service: ${selectedServiceForGroups.name}` : ''}
+        size="sm"
+      >
+        <div className="p-6">
+          {groups.length === 0 ? (
+            <EmptyState
+              title="No groups available"
+              action={{
+                label: 'Create a group first',
+                onClick: () => {
+                  setShowAssignGroupModal(false)
+                  setShowGroupsModal(true)
+                },
+              }}
+            />
+          ) : (
+            <div className="space-y-2">
+              {groups.map(group => {
+                const isInGroup = selectedServiceForGroups ? group.serviceIds.includes(selectedServiceForGroups.id) : false
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => selectedServiceForGroups && handleToggleServiceGroup(group.id, selectedServiceForGroups.id, isInGroup)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors ${
+                      isInGroup
+                        ? 'border-purple-600 bg-purple-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: group.color || '#3B82F6' }}
+                      />
+                      <span className="font-medium">{group.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isInGroup && (
+                        <CheckSquare size={20} className="text-purple-600" />
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Edit Service Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingService(null)
+          setEditForm({ name: '', repoPath: '', command: '', port: '' })
+        }}
+        title="Edit Service"
+        size="md"
+      >
+        <div className="p-6" data-testid="service-edit-form">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Service Name
+              </label>
+              <input
+                type="text"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="e.g., Auth Service"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-edit-name-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Repository Path
+              </label>
+              <input
+                type="text"
+                value={editForm.repoPath}
+                onChange={(e) => setEditForm({ ...editForm, repoPath: e.target.value })}
+                placeholder="/home/user/my-service"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-edit-repoPath-input"
+              />
+              <p className="text-xs text-gray-500 mt-1">Enter the absolute path to your service directory</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Start Command
+              </label>
+              <input
+                type="text"
+                value={editForm.command}
+                onChange={(e) => setEditForm({ ...editForm, command: e.target.value })}
+                placeholder="npm start"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-edit-command-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Port (optional)
+              </label>
+              <input
+                type="number"
+                value={editForm.port}
+                onChange={(e) => setEditForm({ ...editForm, port: e.target.value })}
+                placeholder="3000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                data-testid="service-edit-port-input"
+              />
+            </div>
+          </div>
+          <div className="mt-6 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditModal(false)
+                setEditingService(null)
+                setEditForm({ name: '', repoPath: '', command: '', port: '' })
+              }}
+              className="flex-1"
+              data-testid="service-edit-cancel-button"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditService}
+              disabled={!editForm.name || !editForm.repoPath || !editForm.command}
+              className="flex-1"
+              data-testid="service-edit-save-button"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
