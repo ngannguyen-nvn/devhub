@@ -1,5 +1,11 @@
 # DevHub - Developer Mission Control
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
+![Platform](https://img.shields.io/badge/platform-Web%20%7C%20VSCode-lightgrey)
+![Version](https://img.shields.io/badge/version-2.0.0-green)
+
 **One dashboard to rule all your microservices**
 
 DevHub is a powerful desktop application that helps developers manage their local microservices ecosystem. It combines git repository management, intelligent service orchestration, Docker management, environment configuration, and documentation in one unified interface.
@@ -612,23 +618,18 @@ python3 -m http.server 8080
 
 ## 🤝 Contributing
 
-Contributions welcome!
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### Development
+### Quick Development Setup
 
 ```bash
-# Install dependencies
+git clone https://github.com/ngannguyen-nvn/devhub.git
+cd devhub
 npm install
-
-# Start development servers
 npm run dev
-
-# Type check
-npm run type-check
-
-# Build
-npm run build
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards, commit conventions, and PR process.
 
 ---
 
