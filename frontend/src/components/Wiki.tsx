@@ -308,7 +308,7 @@ export default function Wiki() {
                     e.preventDefault()
                     if (note) handleSelectNote(note)
                   }}
-                  className="text-blue-600 hover:text-blue-800 underline"
+                  className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-hover))] underline"
                   {...props}
                 >
                   {children}
@@ -317,13 +317,13 @@ export default function Wiki() {
             }
             if (href === '#missing') {
               return (
-                <span className="text-gray-400 line-through" {...props}>
+                <span className="text-[hsl(var(--foreground-muted))] line-through" {...props}>
                   {children}
                 </span>
               )
             }
             return (
-              <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline" {...props}>
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-hover))] underline" {...props}>
                 {children}
               </a>
             )
@@ -336,14 +336,14 @@ export default function Wiki() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col p-8">
       {/* No Workspace Warning */}
       {!activeWorkspace && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+        <div className="bg-[hsla(var(--warning),0.1)] border-l-4 border-[hsl(var(--warning))] p-4 rounded-xl mb-4">
           <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
+            <AlertCircle className="h-5 w-5 text-[hsl(var(--warning))] mr-3" />
             <div>
-              <p className="text-sm text-yellow-700">
+              <p className="text-sm text-[hsl(var(--warning))]">
                 <strong className="font-medium">No active workspace.</strong> Please create or activate a workspace to manage notes.
               </p>
             </div>
@@ -351,20 +351,20 @@ export default function Wiki() {
         </div>
       )}
 
-      <div className="flex h-full">
+      <div className="flex h-full rounded-xl overflow-hidden">
         {/* Sidebar - Notes List */}
-        <div className="w-80 bg-white border-r flex flex-col">
-          <div className="p-4 border-b">
+        <div className="w-80 glass-card border-r border-[hsl(var(--border))] flex flex-col rounded-l-xl">
+          <div className="p-4 border-b border-[hsl(var(--border))]">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold">
+              <h2 className="font-semibold text-[hsl(var(--foreground))]">
                 Wiki & Notes
-                {activeWorkspace && <span className="text-xs text-blue-600 ml-2">({activeWorkspace.name})</span>}
+                {activeWorkspace && <span className="text-xs text-[hsl(var(--primary))] ml-2">({activeWorkspace.name})</span>}
               </h2>
             </div>
             <div className="flex gap-2 mb-3">
               <button
                 onClick={handleNewNote}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex-1"
+                className="flex items-center gap-2 px-3 py-2 btn-glow text-[hsl(var(--background))] rounded-xl flex-1"
                 data-testid="wiki-new-note-button"
               >
                 <Plus className="w-4 h-4" />
@@ -372,7 +372,7 @@ export default function Wiki() {
             </button>
             <button
               onClick={() => setShowTemplateModal(true)}
-              className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              className="px-3 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--background-elevated))]"
               title="Templates"
               data-testid="wiki-templates-button"
             >
@@ -380,7 +380,7 @@ export default function Wiki() {
             </button>
             <button
               onClick={fetchNotes}
-              className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              className="px-3 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--background-elevated))]"
               title="Refresh"
               data-testid="wiki-refresh-button"
             >
@@ -390,13 +390,13 @@ export default function Wiki() {
 
           {/* Search */}
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[hsl(var(--foreground-muted))]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search notes..."
-              className="w-full pl-10 pr-3 py-2 border rounded"
+              className="input-field w-full pl-10 pr-3 py-2"
               data-testid="wiki-search-input"
             />
           </div>
@@ -404,12 +404,12 @@ export default function Wiki() {
           {/* Filters */}
           <div className="mt-3 space-y-2">
             {selectedCategory && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm text-[hsl(var(--foreground))]">
                 <Folder className="w-3 h-3" />
                 <span>{selectedCategory}</span>
                 <button
                   onClick={() => setSelectedCategory('')}
-                  className="ml-auto"
+                  className="ml-auto text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]"
                   data-testid="wiki-clear-category-filter-button"
                 >
                   <X className="w-3 h-3" />
@@ -417,12 +417,12 @@ export default function Wiki() {
               </div>
             )}
             {selectedTag && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm text-[hsl(var(--foreground))]">
                 <Tag className="w-3 h-3" />
                 <span>{selectedTag}</span>
                 <button
                   onClick={() => setSelectedTag('')}
-                  className="ml-auto"
+                  className="ml-auto text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]"
                   data-testid="wiki-clear-tag-filter-button"
                 >
                   <X className="w-3 h-3" />
@@ -439,8 +439,8 @@ export default function Wiki() {
               <SkeletonLoader count={5} />
             </div>
           ) : filteredNotes.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">
+              <FileText className="w-12 h-12 mx-auto mb-3 text-[hsl(var(--border))]" />
               <p>No notes found</p>
             </div>
           ) : (
@@ -448,14 +448,14 @@ export default function Wiki() {
               <div
                 key={note.id}
                 onClick={() => handleSelectNote(note)}
-                className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${
-                  selectedNote?.id === note.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                className={`p-3 border-b border-[hsl(var(--border))] cursor-pointer hover:bg-[hsl(var(--background-elevated))] ${
+                  selectedNote?.id === note.id ? 'bg-[hsla(var(--primary),0.08)] border-l-4 border-l-[hsl(var(--primary))]' : ''
                 }`}
                 data-testid={`wiki-note-item-${note.id}`}
               >
-                <h3 className="font-semibold">{note.title}</h3>
+                <h3 className="font-semibold text-[hsl(var(--foreground))]">{note.title}</h3>
                 {note.category && (
-                  <span className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                  <span className="text-xs text-[hsl(var(--foreground-muted))] flex items-center gap-1 mt-1">
                     <Folder className="w-3 h-3" />
                     {note.category}
                   </span>
@@ -463,7 +463,7 @@ export default function Wiki() {
                 {note.tags && note.tags.length > 0 && (
                   <div className="flex gap-1 mt-1 flex-wrap">
                     {note.tags.map((tag, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-gray-100 text-xs rounded">
+                      <span key={i} className="px-2 py-0.5 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] text-xs rounded-xl">
                         {tag}
                       </span>
                     ))}
@@ -475,27 +475,27 @@ export default function Wiki() {
         </div>
 
         {/* Quick Filters */}
-        <div className="p-4 border-t bg-gray-50">
-          <div className="text-xs font-semibold mb-2">Categories</div>
+        <div className="p-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))]">
+          <div className="text-xs font-semibold mb-2 text-[hsl(var(--foreground))]">Categories</div>
           <div className="flex flex-wrap gap-1 mb-3">
             {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className="px-2 py-1 text-xs bg-white border rounded hover:bg-gray-100"
+                className="px-2 py-1 text-xs bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--background-elevated))]"
                 data-testid={`wiki-category-filter-${cat}`}
               >
                 {cat}
               </button>
             ))}
           </div>
-          <div className="text-xs font-semibold mb-2">Tags</div>
+          <div className="text-xs font-semibold mb-2 text-[hsl(var(--foreground))]">Tags</div>
           <div className="flex flex-wrap gap-1">
             {tags.slice(0, 10).map(tag => (
               <button
                 key={tag}
                 onClick={() => setSelectedTag(tag)}
-                className="px-2 py-1 text-xs bg-white border rounded hover:bg-gray-100"
+                className="px-2 py-1 text-xs bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--background-elevated))]"
                 data-testid={`wiki-tag-filter-${tag}`}
               >
                 {tag}
@@ -506,11 +506,11 @@ export default function Wiki() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col glass-card rounded-r-xl">
         {selectedNote || editing ? (
           <>
             {/* Toolbar */}
-            <div className="p-4 border-b bg-white flex justify-between items-center">
+            <div className="p-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))] flex justify-between items-center">
               <div className="flex gap-2">
                 {!editing && (
                   <>
@@ -519,7 +519,7 @@ export default function Wiki() {
                         setEditing(true)
                         setPreviewing(false)
                       }}
-                      className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      className="flex items-center gap-2 px-3 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                       data-testid="wiki-edit-button"
                     >
                       <Edit className="w-4 h-4" />
@@ -527,7 +527,7 @@ export default function Wiki() {
                     </button>
                     <button
                       onClick={() => handleDelete(selectedNote!.id)}
-                      className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                      className="flex items-center gap-2 px-3 py-2 bg-[hsla(var(--danger),0.1)] text-[hsl(var(--danger))] rounded-xl hover:bg-[hsla(var(--danger),0.2)]"
                       data-testid="wiki-delete-button"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -539,7 +539,7 @@ export default function Wiki() {
                   <>
                     <button
                       onClick={selectedNote ? handleUpdate : handleCreate}
-                      className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      className="flex items-center gap-2 px-3 py-2 bg-[hsla(var(--success),0.1)] text-[hsl(var(--success))] rounded-xl hover:bg-[hsla(var(--success),0.2)]"
                       data-testid="wiki-save-button"
                     >
                       <Save className="w-4 h-4" />
@@ -558,7 +558,7 @@ export default function Wiki() {
                           setPreviewing(true)
                         }
                       }}
-                      className="px-3 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      className="px-3 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--background-elevated))]"
                       data-testid="wiki-cancel-button"
                     >
                       Cancel
@@ -570,7 +570,7 @@ export default function Wiki() {
               {editing && (
                 <button
                   onClick={() => setPreviewing(!previewing)}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  className="flex items-center gap-2 px-3 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--background-elevated))]"
                   data-testid="wiki-toggle-preview-button"
                 >
                   {previewing ? <Edit className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -582,14 +582,14 @@ export default function Wiki() {
             {/* Content */}
             <div className="flex-1 overflow-hidden flex">
               {editing && (
-                <div className={previewing ? 'w-1/2 border-r' : 'w-full'} data-testid="wiki-editor">
+                <div className={previewing ? 'w-1/2 border-r border-[hsl(var(--border))]' : 'w-full'} data-testid="wiki-editor">
                   <div className="p-4 h-full overflow-y-auto" data-testid="wiki-note-form">
                     <input
                       type="text"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="Note title..."
-                      className="w-full text-2xl font-bold mb-4 px-3 py-2 border rounded"
+                      className="input-field w-full text-2xl font-bold mb-4 px-3 py-2"
                       data-testid="wiki-title-input"
                     />
                     <div className="grid grid-cols-2 gap-2 mb-4">
@@ -598,7 +598,7 @@ export default function Wiki() {
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         placeholder="Category"
-                        className="px-3 py-2 border rounded"
+                        className="input-field px-3 py-2"
                         data-testid="wiki-category-input"
                       />
                       <input
@@ -606,7 +606,7 @@ export default function Wiki() {
                         value={formData.tags}
                         onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                         placeholder="Tags (comma-separated)"
-                        className="px-3 py-2 border rounded"
+                        className="input-field px-3 py-2"
                         data-testid="wiki-tags-input"
                       />
                     </div>
@@ -614,7 +614,7 @@ export default function Wiki() {
                       value={formData.content}
                       onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                       placeholder="Write your note in Markdown... Use [[Note Title]] to link to other notes."
-                      className="w-full h-full px-3 py-2 border rounded font-mono text-sm resize-none"
+                      className="input-field w-full h-full px-3 py-2 terminal-text text-sm resize-none"
                       style={{ minHeight: 'calc(100vh - 300px)' }}
                       data-testid="wiki-content-input"
                     />
@@ -624,10 +624,10 @@ export default function Wiki() {
 
               {(previewing || !editing) && (
                 <div className={editing ? 'w-1/2' : 'w-full'} data-testid="wiki-preview">
-                  <div className="p-6 h-full overflow-y-auto prose max-w-none">
-                    <h1>{formData.title || selectedNote?.title}</h1>
+                  <div className="p-6 h-full overflow-y-auto prose prose-invert max-w-none prose-headings:text-[hsl(var(--foreground))] prose-p:text-[hsl(var(--foreground))] prose-strong:text-[hsl(var(--foreground))] prose-code:text-[hsl(var(--primary))] prose-code:bg-[hsl(var(--background-elevated))] prose-pre:bg-[hsl(var(--background-elevated))] prose-a:text-[hsl(var(--primary))]">
+                    <h1 className="text-[hsl(var(--foreground))]">{formData.title || selectedNote?.title}</h1>
                     {(formData.category || selectedNote?.category) && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-[hsl(var(--foreground-muted))] mb-4">
                         <Folder className="w-4 h-4" />
                         {formData.category || selectedNote?.category}
                       </div>
@@ -636,10 +636,10 @@ export default function Wiki() {
 
                     {/* Links Section */}
                     {(links.length > 0 || backlinks.length > 0) && (
-                      <div className="mt-8 pt-8 border-t">
+                      <div className="mt-8 pt-8 border-t border-[hsl(var(--border))]">
                         {links.length > 0 && (
                           <div className="mb-4" data-testid="wiki-linked-notes">
-                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-[hsl(var(--foreground))]">
                               <LinkIcon className="w-4 h-4" />
                               Linked Notes
                             </h3>
@@ -651,7 +651,7 @@ export default function Wiki() {
                                       const note = notes.find(n => n.id === link.id)
                                       if (note) handleSelectNote(note)
                                     }}
-                                    className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                    className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-hover))] flex items-center gap-1"
                                     data-testid={`wiki-linked-note-${link.id}`}
                                   >
                                     <ChevronRight className="w-3 h-3" />
@@ -664,7 +664,7 @@ export default function Wiki() {
                         )}
                         {backlinks.length > 0 && (
                           <div data-testid="wiki-backlinks">
-                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-[hsl(var(--foreground))]">
                               <LinkIcon className="w-4 h-4" />
                               Backlinks
                             </h3>
@@ -676,7 +676,7 @@ export default function Wiki() {
                                       const note = notes.find(n => n.id === link.id)
                                       if (note) handleSelectNote(note)
                                     }}
-                                    className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                    className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-hover))] flex items-center gap-1"
                                     data-testid={`wiki-backlink-${link.id}`}
                                   >
                                     <ChevronRight className="w-3 h-3" />
@@ -695,9 +695,9 @@ export default function Wiki() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
+          <div className="flex-1 flex items-center justify-center text-[hsl(var(--foreground-muted))]">
             <div className="text-center">
-              <FileQuestion className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <FileQuestion className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--border))]" />
               <p>Select a note or create a new one</p>
             </div>
           </div>
@@ -706,25 +706,25 @@ export default function Wiki() {
 
       {/* Template Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="wiki-template-modal">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Choose a Template</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" data-testid="wiki-template-modal">
+          <div className="glass-card rounded-xl p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4 text-[hsl(var(--foreground))]">Choose a Template</h2>
             <div className="grid gap-3">
               {templates.map(template => (
                 <button
                   key={template.id}
                   onClick={() => handleUseTemplate(template)}
-                  className="text-left p-4 border rounded hover:bg-gray-50"
+                  className="text-left p-4 border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--background-elevated))] card-hover"
                   data-testid={`wiki-template-${template.id}`}
                 >
-                  <h3 className="font-semibold">{template.name}</h3>
-                  <p className="text-sm text-gray-600">{template.description}</p>
+                  <h3 className="font-semibold text-[hsl(var(--foreground))]">{template.name}</h3>
+                  <p className="text-sm text-[hsl(var(--foreground-muted))]">{template.description}</p>
                 </button>
               ))}
             </div>
             <button
               onClick={() => setShowTemplateModal(false)}
-              className="mt-4 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              className="mt-4 px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--background-elevated))]"
               data-testid="wiki-template-cancel-button"
             >
               Cancel

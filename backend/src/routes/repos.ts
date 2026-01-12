@@ -6,16 +6,38 @@ import * as path from 'path'
 const router = Router()
 const scanner = new RepoScanner()
 
+// Security: Path traversal protection
+function validatePath(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/')
+  return !normalized.includes('../') && !normalized.includes('..\\')
+}
+
+// Security: Validate path exists and is directory
+function validateDirectory(filePath: string): boolean {
+  try {
+    if (!validatePath(filePath)) return false
+    const stats = fs.statSync(filePath)
+    return stats.isDirectory()
+  } catch (error) {
+    return false
+  }
+}
+
 /**
  * GET /api/repos/scan
  * Scan a directory for git repositories
  */
 router.get('/scan', async (req, res) => {
   try {
-    const { path = '/home/user', depth = '3' } = req.query
+    const { path: scanPath = '/home/user', depth = '3' } = req.query
 
-    if (typeof path !== 'string') {
+    if (typeof scanPath !== 'string') {
       return res.status(400).json({ error: 'Path must be a string' })
+    }
+
+    // Security: Validate path (prevent traversal)
+    if (!validatePath(scanPath)) {
+      return res.status(400).json({ error: 'Path contains invalid sequences (../ or ..\\)' })
     }
 
     const maxDepth = parseInt(depth as string, 10)
@@ -23,9 +45,9 @@ router.get('/scan', async (req, res) => {
       return res.status(400).json({ error: 'Depth must be a number between 0 and 5' })
     }
 
-    console.log(`Scanning ${path} for repositories (max depth: ${maxDepth})...`)
+    console.log(`Scanning ${scanPath} for repositories (max depth: ${maxDepth})...`)
 
-    const repositories = await scanner.scanDirectory(path, maxDepth)
+    const repositories = await scanner.scanDirectory(scanPath, maxDepth)
 
     res.json({
       success: true,
@@ -52,6 +74,11 @@ router.post('/analyze', async (req, res) => {
 
     if (!repoPath || typeof repoPath !== 'string') {
       return res.status(400).json({ error: 'Repository path is required' })
+    }
+
+    // Security: Validate path (prevent traversal)
+    if (!validatePath(repoPath)) {
+      return res.status(400).json({ error: 'Path contains invalid sequences (../ or ..\\)' })
     }
 
     // Check if directory exists

@@ -554,33 +554,33 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Overview of your workspace and services</p>
+        <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] mb-2">Dashboard</h1>
+        <p className="text-[hsl(var(--foreground-muted))]">Overview of your workspace and services</p>
       </div>
 
       {/* Active Workspace Section */}
       {activeWorkspace ? (
         <>
           {/* Workspace Overview */}
-          <div className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-6 shadow-lg">
+          <div className="mb-6 glass-card rounded-xl p-6 border-glow">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <Package size={28} />
-                  <h2 className="text-2xl font-bold">{activeWorkspace.name}</h2>
+                  <Package size={28} className="text-[hsl(var(--primary))]" />
+                  <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">{activeWorkspace.name}</h2>
                 </div>
                 {activeWorkspace.description && (
-                  <p className="text-blue-100 mb-3">{activeWorkspace.description}</p>
+                  <p className="text-[hsl(var(--foreground-muted))] mb-3">{activeWorkspace.description}</p>
                 )}
                 {activeWorkspace.folderPath && (
-                  <p className="text-sm text-blue-100 font-mono">{activeWorkspace.folderPath}</p>
+                  <p className="text-sm text-[hsl(var(--foreground-muted))] font-mono terminal-text">{activeWorkspace.folderPath}</p>
                 )}
                 {activeWorkspace.activeSnapshotId && (
-                  <div className="mt-3 flex items-center gap-2 text-sm bg-green-500 bg-opacity-20 px-3 py-1.5 rounded-lg w-fit">
-                    <CheckCircle size={16} />
+                  <div className="mt-3 flex items-center gap-2 text-sm bg-[hsla(var(--success),0.15)] border border-[hsla(var(--success),0.3)] px-3 py-1.5 rounded-lg w-fit">
+                    <CheckCircle size={16} className="text-[hsl(var(--success))]" />
                     <div className="flex flex-col">
-                      <span className="font-semibold">Active Snapshot</span>
-                      <span className="text-xs opacity-90">
+                      <span className="font-semibold text-[hsl(var(--success))]">Active Snapshot</span>
+                      <span className="text-xs text-[hsl(var(--foreground-muted))]">
                         {recentSnapshots.find(s => s.id === activeWorkspace.activeSnapshotId)?.name || 'Loading...'}
                       </span>
                     </div>
@@ -589,7 +589,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
               </div>
               <button
                 onClick={() => onViewChange('workspaces')}
-                className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+                className="btn-glow px-4 py-2 text-[hsl(var(--background))] rounded-xl font-medium"
                 data-testid="dashboard-manage-workspace-button"
               >
                 Manage Workspace
@@ -604,34 +604,34 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
               {/* Statistics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 {/* Services Card */}
-                <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <div className="metric-card card-hover">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Services</h3>
-                    <Settings className="text-gray-400" size={24} />
+                    <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">Services</h3>
+                    <Settings className="text-[hsl(var(--foreground-muted))]" size={24} />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Total</span>
-                      <span className="text-2xl font-bold text-gray-900">{serviceStats.totalServices}</span>
+                      <span className="text-[hsl(var(--foreground-muted))]">Total</span>
+                      <span className="metric-value">{serviceStats.totalServices}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-sm text-gray-600">Running</span>
+                        <div className="w-2 h-2 bg-[hsl(var(--success))] rounded-full"></div>
+                        <span className="text-sm text-[hsl(var(--foreground-muted))]">Running</span>
                       </div>
-                      <span className="text-lg font-semibold text-green-600">{serviceStats.runningServices}</span>
+                      <span className="text-lg font-semibold text-[hsl(var(--success))]">{serviceStats.runningServices}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                        <span className="text-sm text-gray-600">Stopped</span>
+                        <div className="w-2 h-2 bg-[hsl(var(--foreground-muted))] rounded-full"></div>
+                        <span className="text-sm text-[hsl(var(--foreground-muted))]">Stopped</span>
                       </div>
-                      <span className="text-lg font-semibold text-gray-600">{serviceStats.stoppedServices}</span>
+                      <span className="text-lg font-semibold text-[hsl(var(--foreground-muted))]">{serviceStats.stoppedServices}</span>
                     </div>
                   </div>
                   <button
                     onClick={() => onViewChange('services')}
-                    className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="mt-4 w-full btn-glow px-4 py-2 text-[hsl(var(--background))] rounded-xl font-medium"
                     data-testid="dashboard-manage-services-button"
                   >
                     Manage Services
@@ -639,23 +639,23 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 </div>
 
                 {/* Snapshots Card */}
-                <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <div className="metric-card card-hover">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Snapshots</h3>
-                    <Camera className="text-gray-400" size={24} />
+                    <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">Snapshots</h3>
+                    <Camera className="text-[hsl(var(--foreground-muted))]" size={24} />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Total</span>
-                      <span className="text-2xl font-bold text-gray-900">{recentSnapshots.length}</span>
+                      <span className="text-[hsl(var(--foreground-muted))]">Total</span>
+                      <span className="metric-value">{recentSnapshots.length}</span>
                     </div>
                     {recentSnapshots.length > 0 && (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Clock className="text-gray-400" size={16} />
-                          <span className="text-sm text-gray-600">Latest</span>
+                          <Clock className="text-[hsl(var(--foreground-muted))]" size={16} />
+                          <span className="text-sm text-[hsl(var(--foreground-muted))]">Latest</span>
                         </div>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-[hsl(var(--foreground-muted))]">
                           {new Date(recentSnapshots[0].createdAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -664,7 +664,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                   {recentSnapshots.length === 0 ? (
                     <button
                       onClick={handleQuickSnapshot}
-                      className="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                      className="mt-4 w-full px-4 py-2.5 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl font-medium hover:shadow-[0_0_20px_-5px_hsla(145,80%,45%,0.5)] transition-all flex items-center justify-center gap-2"
                       data-testid="dashboard-quick-snapshot-button"
                     >
                       <Camera size={18} />
@@ -673,7 +673,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                   ) : (
                     <button
                       onClick={() => onViewChange('workspaces')}
-                      className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="mt-4 w-full btn-glow px-4 py-2 text-[hsl(var(--background))] rounded-xl font-medium"
                       data-testid="dashboard-manage-snapshots-button"
                     >
                       Manage Snapshots
@@ -682,15 +682,15 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 </div>
 
                 {/* Quick Actions Card */}
-                <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <div className="metric-card card-hover">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-                    <Zap className="text-yellow-500" size={24} />
+                    <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">Quick Actions</h3>
+                    <Zap className="text-[hsl(var(--warning))]" size={24} />
                   </div>
                   <div className="space-y-2">
                     <button
                       onClick={() => onViewChange('env')}
-                      className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-left flex items-center gap-2"
+                      className="w-full px-4 py-2.5 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsla(var(--primary),0.1)] hover:text-[hsl(var(--primary))] transition-colors text-left flex items-center gap-2"
                       data-testid="dashboard-environment-profiles-button"
                     >
                       <FileText size={18} />
@@ -698,7 +698,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     </button>
                     <button
                       onClick={() => onViewChange('wiki')}
-                      className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-left flex items-center gap-2"
+                      className="w-full px-4 py-2.5 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsla(var(--primary),0.1)] hover:text-[hsl(var(--primary))] transition-colors text-left flex items-center gap-2"
                       data-testid="dashboard-wiki-notes-button"
                     >
                       <FileText size={18} />
@@ -710,12 +710,12 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
               {/* Recent Snapshots List */}
               {recentSnapshots.length > 0 && (
-                <div className="mb-6 bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <div className="mb-6 glass-card rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Recent Snapshots</h3>
+                    <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">Recent Snapshots</h3>
                     <button
                       onClick={() => onViewChange('workspaces')}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-sm text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-glow))] font-medium transition-colors"
                       data-testid="dashboard-view-all-snapshots-button"
                     >
                       View All →
@@ -725,27 +725,27 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     {recentSnapshots.map((snapshot, index) => (
                       <div
                         key={snapshot.id}
-                        className={`flex items-center justify-between p-4 rounded-lg border ${
+                        className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                           activeWorkspace.activeSnapshotId === snapshot.id
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-gray-200 bg-gray-50'
+                            ? 'border-[hsla(var(--success),0.3)] bg-[hsla(var(--success),0.08)]'
+                            : 'border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))] hover:border-[hsla(var(--primary),0.3)]'
                         }`}
                         data-testid={`dashboard-snapshot-item-${index}`}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-gray-900">{snapshot.name}</h4>
+                            <h4 className="font-medium text-[hsl(var(--foreground))]">{snapshot.name}</h4>
                             {activeWorkspace.activeSnapshotId === snapshot.id && (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded flex items-center gap-1">
+                              <span className="px-2 py-1 bg-[hsla(var(--success),0.15)] text-[hsl(var(--success))] text-xs font-semibold rounded-lg flex items-center gap-1 border border-[hsla(var(--success),0.3)]">
                                 <CheckCircle className="w-3 h-3" />
                                 Active
                               </span>
                             )}
                           </div>
                           {snapshot.description && (
-                            <p className="text-sm text-gray-600 mt-1">{snapshot.description}</p>
+                            <p className="text-sm text-[hsl(var(--foreground-muted))] mt-1">{snapshot.description}</p>
                           )}
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1 terminal-text">
                             {new Date(snapshot.createdAt).toLocaleString()}
                           </p>
                         </div>
@@ -753,7 +753,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                           <div className="ml-4 flex items-center gap-2">
                             <button
                               onClick={() => handleRestoreSnapshot(snapshot.id)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                              className="btn-glow px-4 py-2 text-[hsl(var(--background))] rounded-xl font-medium flex items-center gap-2"
                               data-testid={`dashboard-restore-snapshot-button-${index}`}
                             >
                               <RefreshCw size={16} />
@@ -761,7 +761,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                             </button>
                             <button
                               onClick={() => handleDeleteSnapshot(snapshot.id, snapshot.name)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-[hsl(var(--danger))] hover:bg-[hsla(var(--danger),0.1)] rounded-xl transition-colors"
                               title="Delete snapshot"
                               data-testid={`dashboard-delete-snapshot-button-${index}`}
                             >
@@ -791,10 +791,10 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
       )}
 
       {/* Repository Scanner Section - Always Visible */}
-      <div className="mb-6 bg-white rounded-lg shadow-md border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Repository Scanner</h3>
-          <p className="text-sm text-gray-600 mt-1">Scan for git repositories and save to workspace</p>
+      <div className="mb-6 glass-card rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-[hsl(var(--border))]">
+          <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">Repository Scanner</h3>
+          <p className="text-sm text-[hsl(var(--foreground-muted))] mt-1">Scan for git repositories and save to workspace</p>
         </div>
         <div className="px-6 py-6">
           <div className="mb-6 flex gap-4">
@@ -804,13 +804,13 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
               value={scanPath}
               onChange={(e) => setScanPath(e.target.value)}
               placeholder="Path to scan (e.g., /home/user)"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-field flex-1 terminal-text"
               data-testid="dashboard-scan-path-input"
             />
             <button
               onClick={scanRepositories}
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="btn-glow px-6 py-2 text-[hsl(var(--background))] rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               data-testid="dashboard-scan-button"
             >
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -819,7 +819,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+            <div className="mb-6 p-4 bg-[hsla(var(--danger),0.1)] border border-[hsla(var(--danger),0.3)] rounded-xl flex items-center gap-3 text-[hsl(var(--danger))]">
               <AlertCircle size={20} />
               {error}
             </div>
@@ -827,12 +827,12 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
           {repos.length > 0 && (
             <>
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
+              <div className="mb-6 p-4 bg-[hsla(var(--primary),0.08)] border border-[hsla(var(--primary),0.2)] rounded-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={toggleAllRepos}
-                      className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium"
+                      className="flex items-center gap-2 text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-glow))] font-medium transition-colors"
                       data-testid="dashboard-toggle-all-repos-button"
                     >
                       {selectedRepos.size === repos.length ? (
@@ -842,14 +842,14 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                       )}
                       {selectedRepos.size === repos.length ? 'Deselect All' : 'Select All'}
                     </button>
-                    <span className="text-blue-700">
+                    <span className="text-[hsl(var(--primary))]">
                       {selectedRepos.size} of {repos.length} selected
                     </span>
                   </div>
                   <button
                     onClick={handleImportServices}
                     disabled={selectedRepos.size === 0 || saving}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="btn-glow px-4 py-2 text-[hsl(var(--background))] rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     data-testid="dashboard-import-services-button"
                   >
                     {saving ? (
@@ -867,13 +867,13 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                 </div>
 
                 {/* Scanner Options */}
-                <div className="flex flex-wrap gap-6 pt-2 border-t border-blue-200">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                <div className="flex flex-wrap gap-6 pt-2 border-t border-[hsla(var(--primary),0.2)]">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] transition-colors">
                     <input
                       type="checkbox"
                       checked={createWorkspaceOnScan}
                       onChange={(e) => setCreateWorkspaceOnScan(e.target.checked)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 rounded border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))] focus:ring-offset-0"
                       data-testid="dashboard-create-workspace-checkbox"
                     />
                     <span>Automatically create new workspace for this scan</span>
@@ -883,12 +883,12 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     const envFileCount = repos.filter(r => selectedRepos.has(r.path) && r.hasEnvFile).length
                     if (envFileCount > 0) {
                       return (
-                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] transition-colors">
                           <input
                             type="checkbox"
                             checked={importEnvFiles}
                             onChange={(e) => setImportEnvFiles(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 rounded border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))] focus:ring-offset-0"
                             data-testid="dashboard-import-env-checkbox"
                           />
                           <span>Import .env files ({envFileCount} detected)</span>
@@ -906,8 +906,8 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                   return (
                     <div
                       key={repo.path}
-                      className={`bg-white border rounded-lg p-6 hover:shadow-md transition-all cursor-pointer ${
-                        isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                      className={`bg-[hsl(var(--background-elevated))] border rounded-xl p-6 card-hover cursor-pointer transition-all ${
+                        isSelected ? 'border-[hsl(var(--primary))] shadow-[0_0_0_2px_hsla(175,85%,50%,0.2)]' : 'border-[hsl(var(--border))]'
                       }`}
                       onClick={() => toggleRepo(repo.path)}
                       data-testid={`dashboard-repo-item-${index}`}
@@ -923,18 +923,18 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                             data-testid={`dashboard-repo-checkbox-${index}`}
                           >
                             {isSelected ? (
-                              <CheckSquare size={20} className="text-blue-600" />
+                              <CheckSquare size={20} className="text-[hsl(var(--primary))]" />
                             ) : (
-                              <Square size={20} className="text-gray-400" />
+                              <Square size={20} className="text-[hsl(var(--foreground-muted))]" />
                             )}
                           </button>
                           <div className="flex-1">
-                            <h3 className="text-xl font-semibold text-gray-900 mb-1">{repo.name}</h3>
-                            <p className="text-sm text-gray-500 font-mono">{repo.path}</p>
+                            <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-1">{repo.name}</h3>
+                            <p className="text-sm text-[hsl(var(--foreground-muted))] font-mono terminal-text">{repo.path}</p>
                           </div>
                         </div>
                         {repo.hasDockerfile && (
-                          <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                          <span className="px-3 py-1 bg-[hsla(var(--info),0.15)] text-[hsl(var(--info))] text-xs rounded-full font-medium border border-[hsla(var(--info),0.3)]">
                             Docker
                           </span>
                         )}
@@ -942,21 +942,21 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
                       <div className="flex items-center gap-6 text-sm">
                         <div className="flex items-center gap-2">
-                          <GitBranch size={16} className="text-gray-400" />
-                          <span className="font-medium">{repo.branch}</span>
+                          <GitBranch size={16} className="text-[hsl(var(--foreground-muted))]" />
+                          <span className="font-medium text-[hsl(var(--foreground))]">{repo.branch}</span>
                         </div>
 
                         {repo.hasChanges && (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-medium">
+                          <span className="px-2 py-1 bg-[hsla(var(--warning),0.15)] text-[hsl(var(--warning))] text-xs rounded-lg font-medium border border-[hsla(var(--warning),0.3)]">
                             Uncommitted changes
                           </span>
                         )}
                       </div>
 
                       {repo.lastCommit && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <p className="text-sm text-gray-700 mb-1">{repo.lastCommit.message}</p>
-                          <p className="text-xs text-gray-500">
+                        <div className="mt-4 pt-4 border-t border-[hsl(var(--border-subtle))]">
+                          <p className="text-sm text-[hsl(var(--foreground))] mb-1">{repo.lastCommit.message}</p>
+                          <p className="text-xs text-[hsl(var(--foreground-muted))] terminal-text">
                             {repo.lastCommit.author} • {new Date(repo.lastCommit.date).toLocaleDateString()}
                           </p>
                         </div>
@@ -974,7 +974,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
           {repos.length === 0 && !loading && (
             <EmptyState
-              icon={<Folder size={48} className="text-gray-400" />}
+              icon={<Folder size={48} className="text-[hsl(var(--foreground-muted))]" />}
               title="No repositories found"
               description="Try scanning a different path."
             />

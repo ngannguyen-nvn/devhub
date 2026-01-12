@@ -532,14 +532,15 @@ export default function Services() {
   })
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col p-8">
       {!activeWorkspace && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="mb-6 p-4 bg-[hsla(var(--warning),0.1)] border border-[hsla(var(--warning),0.3)] rounded-xl">
           <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+            <AlertCircle className="h-5 w-5 text-[hsl(var(--warning))] flex-shrink-0" />
             <div>
-              <p className="text-sm text-amber-800">
-                <strong className="font-medium">No active workspace.</strong> Please create or activate a workspace to manage services.
+              <p className="text-sm text-[hsl(var(--foreground))]">
+                <strong className="font-medium">No active workspace.</strong>{' '}
+                <span className="text-[hsl(var(--foreground-muted))]">Please create or activate a workspace to manage services.</span>
               </p>
             </div>
           </div>
@@ -548,10 +549,10 @@ export default function Services() {
 
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Service Manager</h1>
-          <p className="text-gray-600 text-sm">
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-1">Service Manager</h1>
+          <p className="text-[hsl(var(--foreground-muted))] text-sm">
             Start, stop, and monitor your services
-            {activeWorkspace && <span className="text-blue-600 font-medium ml-1">in {activeWorkspace.name}</span>}
+            {activeWorkspace && <span className="text-[hsl(var(--primary))] font-medium ml-1">in {activeWorkspace.name}</span>}
           </p>
         </div>
         <div className="flex gap-2">
@@ -627,7 +628,7 @@ export default function Services() {
         <div className="p-6" data-testid="service-create-form">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Service Name
               </label>
               <input
@@ -635,12 +636,12 @@ export default function Services() {
                 value={newService.name}
                 onChange={(e) => setNewService({ ...newService, name: e.target.value })}
                 placeholder="e.g., Auth Service"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 data-testid="service-name-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Repository Path
               </label>
               <input
@@ -648,13 +649,13 @@ export default function Services() {
                 value={newService.repoPath}
                 onChange={(e) => setNewService({ ...newService, repoPath: e.target.value })}
                 placeholder="/home/user/my-service"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field terminal-text"
                 data-testid="service-repoPath-input"
               />
-              <p className="text-xs text-gray-500 mt-1">Enter the absolute path to your service directory</p>
+              <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">Enter the absolute path to your service directory</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Start Command
               </label>
               <input
@@ -662,12 +663,12 @@ export default function Services() {
                 value={newService.command}
                 onChange={(e) => setNewService({ ...newService, command: e.target.value })}
                 placeholder="npm start"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field terminal-text"
                 data-testid="service-command-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Port (optional)
               </label>
               <input
@@ -675,7 +676,7 @@ export default function Services() {
                 value={newService.port}
                 onChange={(e) => setNewService({ ...newService, port: e.target.value })}
                 placeholder="3000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 data-testid="service-port-input"
               />
             </div>
@@ -715,7 +716,7 @@ export default function Services() {
         <div className="p-6" data-testid="service-import-form">
           {workspaceRepos.length === 0 ? (
             <EmptyState
-              icon={<FolderInput size={48} className="text-gray-400" />}
+              icon={<FolderInput size={48} className="text-[hsl(var(--foreground-muted))]" />}
               title="No repositories found"
               description="Add repositories by creating a snapshot from the Dashboard."
             />
@@ -730,7 +731,7 @@ export default function Services() {
                       setSelectedRepos(new Set(workspaceRepos.map(r => r.path)))
                     }
                   }}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2"
+                  className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-glow))] font-medium text-sm flex items-center gap-2 transition-colors"
                   data-testid="service-select-all-button"
                 >
                   {selectedRepos.size === workspaceRepos.length ? (
@@ -745,7 +746,7 @@ export default function Services() {
                     </>
                   )}
                 </button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-[hsl(var(--foreground-muted))]">
                   {selectedRepos.size} of {workspaceRepos.length} selected
                 </span>
               </div>
@@ -758,27 +759,27 @@ export default function Services() {
                     <div
                       key={repo.path}
                       onClick={() => toggleRepo(repo.path)}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                      className={`p-4 border rounded-xl cursor-pointer transition-all ${
+                        isSelected ? 'border-[hsl(var(--primary))] bg-[hsla(var(--primary),0.08)]' : 'border-[hsl(var(--border))] hover:bg-[hsl(var(--background-elevated))]'
                       }`}
                       data-testid={`service-import-repo-${repo.path.replace(/\//g, '-')}`}
                     >
                       <div className="flex items-center gap-3">
                         {isSelected ? (
-                          <CheckSquare size={20} className="text-blue-600 flex-shrink-0" />
+                          <CheckSquare size={20} className="text-[hsl(var(--primary))] flex-shrink-0" />
                         ) : (
-                          <SquareIcon size={20} className="text-gray-400 flex-shrink-0" />
+                          <SquareIcon size={20} className="text-[hsl(var(--foreground-muted))] flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-gray-900">{repo.name}</p>
+                            <p className="font-medium text-[hsl(var(--foreground))]">{repo.name}</p>
                             {alreadyExists && (
-                              <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                              <span className="px-2 py-0.5 bg-[hsl(var(--border))] text-[hsl(var(--foreground-muted))] text-xs rounded-full">
                                 Already added
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500 truncate">{repo.path}</p>
+                          <p className="text-sm text-[hsl(var(--foreground-muted))] truncate terminal-text">{repo.path}</p>
                         </div>
                       </div>
                     </div>
@@ -822,10 +823,10 @@ export default function Services() {
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             <button
               onClick={() => setSelectedGroup('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                 selectedGroup === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'btn-glow text-[hsl(var(--background))]'
+                  : 'bg-[hsl(var(--border))] text-[hsl(var(--foreground-muted))] hover:bg-[hsla(var(--primary),0.1)] hover:text-[hsl(var(--foreground))]'
               }`}
             >
               All Services ({services.length})
@@ -838,10 +839,10 @@ export default function Services() {
                 <button
                   key={group.id}
                   onClick={() => setSelectedGroup(group.name)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
+                  className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
                     selectedGroup === group.name
                       ? 'text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-[hsl(var(--border))] text-[hsl(var(--foreground-muted))] hover:bg-[hsl(var(--background-elevated))]'
                   }`}
                   style={
                     selectedGroup === group.name
@@ -861,18 +862,18 @@ export default function Services() {
 
           {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[hsl(var(--foreground-muted))]" size={20} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search services by name, path, command, or port..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-field pl-10"
               data-testid="service-search-input"
             />
           </div>
           {searchTerm && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[hsl(var(--foreground-muted))]">
               Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{searchTerm}"
             </p>
           )}
@@ -908,39 +909,39 @@ export default function Services() {
             return (
               <div
                 key={service.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                className="glass-card rounded-xl p-4 card-hover"
                 data-testid={`service-item-${service.id}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">{service.name}</h3>
+                      <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] truncate">{service.name}</h3>
                       <ServiceStatusBadge status={service.status} healthStatus={service.healthStatus as 'healthy' | 'unhealthy' | 'unknown' | null} />
                       {service.tags && service.tags.length > 0 && (
                         <div className="flex gap-1">
                           {service.tags.slice(0, 2).map((tag, idx) => (
-                            <span key={idx} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-xs rounded">
+                            <span key={idx} className="px-1.5 py-0.5 bg-[hsla(var(--primary),0.1)] text-[hsl(var(--primary))] text-xs rounded-lg">
                               {tag}
                             </span>
                           ))}
                           {service.tags.length > 2 && (
-                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                            <span className="px-1.5 py-0.5 bg-[hsl(var(--border))] text-[hsl(var(--foreground-muted))] text-xs rounded-lg">
                               +{service.tags.length - 2}
                             </span>
                           )}
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 font-mono truncate">{service.command}</p>
+                    <p className="text-sm text-[hsl(var(--foreground-muted))] font-mono terminal-text truncate">{service.command}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-3">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[hsl(var(--foreground-muted))] mb-3 terminal-text">
                   <span className="truncate max-w-full">{service.repoPath}</span>
                   {service.port && <span>Port: {service.port}</span>}
                   {service.pid && <span>PID: {service.pid}</span>}
                   {!isRunning && service.exitCode !== undefined && (
-                    <span className={service.exitCode === 0 ? '' : 'text-red-600'}>
+                    <span className={service.exitCode === 0 ? '' : 'text-[hsl(var(--danger))]'}>
                       Exit: {service.exitCode}
                     </span>
                   )}
@@ -1030,29 +1031,29 @@ export default function Services() {
         </div>
 
         {/* Tabbed Logs Viewer */}
-        <div className="bg-gray-900 rounded-lg overflow-hidden flex flex-col" data-testid="service-logs-viewer">
+        <div className="glass-card rounded-xl overflow-hidden flex flex-col scanlines" data-testid="service-logs-viewer">
           {/* Header with title and controls */}
           <div className="flex items-center justify-between p-4 pb-0">
             <div className="flex items-center gap-3">
-              <h3 className="text-white font-semibold">Service Logs</h3>
-              <span className="text-gray-400 text-xs">
+              <h3 className="text-[hsl(var(--foreground))] font-semibold">Service Logs</h3>
+              <span className="text-[hsl(var(--foreground-muted))] text-xs terminal-text">
                 ({services.filter(s => s.status === 'running').length} services running)
               </span>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowCentralLogs(!showCentralLogs)}
-                className={`px-3 py-1 rounded text-xs ${
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                   showCentralLogs
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-700 text-gray-300'
+                    ? 'bg-[hsl(var(--success))] text-[hsl(var(--background))]'
+                    : 'bg-[hsl(var(--border))] text-[hsl(var(--foreground-muted))]'
                 }`}
               >
                 {showCentralLogs ? 'Live' : 'Paused'}
               </button>
               <button
                 onClick={() => activeLogTab === 'all' ? fetchAllLogs() : fetchSingleServiceLogs(activeLogTab)}
-                className="text-gray-400 hover:text-white"
+                className="text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--primary))] transition-colors"
                 data-testid="service-logs-refresh-button"
               >
                 <RefreshCw size={16} />
@@ -1061,13 +1062,13 @@ export default function Services() {
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 px-4 pt-3 pb-2 border-b border-gray-700 overflow-x-auto">
+          <div className="flex items-center gap-1 px-4 pt-3 pb-2 border-b border-[hsl(var(--border))] overflow-x-auto">
             <button
               onClick={() => setActiveLogTab('all')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                 activeLogTab === 'all'
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                  ? 'bg-[hsl(var(--background))] text-[hsl(var(--primary))]'
+                  : 'text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--background))]/50'
               }`}
             >
               All Services
@@ -1076,10 +1077,10 @@ export default function Services() {
               <button
                 key={service.id}
                 onClick={() => setActiveLogTab(service.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors whitespace-nowrap ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                   activeLogTab === service.id
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                    ? 'bg-[hsl(var(--background))] text-[hsl(var(--primary))]'
+                    : 'text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--background))]/50'
                 }`}
               >
                 {service.name}
@@ -1088,32 +1089,32 @@ export default function Services() {
           </div>
 
           {/* Log Content */}
-          <div className="p-4 flex-1 overflow-hidden flex flex-col">
+          <div className="p-4 flex-1 overflow-hidden flex flex-col bg-[hsl(var(--background))]">
             {services.filter(s => s.status === 'running').length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
+              <div className="flex-1 flex items-center justify-center text-[hsl(var(--foreground-muted))]">
                 No services are currently running
               </div>
             ) : (
-              <div className="flex-1 overflow-auto font-mono text-xs space-y-1" data-testid="service-logs-content">
+              <div className="flex-1 overflow-auto font-mono text-xs space-y-1 terminal-text" data-testid="service-logs-content">
                 {activeLogTab === 'all' ? (
                   // Show all services logs with prefix
                   allLogs.length === 0 ? (
-                    <p className="text-gray-500">Waiting for logs...</p>
+                    <p className="text-[hsl(var(--foreground-muted))]">Waiting for logs...</p>
                   ) : (
                     allLogs.map((logEntry, i) => (
                       <div key={i} className="whitespace-pre-wrap break-all">
-                        <span className="text-blue-400 font-semibold">[{logEntry.serviceName}]</span>{' '}
-                        <span className="text-green-400">{logEntry.log}</span>
+                        <span className="text-[hsl(var(--info))] font-semibold">[{logEntry.serviceName}]</span>{' '}
+                        <span className="text-[hsl(var(--success))]">{logEntry.log}</span>
                       </div>
                     ))
                   )
                 ) : (
                   // Show single service logs without prefix
                   singleServiceLogs.length === 0 ? (
-                    <p className="text-gray-500">No logs available</p>
+                    <p className="text-[hsl(var(--foreground-muted))]">No logs available</p>
                   ) : (
                     singleServiceLogs.map((log, i) => (
-                      <div key={i} className="whitespace-pre-wrap break-all text-green-400">
+                      <div key={i} className="whitespace-pre-wrap break-all text-[hsl(var(--success))]">
                         {log}
                       </div>
                     ))
@@ -1134,11 +1135,11 @@ export default function Services() {
       >
         <div className="p-6">
           {/* Create New Group */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold mb-3">Create New Group</h3>
+          <div className="mb-6 p-4 bg-[hsl(var(--background-elevated))] rounded-xl border border-[hsl(var(--border))]">
+            <h3 className="font-semibold mb-3 text-[hsl(var(--foreground))]">Create New Group</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                   Group Name *
                 </label>
                 <input
@@ -1146,11 +1147,11 @@ export default function Services() {
                   value={newGroup.name}
                   onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
                   placeholder="e.g., Backend Services"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="input-field"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                   Description
                 </label>
                 <input
@@ -1158,24 +1159,23 @@ export default function Services() {
                   value={newGroup.description}
                   onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
                   placeholder="Optional description"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="input-field"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                   Color
                 </label>
                 <input
                   type="color"
                   value={newGroup.color}
                   onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
-                  className="h-10 w-20 rounded cursor-pointer"
+                  className="h-10 w-20 rounded-lg cursor-pointer bg-[hsl(var(--background))] border border-[hsl(var(--border))]"
                 />
               </div>
               <Button
                 onClick={handleCreateGroup}
                 fullWidth
-                className="bg-purple-600 hover:bg-purple-700"
               >
                 Create Group
               </Button>
@@ -1184,24 +1184,24 @@ export default function Services() {
 
           {/* Existing Groups */}
           <div>
-            <h3 className="font-semibold mb-3">Existing Groups ({groups.length})</h3>
+            <h3 className="font-semibold mb-3 text-[hsl(var(--foreground))]">Existing Groups ({groups.length})</h3>
             {groups.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No groups created yet</p>
+              <p className="text-[hsl(var(--foreground-muted))] text-center py-8">No groups created yet</p>
             ) : (
               <div className="space-y-2">
                 {groups.map(group => (
-                  <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={group.id} className="flex items-center justify-between p-3 bg-[hsl(var(--background-elevated))] rounded-xl border border-[hsl(var(--border))]">
                     <div className="flex items-center gap-3">
                       <div
                         className="w-4 h-4 rounded"
                         style={{ backgroundColor: group.color || '#3B82F6' }}
                       />
                       <div>
-                        <p className="font-medium">{group.name}</p>
+                        <p className="font-medium text-[hsl(var(--foreground))]">{group.name}</p>
                         {group.description && (
-                          <p className="text-sm text-gray-500">{group.description}</p>
+                          <p className="text-sm text-[hsl(var(--foreground-muted))]">{group.description}</p>
                         )}
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-[hsl(var(--foreground-muted))]">
                           {group.serviceIds.length} service{group.serviceIds.length !== 1 ? 's' : ''}
                         </p>
                       </div>
@@ -1210,7 +1210,7 @@ export default function Services() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteGroup(group.id, group.name)}
-                      className="text-red-600 hover:bg-red-50"
+                      className="text-[hsl(var(--danger))] hover:bg-[hsla(var(--danger),0.1)]"
                     >
                       Delete
                     </Button>
@@ -1253,10 +1253,10 @@ export default function Services() {
                   <button
                     key={group.id}
                     onClick={() => selectedServiceForGroups && handleToggleServiceGroup(group.id, selectedServiceForGroups.id, isInGroup)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors ${
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all ${
                       isInGroup
-                        ? 'border-purple-600 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-[hsl(var(--primary))] bg-[hsla(var(--primary),0.08)]'
+                        : 'border-[hsl(var(--border))] hover:border-[hsla(var(--primary),0.3)]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -1264,11 +1264,11 @@ export default function Services() {
                         className="w-4 h-4 rounded"
                         style={{ backgroundColor: group.color || '#3B82F6' }}
                       />
-                      <span className="font-medium">{group.name}</span>
+                      <span className="font-medium text-[hsl(var(--foreground))]">{group.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {isInGroup && (
-                        <CheckSquare size={20} className="text-purple-600" />
+                        <CheckSquare size={20} className="text-[hsl(var(--primary))]" />
                       )}
                     </div>
                   </button>
@@ -1293,7 +1293,7 @@ export default function Services() {
         <div className="p-6" data-testid="service-edit-form">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Service Name
               </label>
               <input
@@ -1301,12 +1301,12 @@ export default function Services() {
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 placeholder="e.g., Auth Service"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 data-testid="service-edit-name-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Repository Path
               </label>
               <input
@@ -1314,13 +1314,13 @@ export default function Services() {
                 value={editForm.repoPath}
                 onChange={(e) => setEditForm({ ...editForm, repoPath: e.target.value })}
                 placeholder="/home/user/my-service"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field terminal-text"
                 data-testid="service-edit-repoPath-input"
               />
-              <p className="text-xs text-gray-500 mt-1">Enter the absolute path to your service directory</p>
+              <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">Enter the absolute path to your service directory</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Start Command
               </label>
               <input
@@ -1328,12 +1328,12 @@ export default function Services() {
                 value={editForm.command}
                 onChange={(e) => setEditForm({ ...editForm, command: e.target.value })}
                 placeholder="npm start"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field terminal-text"
                 data-testid="service-edit-command-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                 Port (optional)
               </label>
               <input
@@ -1341,7 +1341,7 @@ export default function Services() {
                 value={editForm.port}
                 onChange={(e) => setEditForm({ ...editForm, port: e.target.value })}
                 placeholder="3000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 data-testid="service-edit-port-input"
               />
             </div>

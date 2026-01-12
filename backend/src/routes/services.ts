@@ -2,8 +2,27 @@ import { Router, Request, Response } from 'express'
 import { serviceManager, Database } from '@devhub/core'
 import { spawn } from 'child_process'
 import os from 'os'
+import { validatePath, isValidPort, sanitizeString } from '../index'
 
 const router = Router()
+
+// Security: Additional input validation helpers
+function validateServiceName(name: any): boolean {
+  if (typeof name !== 'string' || name.length < 1 || name.length > 100) {
+    return false
+  }
+  // Only allow alphanumeric, spaces, hyphens, underscores
+  return /^[a-zA-Z0-9\s\-_]+$/.test(name)
+}
+
+function validateCommand(command: any): boolean {
+  if (typeof command !== 'string' || command.length === 0 || command.length > 1000) {
+    return false
+  }
+  // Basic validation - prevent obvious shell injection attempts
+  // Note: This is basic validation, terminal commands still require caution
+  return !/[;&|`$()]/.test(command)
+}
 
 /**
  * Middleware to get active workspace ID
@@ -104,12 +123,36 @@ router.post('/', async (req: Request, res: Response) => {
       })
     }
 
+    // Security: Validate service name
+    if (!validateServiceName(name)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid service name. Use only alphanumeric characters, spaces, hyphens, and underscores (max 100 chars)',
+      })
+    }
+
+    // Security: Validate path (prevent traversal)
+    if (!validatePath(repoPath)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Path contains invalid sequences (../ or ..\\)',
+      })
+    }
+
+    // Security: Validate port if provided
+    if (port !== undefined && port !== null && !isValidPort(port)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid port number. Must be between 1 and 65535',
+      })
+    }
+
     const workspaceId = await getWorkspaceId(req)
 
     const service = serviceManager.createService(workspaceId, {
-      name,
-      repoPath,
-      command,
+      name: sanitizeString(name, 100),
+      repoPath: sanitizeString(repoPath, 500),
+      command: sanitizeString(command, 1000),
       port,
       envVars,
     })
@@ -141,10 +184,34 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Service not found in this workspace' })
     }
 
+    // Security: Validate service name if provided
+    if (name !== undefined && !validateServiceName(name)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid service name. Use only alphanumeric characters, spaces, hyphens, and underscores (max 100 chars)',
+      })
+    }
+
+    // Security: Validate path if provided (prevent traversal)
+    if (repoPath !== undefined && !validatePath(repoPath)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Path contains invalid sequences (../ or ..\\)',
+      })
+    }
+
+    // Security: Validate port if provided
+    if (port !== undefined && port !== null && !isValidPort(port)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid port number. Must be between 1 and 65535',
+      })
+    }
+
     const updated = serviceManager.updateService(req.params.id, {
-      name,
-      repoPath,
-      command,
+      name: name !== undefined ? sanitizeString(name, 100) : undefined,
+      repoPath: repoPath !== undefined ? sanitizeString(repoPath, 500) : undefined,
+      command: command !== undefined ? sanitizeString(command, 1000) : undefined,
       port,
       envVars,
     })
@@ -554,6 +621,11 @@ router.post('/batch', async (req: Request, res: Response) => {
       failed: [] as any[],
     }
 
+    // Security: Limit batch size to prevent DoS
+    if (services.length > 50) {
+      return res.status(400).json({ error: 'Maximum 50 services per batch' })
+    }
+
     // Process all services
     for (const serviceData of services) {
       try {
@@ -562,6 +634,33 @@ router.post('/batch', async (req: Request, res: Response) => {
           results.failed.push({
             service: serviceData,
             error: 'Missing required fields (name, repoPath, command)',
+          })
+          continue
+        }
+
+        // Security: Validate service name
+        if (!validateServiceName(serviceData.name)) {
+          results.failed.push({
+            service: serviceData,
+            error: 'Invalid service name. Use only alphanumeric characters, spaces, hyphens, and underscores (max 100 chars)',
+          })
+          continue
+        }
+
+        // Security: Validate path (prevent traversal)
+        if (!validatePath(serviceData.repoPath)) {
+          results.failed.push({
+            service: serviceData,
+            error: 'Path contains invalid sequences (../ or ..\\)',
+          })
+          continue
+        }
+
+        // Security: Validate port if provided
+        if (serviceData.port !== undefined && serviceData.port !== null && !isValidPort(serviceData.port)) {
+          results.failed.push({
+            service: serviceData,
+            error: 'Invalid port number. Must be between 1 and 65535',
           })
           continue
         }
@@ -576,11 +675,11 @@ router.post('/batch', async (req: Request, res: Response) => {
           continue
         }
 
-        // Create service
+        // Create service with sanitized inputs
         const service = serviceManager.createService(workspaceId, {
-          name: serviceData.name,
-          repoPath: serviceData.repoPath,
-          command: serviceData.command,
+          name: sanitizeString(serviceData.name, 100),
+          repoPath: sanitizeString(serviceData.repoPath, 500),
+          command: sanitizeString(serviceData.command, 1000),
           port: serviceData.port || undefined,
           envVars: serviceData.envVars || undefined,
         })

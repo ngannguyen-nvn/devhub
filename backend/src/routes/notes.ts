@@ -4,6 +4,20 @@ import { Database, NotesManager } from '@devhub/core'
 const router = Router()
 const notesManager = new NotesManager()
 
+// Security: Sanitize string input
+function sanitizeString(input: any, maxLength = 1000): string {
+  if (typeof input !== 'string') return ''
+  return input.slice(0, maxLength).trim()
+}
+
+// Security: Validate search query (prevent ReDoS)
+function validateSearchQuery(query: string): boolean {
+  if (typeof query !== 'string' || query.length === 0 || query.length > 200) {
+    return false
+  }
+  return true
+}
+
 /**
  * Middleware to get active workspace ID
  * Can be overridden by workspace_id query param
@@ -78,7 +92,13 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const workspaceId = await getWorkspaceId(req)
-    const note = notesManager.createNote(workspaceId, { title, content, category, tags, template })
+    const note = notesManager.createNote(workspaceId, {
+      title: sanitizeString(title, 200),
+      content: sanitizeString(content, 100000), // Allow large content for notes
+      category: category ? sanitizeString(category, 100) : undefined,
+      tags,
+      template: template ? sanitizeString(template, 50) : undefined,
+    })
     res.json({ success: true, note })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
@@ -152,10 +172,16 @@ router.delete('/:noteId', async (req: Request, res: Response) => {
 router.get('/search/:query', async (req: Request, res: Response) => {
   try {
     const { query } = req.params
+
+    // Security: Validate search query
+    if (!validateSearchQuery(query)) {
+      return res.status(400).json({ success: false, error: 'Invalid search query (max 200 characters)' })
+    }
+
     const workspaceId = await getWorkspaceId(req)
 
     // Get search results and filter by workspace
-    const allResults = notesManager.searchNotes(query)
+    const allResults = notesManager.searchNotes(sanitizeString(query, 200))
     const notes = allResults.filter(note => note.workspaceId === workspaceId)
 
     res.json({ success: true, notes })

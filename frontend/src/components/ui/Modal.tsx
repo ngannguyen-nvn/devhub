@@ -93,28 +93,45 @@ export function Modal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[hsla(220,20%,4%,0.8)] backdrop-blur-md animate-fade-in"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
       aria-describedby={description ? 'modal-description' : undefined}
     >
+      {/* Ambient glow behind modal */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at center, hsla(175, 85%, 50%, 0.05) 0%, transparent 50%)',
+        }}
+      />
+
       <div
         ref={contentRef}
         className={`
-          w-full ${sizeClasses[size]} bg-white rounded-xl shadow-2xl
+          relative w-full ${sizeClasses[size]}
+          glass-card rounded-2xl
           animate-slide-up max-h-[90vh] flex flex-col overflow-hidden
           ${className}
         `}
       >
+        {/* Top glow accent */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{
+            background: 'linear-gradient(90deg, transparent, hsla(175, 85%, 50%, 0.5), transparent)',
+          }}
+        />
+
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between p-6 border-b border-gray-200">
+          <div className="flex items-start justify-between p-6 border-b border-[hsl(var(--border))]">
             <div className="flex-1 pr-4">
               {title && (
                 <h2
                   id="modal-title"
-                  className={`text-xl font-semibold text-gray-900 ${titleClassName}`}
+                  className={`text-xl font-semibold text-[hsl(var(--foreground))] ${titleClassName}`}
                 >
                   {title}
                 </h2>
@@ -122,7 +139,7 @@ export function Modal({
               {description && (
                 <p
                   id="modal-description"
-                  className="mt-1 text-sm text-gray-600"
+                  className="mt-1 text-sm text-[hsl(var(--foreground-muted))]"
                 >
                   {description}
                 </p>
@@ -131,7 +148,7 @@ export function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="p-2 text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--border))] rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
                 aria-label="Close modal"
               >
                 <X size={20} />
@@ -147,5 +164,3 @@ export function Modal({
     </div>
   )
 }
-
-

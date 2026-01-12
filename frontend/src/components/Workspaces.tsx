@@ -881,7 +881,7 @@ export default function Workspaces() {
     <div className="flex items-center gap-2 text-sm mb-4" data-testid="workspace-breadcrumb">
       <button
         onClick={handleBackToWorkspaces}
-        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+        className="flex items-center gap-1 text-[hsl(var(--primary))] hover:opacity-80"
         data-testid="workspace-breadcrumb-home-button"
       >
         <Home className="w-4 h-4" />
@@ -889,13 +889,13 @@ export default function Workspaces() {
       </button>
       {selectedWorkspace && (
         <>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <ChevronRight className="w-4 h-4 text-[hsl(var(--foreground-muted))]" />
           {viewLevel === 'workspace-detail' ? (
-            <span className="text-gray-900">{selectedWorkspace.name}</span>
+            <span className="text-[hsl(var(--foreground))]">{selectedWorkspace.name}</span>
           ) : (
             <button
               onClick={handleBackToSnapshots}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-[hsl(var(--primary))] hover:opacity-80"
               data-testid="workspace-breadcrumb-workspace-button"
             >
               {selectedWorkspace.name}
@@ -905,8 +905,8 @@ export default function Workspaces() {
       )}
       {selectedSnapshot && viewLevel === 'snapshot-detail' && (
         <>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-900">{selectedSnapshot.name}</span>
+          <ChevronRight className="w-4 h-4 text-[hsl(var(--foreground-muted))]" />
+          <span className="text-[hsl(var(--foreground))]">{selectedSnapshot.name}</span>
         </>
       )}
     </div>
@@ -921,11 +921,11 @@ export default function Workspaces() {
       {viewLevel === 'workspace-list' && (
         <>
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">Workspaces</h1>
+            <h1 className="text-3xl font-bold text-[hsl(var(--foreground))]">Workspaces</h1>
             <div className="flex gap-2">
               <button
                 onClick={fetchWorkspaces}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80"
                 data-testid="workspace-refresh-button"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -933,7 +933,7 @@ export default function Workspaces() {
               </button>
               <button
                 onClick={() => setShowScanForm(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--info))] text-[hsl(var(--background))] rounded-xl hover:opacity-90"
                 data-testid="workspace-scan-folder-button"
               >
                 <Folder className="w-4 h-4" />
@@ -941,7 +941,7 @@ export default function Workspaces() {
               </button>
               <button
                 onClick={() => setShowCreateWorkspaceForm(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="flex items-center gap-2 px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                 data-testid="workspace-create-button"
               >
                 <Plus className="w-4 h-4" />
@@ -952,15 +952,15 @@ export default function Workspaces() {
 
           {/* Create Workspace Form */}
           {showCreateWorkspaceForm && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded" data-testid="workspace-create-form">
-              <h3 className="font-semibold mb-3">Create New Workspace</h3>
+            <div className="mb-6 p-4 glass-card rounded-xl border border-[hsl(var(--border))]" data-testid="workspace-create-form">
+              <h3 className="font-semibold mb-3 text-[hsl(var(--foreground))]">Create New Workspace</h3>
               <div className="space-y-3">
                 <input
                   type="text"
                   value={createWorkspaceForm.name}
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, name: e.target.value })}
                   placeholder="Workspace name *"
-                  className="w-full px-3 py-2 border rounded"
+                  className="input-field w-full"
                   data-testid="workspace-name-input"
                 />
                 <input
@@ -968,7 +968,7 @@ export default function Workspaces() {
                   value={createWorkspaceForm.description}
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, description: e.target.value })}
                   placeholder="Description (optional)"
-                  className="w-full px-3 py-2 border rounded"
+                  className="input-field w-full"
                   data-testid="workspace-description-input"
                 />
                 <input
@@ -976,7 +976,7 @@ export default function Workspaces() {
                   value={createWorkspaceForm.folderPath}
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, folderPath: e.target.value })}
                   placeholder="Folder path (optional)"
-                  className="w-full px-3 py-2 border rounded"
+                  className="input-field w-full"
                   data-testid="workspace-folderpath-input"
                 />
                 <input
@@ -984,21 +984,21 @@ export default function Workspaces() {
                   value={createWorkspaceForm.tags}
                   onChange={(e) => setCreateWorkspaceForm({ ...createWorkspaceForm, tags: e.target.value })}
                   placeholder="Tags (comma-separated, optional)"
-                  className="w-full px-3 py-2 border rounded"
+                  className="input-field w-full"
                   data-testid="workspace-tags-input"
                 />
               </div>
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleCreateWorkspace}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                   data-testid="workspace-create-submit-button"
                 >
                   Create
                 </button>
                 <button
                   onClick={() => setShowCreateWorkspaceForm(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80"
                   data-testid="workspace-create-cancel-button"
                 >
                   Cancel
@@ -1012,8 +1012,8 @@ export default function Workspaces() {
             {loading && workspaces.length === 0 ? (
               <SkeletonLoader count={3} />
             ) : workspaces.length === 0 ? (
-              <div className="col-span-full text-center py-16 text-gray-500">
-                <Layers className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <div className="col-span-full text-center py-16 text-[hsl(var(--foreground-muted))]">
+                <Layers className="w-16 h-16 mx-auto mb-4 opacity-30" />
                 <p className="text-lg font-medium">No workspaces yet</p>
                 <p className="text-sm mt-2">Create your first workspace to get started</p>
               </div>
@@ -1021,20 +1021,20 @@ export default function Workspaces() {
               workspaces.map((workspace) => (
                 <div
                   key={workspace.id}
-                  className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 p-4 cursor-pointer transition-colors"
+                  className="glass-card card-hover rounded-xl border-2 border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] p-4 cursor-pointer transition-colors"
                   onClick={() => handleWorkspaceClick(workspace.id)}
                   data-testid={`workspace-item-${workspace.id}`}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg">{workspace.name}</h3>
+                    <h3 className="font-bold text-lg text-[hsl(var(--foreground))]">{workspace.name}</h3>
                     {workspace.active && (
-                      <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded">Active</span>
+                      <span className="px-2 py-0.5 bg-[hsla(var(--success),0.1)] text-[hsl(var(--success))] text-xs rounded-xl">Active</span>
                     )}
                   </div>
                   {workspace.description && (
-                    <p className="text-sm text-gray-600 mb-3">{workspace.description}</p>
+                    <p className="text-sm text-[hsl(var(--foreground-muted))] mb-3">{workspace.description}</p>
                   )}
-                  <div className="flex gap-4 text-xs text-gray-500 mb-3">
+                  <div className="flex gap-4 text-xs text-[hsl(var(--foreground-muted))] mb-3">
                     <span className="flex items-center gap-1">
                       <Save className="w-3 h-3" />
                       {workspace.snapshotCount || 0} snapshots
@@ -1049,19 +1049,19 @@ export default function Workspaces() {
                   {workspace.tags && workspace.tags.length > 0 && (
                     <div className="flex gap-1 flex-wrap mb-3">
                       {workspace.tags.map((tag, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
+                        <span key={i} className="px-2 py-0.5 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] text-xs rounded-xl">
                           {tag}
                         </span>
                       ))}
                     </div>
                   )}
-                  <div className="flex gap-2 mt-3 pt-3 border-t">
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-[hsl(var(--border))]">
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         handleActivateWorkspace(workspace.id)
                       }}
-                      className="flex-1 px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                      className="flex-1 px-3 py-1 text-xs bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:opacity-90"
                       data-testid={`workspace-activate-button-${workspace.id}`}
                     >
                       Activate
@@ -1071,7 +1071,7 @@ export default function Workspaces() {
                         e.stopPropagation()
                         handleDeleteWorkspace(workspace.id, workspace.name)
                       }}
-                      className="px-3 py-1 text-xs text-red-600 hover:text-red-800"
+                      className="px-3 py-1 text-xs text-[hsl(var(--danger))] hover:opacity-80"
                       data-testid={`workspace-delete-button-${workspace.id}`}
                     >
                       Delete
@@ -1089,15 +1089,15 @@ export default function Workspaces() {
         <>
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-bold">{selectedWorkspace.name}</h1>
+              <h1 className="text-3xl font-bold text-[hsl(var(--foreground))]">{selectedWorkspace.name}</h1>
               {selectedWorkspace.description && (
-                <p className="text-gray-600 mt-1">{selectedWorkspace.description}</p>
+                <p className="text-[hsl(var(--foreground-muted))] mt-1">{selectedWorkspace.description}</p>
               )}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => fetchSnapshots(selectedWorkspaceId!)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80"
                 data-testid="snapshot-refresh-button"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -1105,7 +1105,7 @@ export default function Workspaces() {
               </button>
               <button
                 onClick={handleQuickSnapshot}
-                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--warning))] text-[hsl(var(--background))] rounded-xl hover:opacity-90"
                 data-testid="snapshot-quick-button"
               >
                 <Zap className="w-4 h-4" />
@@ -1113,7 +1113,7 @@ export default function Workspaces() {
               </button>
               <button
                 onClick={() => setShowCreateSnapshotForm(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="flex items-center gap-2 px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                 data-testid="snapshot-create-button"
               >
                 <Plus className="w-4 h-4" />
@@ -1124,19 +1124,19 @@ export default function Workspaces() {
 
           {/* Current Active Snapshot Info */}
           {selectedWorkspace.activeSnapshotId && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+            <div className="mb-6 p-4 bg-[hsla(var(--success),0.1)] border border-[hsl(var(--success))] rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-5 h-5 text-[hsl(var(--success))]" />
                 <div>
-                  <p className="font-semibold text-green-900">Active Snapshot</p>
-                  <p className="text-sm text-green-700">
+                  <p className="font-semibold text-[hsl(var(--success))]">Active Snapshot</p>
+                  <p className="text-sm text-[hsl(var(--foreground-muted))]">
                     {snapshots.find(s => s.id === selectedWorkspace.activeSnapshotId)?.name || 'Unknown'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleClearActiveSnapshot}
-                className="px-3 py-1.5 text-sm bg-white border border-green-300 text-green-700 rounded hover:bg-green-100"
+                className="px-3 py-1.5 text-sm bg-[hsl(var(--background-elevated))] border border-[hsl(var(--success))] text-[hsl(var(--success))] rounded-xl hover:opacity-80"
                 data-testid="snapshot-clear-active-button"
               >
                 Clear Active Snapshot
@@ -1146,22 +1146,22 @@ export default function Workspaces() {
 
           {/* Create Snapshot Form */}
           {showCreateSnapshotForm && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded" data-testid="snapshot-create-form">
-              <h3 className="font-semibold mb-3">Create Snapshot</h3>
+            <div className="mb-6 p-4 glass-card rounded-xl border border-[hsl(var(--border))]" data-testid="snapshot-create-form">
+              <h3 className="font-semibold mb-3 text-[hsl(var(--foreground))]">Create Snapshot</h3>
               <div className="space-y-3">
                 <input
                   type="text"
                   value={createSnapshotForm.name}
                   onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, name: e.target.value })}
                   placeholder="Snapshot name *"
-                  className="w-full px-3 py-2 border rounded"
+                  className="input-field w-full"
                   data-testid="snapshot-name-input"
                 />
                 <textarea
                   value={createSnapshotForm.description}
                   onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, description: e.target.value })}
                   placeholder="Description (optional)"
-                  className="w-full px-3 py-2 border rounded"
+                  className="input-field w-full"
                   rows={2}
                   data-testid="snapshot-description-input"
                 />
@@ -1169,7 +1169,7 @@ export default function Workspaces() {
                   value={createSnapshotForm.repoPaths}
                   onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, repoPaths: e.target.value })}
                   placeholder="Repository paths (comma-separated) *"
-                  className="w-full px-3 py-2 border rounded font-mono text-sm"
+                  className="input-field w-full terminal-text text-sm"
                   rows={3}
                   data-testid="snapshot-repopaths-input"
                 />
@@ -1178,22 +1178,22 @@ export default function Workspaces() {
                   value={createSnapshotForm.tags}
                   onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, tags: e.target.value })}
                   placeholder="Tags (comma-separated, optional)"
-                  className="w-full px-3 py-2 border rounded"
+                  className="input-field w-full"
                   data-testid="snapshot-tags-input"
                 />
-                <label className="flex items-start gap-3 cursor-pointer p-3 bg-green-50 border border-green-200 rounded">
+                <label className="flex items-start gap-3 cursor-pointer p-3 bg-[hsla(var(--success),0.1)] border border-[hsl(var(--success))] rounded-xl">
                   <input
                     type="checkbox"
                     checked={createSnapshotForm.autoImportEnv}
                     onChange={(e) => setCreateSnapshotForm({ ...createSnapshotForm, autoImportEnv: e.target.checked })}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="mt-1 w-4 h-4 accent-[hsl(var(--primary))]"
                     data-testid="snapshot-auto-import-env-checkbox"
                   />
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-[hsl(var(--foreground))]">
                       Auto-import .env files before snapshot
                     </span>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">
                       Scan and import all .env files from repositories before capturing workspace state
                     </p>
                   </div>
@@ -1202,14 +1202,14 @@ export default function Workspaces() {
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleCreateSnapshot}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                   data-testid="snapshot-create-submit-button"
                 >
                   Create
                 </button>
                 <button
                   onClick={() => setShowCreateSnapshotForm(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80"
                   data-testid="snapshot-create-cancel-button"
                 >
                   Cancel
@@ -1220,12 +1220,12 @@ export default function Workspaces() {
 
           {/* Bulk Action Bar */}
           {snapshots.length > 0 && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg" data-testid="snapshot-bulk-action-bar">
+            <div className="mb-4 p-4 bg-[hsla(var(--primary),0.08)] border border-[hsl(var(--border))] rounded-xl" data-testid="snapshot-bulk-action-bar">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={toggleAllSnapshots}
-                    className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium"
+                    className="flex items-center gap-2 text-[hsl(var(--primary))] hover:opacity-80 font-medium"
                     data-testid="snapshot-toggle-all-button"
                   >
                     {selectedSnapshots.size === snapshots.length ? (
@@ -1235,14 +1235,14 @@ export default function Workspaces() {
                     )}
                     {selectedSnapshots.size === snapshots.length ? 'Deselect All' : 'Select All'}
                   </button>
-                  <span className="text-blue-700">
+                  <span className="text-[hsl(var(--primary))]">
                     {selectedSnapshots.size} of {snapshots.length} selected
                   </span>
                 </div>
                 {selectedSnapshots.size > 0 && (
                   <button
                     onClick={handleDeleteSelectedSnapshots}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-[hsl(var(--danger))] text-white rounded-xl hover:opacity-90 flex items-center gap-2"
                     data-testid="snapshot-delete-selected-button"
                   >
                     <Trash2 size={18} />
@@ -1258,8 +1258,8 @@ export default function Workspaces() {
             {loading && snapshots.length === 0 ? (
               <SkeletonLoader count={3} />
             ) : snapshots.length === 0 ? (
-              <div className="col-span-full text-center py-16 text-gray-500">
-                <Save className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <div className="col-span-full text-center py-16 text-[hsl(var(--foreground-muted))]">
+                <Save className="w-16 h-16 mx-auto mb-4 opacity-30" />
                 <p className="text-lg font-medium">No snapshots yet</p>
                 <p className="text-sm mt-2">Create your first snapshot to save your workspace state</p>
               </div>
@@ -1271,12 +1271,12 @@ export default function Workspaces() {
                 return (
                   <div
                     key={snapshot.id}
-                    className={`bg-white rounded-lg border-2 ${
+                    className={`glass-card card-hover rounded-xl border-2 ${
                       isSelected
-                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        ? 'border-[hsl(var(--primary))] ring-2 ring-[hsla(var(--primary),0.2)]'
                         : isActive
-                        ? 'border-green-500'
-                        : 'border-gray-200 hover:border-blue-400'
+                        ? 'border-[hsl(var(--success))]'
+                        : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]'
                     } p-4 cursor-pointer transition-colors relative`}
                     onClick={() => handleSnapshotClick(snapshot.id)}
                     data-testid={`snapshot-item-${snapshot.id}`}
@@ -1286,31 +1286,31 @@ export default function Workspaces() {
                       <button
                         onClick={(e) => !isActive && toggleSnapshotSelection(snapshot.id, e)}
                         disabled={isActive}
-                        className={`p-1 rounded ${isActive ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'}`}
+                        className={`p-1 rounded-xl ${isActive ? 'cursor-not-allowed opacity-50' : 'hover:bg-[hsl(var(--border))]'}`}
                         title={isActive ? 'Cannot select active snapshot for deletion' : ''}
                         data-testid={`snapshot-checkbox-${snapshot.id}`}
                       >
                         {isSelected ? (
-                          <CheckSquare size={20} className="text-blue-600" />
+                          <CheckSquare size={20} className="text-[hsl(var(--primary))]" />
                         ) : (
-                          <Square size={20} className={isActive ? "text-gray-300" : "text-gray-400"} />
+                          <Square size={20} className={isActive ? "opacity-30" : "text-[hsl(var(--foreground-muted))]"} />
                         )}
                       </button>
                     </div>
 
                     <div className="flex items-start justify-between mb-2 ml-8">
-                      <h3 className="font-bold text-lg">{snapshot.name}</h3>
+                      <h3 className="font-bold text-lg text-[hsl(var(--foreground))]">{snapshot.name}</h3>
                       {isActive && (
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded flex items-center gap-1">
+                        <span className="px-2 py-1 bg-[hsla(var(--success),0.1)] text-[hsl(var(--success))] text-xs font-semibold rounded-xl flex items-center gap-1">
                           <CheckCircle className="w-3 h-3" />
                           Active
                         </span>
                       )}
                     </div>
                     {snapshot.description && (
-                      <p className="text-sm text-gray-600 mb-3">{snapshot.description}</p>
+                      <p className="text-sm text-[hsl(var(--foreground-muted))] mb-3">{snapshot.description}</p>
                     )}
-                  <div className="flex gap-3 text-xs text-gray-500 mb-2">
+                  <div className="flex gap-3 text-xs text-[hsl(var(--foreground-muted))] mb-2">
                     <span className="flex items-center gap-1">
                       <Server className="w-3 h-3" />
                       {snapshot.runningServices.length} services
@@ -1323,13 +1323,13 @@ export default function Workspaces() {
                   {snapshot.tags && snapshot.tags.length > 0 && (
                     <div className="flex gap-1 flex-wrap mb-2">
                       {snapshot.tags.map((tag, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
+                        <span key={i} className="px-2 py-0.5 bg-[hsla(var(--primary),0.08)] text-[hsl(var(--primary))] text-xs rounded-xl">
                           {tag}
                         </span>
                       ))}
                     </div>
                   )}
-                  <div className="text-xs text-gray-400 mt-2">
+                  <div className="text-xs text-[hsl(var(--foreground-muted))] mt-2">
                     {formatDate(snapshot.createdAt)}
                   </div>
                 </div>
@@ -1353,13 +1353,13 @@ export default function Workspaces() {
 
       {/* View Level 3: Snapshot Detail */}
       {viewLevel === 'snapshot-detail' && selectedSnapshot && (
-        <div className="bg-white rounded-lg shadow p-6" data-testid="snapshot-detail-view">
+        <div className="glass-card rounded-xl p-6" data-testid="snapshot-detail-view">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">{selectedSnapshot.name}</h2>
+            <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">{selectedSnapshot.name}</h2>
             <div className="flex gap-2">
               <button
                 onClick={() => handleExport(selectedSnapshot.id, selectedSnapshot.name)}
-                className="p-2 text-blue-600 hover:text-blue-800"
+                className="p-2 text-[hsl(var(--primary))] hover:opacity-80"
                 title="Export"
                 data-testid="snapshot-export-button"
               >
@@ -1368,7 +1368,7 @@ export default function Workspaces() {
               <button
                 onClick={() => handleRestore(selectedSnapshot.id, selectedSnapshot.name)}
                 disabled={restoring}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 disabled:opacity-50"
                 data-testid="snapshot-restore-button"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -1376,7 +1376,7 @@ export default function Workspaces() {
               </button>
               <button
                 onClick={() => handleDeleteSnapshot(selectedSnapshot.id, selectedSnapshot.name)}
-                className="p-2 text-red-600 hover:text-red-800"
+                className="p-2 text-[hsl(var(--danger))] hover:opacity-80"
                 title="Delete"
                 data-testid="snapshot-delete-button"
               >
@@ -1386,22 +1386,22 @@ export default function Workspaces() {
           </div>
 
           {selectedSnapshot.description && (
-            <p className="text-gray-600 mb-6">{selectedSnapshot.description}</p>
+            <p className="text-[hsl(var(--foreground-muted))] mb-6">{selectedSnapshot.description}</p>
           )}
 
           {/* Running Services */}
           <div className="mb-6">
-            <h3 className="font-semibold flex items-center gap-2 mb-3">
+            <h3 className="font-semibold flex items-center gap-2 mb-3 text-[hsl(var(--foreground))]">
               <Server className="w-5 h-5" />
               Running Services ({selectedSnapshot.runningServices.length})
             </h3>
             {selectedSnapshot.runningServices.length === 0 ? (
-              <p className="text-sm text-gray-500 ml-7">No services were running</p>
+              <p className="text-sm text-[hsl(var(--foreground-muted))] ml-7">No services were running</p>
             ) : (
               <div className="space-y-2 ml-7">
                 {selectedSnapshot.runningServices.map((service, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  <div key={i} className="flex items-center gap-2 text-[hsl(var(--foreground))]">
+                    <CheckCircle className="w-4 h-4 text-[hsl(var(--success))]" />
                     <span>{service.serviceName}</span>
                   </div>
                 ))}
@@ -1411,25 +1411,25 @@ export default function Workspaces() {
 
           {/* Repository Branches */}
           <div className="mb-6">
-            <h3 className="font-semibold flex items-center gap-2 mb-3">
+            <h3 className="font-semibold flex items-center gap-2 mb-3 text-[hsl(var(--foreground))]">
               <GitBranch className="w-5 h-5" />
               Repository Branches ({selectedSnapshot.repositories.length})
             </h3>
             {selectedSnapshot.repositories.length === 0 ? (
-              <p className="text-sm text-gray-500 ml-7">No repositories tracked</p>
+              <p className="text-sm text-[hsl(var(--foreground-muted))] ml-7">No repositories tracked</p>
             ) : (
               <div className="space-y-3 ml-7">
                 {selectedSnapshot.repositories.map((repo, i) => (
                   <div key={i}>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-blue-600">{repo.branch}</span>
+                      <span className="terminal-text text-sm text-[hsl(var(--primary))]">{repo.branch}</span>
                       {repo.hasChanges && (
                         <span title="Had uncommitted changes">
-                          <AlertCircle className="w-4 h-4 text-yellow-600" />
+                          <AlertCircle className="w-4 h-4 text-[hsl(var(--warning))]" />
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500">{repo.path}</div>
+                    <div className="text-xs text-[hsl(var(--foreground-muted))] terminal-text">{repo.path}</div>
                   </div>
                 ))}
               </div>
@@ -1439,7 +1439,7 @@ export default function Workspaces() {
           {/* Environment Variables - Commented out until envVariables is added to snapshot interface */}
 
           {/* Metadata */}
-          <div className="mt-6 pt-6 border-t text-sm text-gray-500">
+          <div className="mt-6 pt-6 border-t border-[hsl(var(--border))] text-sm text-[hsl(var(--foreground-muted))]">
             <div>Created: {formatDate(selectedSnapshot.createdAt)}</div>
             <div>Updated: {formatDate(selectedSnapshot.updatedAt)}</div>
           </div>
@@ -1448,16 +1448,16 @@ export default function Workspaces() {
 
       {/* Scan Folder Form (shown at workspace list level) */}
       {showScanForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="workspace-scan-modal">
-          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 p-6" data-testid="workspace-scan-form">
-            <h3 className="text-xl font-bold mb-4">Scan Folder & Create Snapshot</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" data-testid="workspace-scan-modal">
+          <div className="glass-card rounded-xl max-w-xl w-full mx-4 p-6" data-testid="workspace-scan-form">
+            <h3 className="text-xl font-bold mb-4 text-[hsl(var(--foreground))]">Scan Folder & Create Snapshot</h3>
             <div className="space-y-3">
               <input
                 type="text"
                 value={scanForm.path}
                 onChange={(e) => setScanForm({ ...scanForm, path: e.target.value })}
                 placeholder="Folder path to scan *"
-                className="w-full px-3 py-2 border rounded"
+                className="input-field w-full"
                 data-testid="workspace-scan-path-input"
               />
               <input
@@ -1465,14 +1465,14 @@ export default function Workspaces() {
                 value={scanForm.name}
                 onChange={(e) => setScanForm({ ...scanForm, name: e.target.value })}
                 placeholder="Snapshot name *"
-                className="w-full px-3 py-2 border rounded"
+                className="input-field w-full"
                 data-testid="workspace-scan-name-input"
               />
               <textarea
                 value={scanForm.description}
                 onChange={(e) => setScanForm({ ...scanForm, description: e.target.value })}
                 placeholder="Description (optional)"
-                className="w-full px-3 py-2 border rounded"
+                className="input-field w-full"
                 rows={2}
                 data-testid="workspace-scan-description-input"
               />
@@ -1484,7 +1484,7 @@ export default function Workspaces() {
                   placeholder="Scan depth"
                   min="0"
                   max="5"
-                  className="w-24 px-3 py-2 border rounded"
+                  className="input-field w-24"
                   data-testid="workspace-scan-depth-input"
                 />
                 <input
@@ -1492,32 +1492,32 @@ export default function Workspaces() {
                   value={scanForm.tags}
                   onChange={(e) => setScanForm({ ...scanForm, tags: e.target.value })}
                   placeholder="Tags (comma-separated, optional)"
-                  className="flex-1 px-3 py-2 border rounded"
+                  className="input-field flex-1"
                   data-testid="workspace-scan-tags-input"
                 />
               </div>
 
               {/* Environment Variables Import Checkbox */}
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="p-4 bg-[hsla(var(--success),0.1)] border border-[hsl(var(--success))] rounded-xl">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={scanForm.importEnvFiles}
                     onChange={(e) => setScanForm({ ...scanForm, importEnvFiles: e.target.checked })}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="mt-1 w-4 h-4 accent-[hsl(var(--primary))]"
                     data-testid="workspace-scan-import-env-checkbox"
                   />
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-[hsl(var(--foreground))]">
                       Import .env files to environment profiles
                     </span>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">
                       Will automatically import .env files from scanned repositories
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">
                       Profile format: "{scanForm.name || 'Snapshot'} - {'{RepoName}'}"
                     </p>
-                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    <p className="text-xs text-[hsl(var(--foreground-muted))] mt-2 flex items-center gap-1">
                       <AlertCircle size={12} />
                       Env vars will be encrypted and stored securely
                     </p>
@@ -1525,7 +1525,7 @@ export default function Workspaces() {
                 </label>
               </div>
 
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-[hsl(var(--foreground-muted))]">
                 This will scan the folder for git repositories and create a workspace + snapshot.
               </p>
             </div>
@@ -1533,7 +1533,7 @@ export default function Workspaces() {
               <button
                 onClick={() => setShowScanForm(false)}
                 disabled={loading}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="workspace-scan-cancel-button"
               >
                 Cancel
@@ -1541,7 +1541,7 @@ export default function Workspaces() {
               <button
                 onClick={handleScanFolder}
                 disabled={loading}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-[hsl(var(--info))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 data-testid="workspace-scan-submit-button"
               >
                 {loading ? (
@@ -1577,25 +1577,25 @@ export default function Workspaces() {
 
       {/* Quick Snapshot Dialog */}
       {quickSnapshotDialog.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Create Quick Snapshot</h3>
-            <p className="text-sm text-gray-600 mb-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="glass-card rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-[hsl(var(--foreground))]">Create Quick Snapshot</h3>
+            <p className="text-sm text-[hsl(var(--foreground-muted))] mb-4">
               This will create a snapshot of the current workspace state with an auto-generated name.
             </p>
 
-            <label className="flex items-start gap-3 cursor-pointer p-3 bg-green-50 border border-green-200 rounded mb-4">
+            <label className="flex items-start gap-3 cursor-pointer p-3 bg-[hsla(var(--success),0.1)] border border-[hsl(var(--success))] rounded-xl mb-4">
               <input
                 type="checkbox"
                 checked={quickSnapshotDialog.autoImportEnv}
                 onChange={(e) => setQuickSnapshotDialog({ ...quickSnapshotDialog, autoImportEnv: e.target.checked })}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="mt-1 w-4 h-4 accent-[hsl(var(--primary))]"
               />
               <div className="flex-1">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-[hsl(var(--foreground))]">
                   Auto-import .env files before snapshot
                 </span>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">
                   Scan and import all .env files from repositories before capturing workspace state
                 </p>
               </div>
@@ -1604,13 +1604,13 @@ export default function Workspaces() {
             <div className="flex gap-2">
               <button
                 onClick={confirmQuickSnapshot}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="flex-1 px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
               >
                 Create Snapshot
               </button>
               <button
                 onClick={() => setQuickSnapshotDialog({ isOpen: false, autoImportEnv: false })}
-                className="flex-1 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                className="flex-1 px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80"
               >
                 Cancel
               </button>
@@ -1657,18 +1657,18 @@ export default function Workspaces() {
       >
         {/* Show checkbox for restore type */}
         {confirmDialog.type === 'restore' && (
-          <label className="flex items-start gap-3 cursor-pointer p-3 bg-green-50 border border-green-200 rounded">
+          <label className="flex items-start gap-3 cursor-pointer p-3 bg-[hsla(var(--success),0.1)] border border-[hsl(var(--success))] rounded-xl">
             <input
               type="checkbox"
               checked={restoreOptions.applyEnvToFiles}
               onChange={(e) => setRestoreOptions({ ...restoreOptions, applyEnvToFiles: e.target.checked })}
-              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="mt-1 w-4 h-4 accent-[hsl(var(--primary))]"
             />
             <div className="flex-1">
-              <span className="text-sm font-medium text-gray-900">
+              <span className="text-sm font-medium text-[hsl(var(--foreground))]">
                 Apply environment variables to .env files
               </span>
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">
                 Export snapshot env variables back to .env files in repositories
               </p>
             </div>

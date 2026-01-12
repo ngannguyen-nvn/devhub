@@ -187,35 +187,35 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
 
   if (loading && totalStashes === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="glass-card rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Archive className="w-5 h-5" />
+          <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
+            <Archive className="w-5 h-5 text-[hsl(var(--primary))]" />
             Stash Manager
           </h3>
         </div>
-        <div className="text-sm text-gray-500">Loading stashes...</div>
+        <div className="text-sm text-[hsl(var(--foreground-muted))]">Loading stashes...</div>
       </div>
     )
   }
 
   if (totalStashes === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="glass-card rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Archive className="w-5 h-5" />
+          <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
+            <Archive className="w-5 h-5 text-[hsl(var(--primary))]" />
             Stash Manager
           </h3>
           <button
             onClick={fetchStashes}
-            className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+            className="p-2 text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsla(var(--primary),0.1)] rounded-lg transition-colors"
             title="Refresh"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[hsl(var(--foreground-muted))]">
           No stashes found. Stashes are created when you restore a snapshot with uncommitted changes.
         </div>
       </div>
@@ -223,19 +223,19 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="glass-card rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Archive className="w-5 h-5" />
+        <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
+          <Archive className="w-5 h-5 text-[hsl(var(--primary))]" />
           Stash Manager
-          <span className="text-sm font-normal text-gray-500">
+          <span className="text-sm font-normal text-[hsl(var(--foreground-muted))]">
             ({searchTerm ? `${filteredTotalStashes} / ${totalStashes}` : totalStashes})
           </span>
         </h3>
         <button
           onClick={fetchStashes}
           disabled={loading}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded disabled:opacity-50"
+          className="p-2 text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsla(var(--primary),0.1)] rounded-lg disabled:opacity-50 transition-colors"
           title="Refresh"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -249,13 +249,13 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search repositories..."
-          className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="input-field pl-10"
         />
-        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-3.5 w-4 h-4 text-[hsl(var(--foreground-muted))]" />
         {searchTerm && (
           <button
             onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-3.5 text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]"
             title="Clear search"
           >
             <X className="w-4 h-4" />
@@ -264,12 +264,12 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
       </div>
 
       {filteredTotalStashes === 0 && searchTerm ? (
-        <div className="text-center py-8 text-gray-500">
-          <Search size={48} className="mx-auto mb-4 text-gray-400" />
+        <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">
+          <Search size={48} className="mx-auto mb-4 opacity-50" />
           <p>No stashes match your search</p>
           <button
             onClick={() => setSearchTerm('')}
-            className="mt-4 text-blue-600 hover:underline"
+            className="mt-4 text-[hsl(var(--primary))] hover:underline"
           >
             Clear search
           </button>
@@ -281,28 +281,28 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
           const repoName = repoPath.split('/').pop() || repoPath
 
           return (
-            <div key={repoPath} className="border rounded-lg">
+            <div key={repoPath} className="border border-[hsl(var(--border))] rounded-xl overflow-hidden">
               <button
                 onClick={() => toggleRepo(repoPath)}
-                className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
+                className="w-full flex items-center justify-between p-3 hover:bg-[hsla(var(--primary),0.05)] transition-colors"
               >
                 <div className="flex items-center gap-2">
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                    <ChevronDown className="w-4 h-4 text-[hsl(var(--foreground-muted))]" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                    <ChevronRight className="w-4 h-4 text-[hsl(var(--foreground-muted))]" />
                   )}
-                  <GitBranch className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium text-sm">{repoName}</span>
-                  <span className="text-xs text-gray-500">({repoStashes.length} stashes)</span>
+                  <GitBranch className="w-4 h-4 text-[hsl(var(--info))]" />
+                  <span className="font-medium text-sm text-[hsl(var(--foreground))]">{repoName}</span>
+                  <span className="text-xs text-[hsl(var(--foreground-muted))]">({repoStashes.length} stashes)</span>
                 </div>
-                <span className="text-xs text-gray-400 truncate max-w-md" title={repoPath}>
+                <span className="text-xs text-[hsl(var(--foreground-muted))] truncate max-w-md terminal-text" title={repoPath}>
                   {repoPath}
                 </span>
               </button>
 
               {isExpanded && (
-                <div className="border-t divide-y">
+                <div className="border-t border-[hsl(var(--border))] divide-y divide-[hsl(var(--border))]">
                   {repoStashes.map((stash) => {
                     const stashKey = `${repoPath}:${stash.index}`
                     const isStashExpanded = expandedStashes.has(stashKey)
@@ -310,30 +310,30 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
 
                     return (
                       <div key={stash.index}>
-                        <div className="p-3 hover:bg-gray-50 flex items-start justify-between gap-3">
+                        <div className="p-3 hover:bg-[hsla(var(--primary),0.05)] flex items-start justify-between gap-3 transition-colors">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">
+                              <span className="text-xs terminal-text bg-[hsl(var(--background))] px-2 py-0.5 rounded text-[hsl(var(--foreground-muted))]">
                                 stash@{'{' + stash.index + '}'}
                               </span>
                               {details?.summary?.untrackedFiles > 0 && (
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded flex items-center gap-1">
+                                <span className="text-xs bg-[hsla(var(--info),0.15)] text-[hsl(var(--info))] px-2 py-0.5 rounded flex items-center gap-1">
                                   <Archive className="w-3 h-3" />
                                   {details.summary.untrackedFiles} untracked
                                 </span>
                               )}
-                              <span className="text-xs text-gray-500">{stash.date}</span>
+                              <span className="text-xs text-[hsl(var(--foreground-muted))]">{stash.date}</span>
                             </div>
-                            <p className="text-sm text-gray-700 truncate" title={stash.message}>
+                            <p className="text-sm text-[hsl(var(--foreground))] truncate" title={stash.message}>
                               {stash.message}
                             </p>
-                            <p className="text-xs text-gray-400 font-mono mt-1">{stash.hash.substring(0, 8)}</p>
+                            <p className="text-xs text-[hsl(var(--foreground-muted))] terminal-text mt-1">{stash.hash.substring(0, 8)}</p>
                           </div>
 
                           <div className="flex gap-1 flex-shrink-0">
                             <button
                               onClick={() => toggleStashDetails(repoPath, stash.index)}
-                              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded text-xs flex items-center gap-1"
+                              className="p-1.5 text-[hsl(var(--foreground-muted))] hover:bg-[hsla(var(--primary),0.1)] rounded text-xs flex items-center gap-1 transition-colors"
                               title="View details"
                             >
                               <FileText className="w-3.5 h-3.5" />
@@ -341,7 +341,7 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
                             </button>
                             <button
                               onClick={() => handleApplyStash(repoPath, stash.index, false)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs flex items-center gap-1"
+                              className="p-1.5 text-[hsl(var(--info))] hover:bg-[hsla(var(--info),0.1)] rounded text-xs flex items-center gap-1 transition-colors"
                               title="Apply (keep in stash)"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -349,7 +349,7 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
                             </button>
                             <button
                               onClick={() => handleApplyStash(repoPath, stash.index, true)}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded text-xs flex items-center gap-1"
+                              className="p-1.5 text-[hsl(var(--success))] hover:bg-[hsla(var(--success),0.1)] rounded text-xs flex items-center gap-1 transition-colors"
                               title="Pop (apply and remove)"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -357,7 +357,7 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
                             </button>
                             <button
                               onClick={() => handleDropStash(repoPath, stash.index)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                              className="p-1.5 text-[hsl(var(--danger))] hover:bg-[hsla(var(--danger),0.1)] rounded transition-colors"
                               title="Delete stash"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -366,38 +366,40 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
                         </div>
 
                         {isStashExpanded && details && (
-                          <div className="px-3 pb-3 bg-gray-50">
-                            <div className="border-t pt-2 mt-1">
+                          <div className="px-3 pb-3 bg-[hsl(var(--background))]">
+                            <div className="border-t border-[hsl(var(--border))] pt-2 mt-1">
                               <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-xs font-semibold text-gray-700">
+                                <h4 className="text-xs font-semibold text-[hsl(var(--foreground))]">
                                   File Changes ({details.summary.totalFiles} files)
                                 </h4>
                                 <div className="flex gap-3 text-xs">
-                                  <span className="text-green-600">+{details.summary.totalInsertions}</span>
-                                  <span className="text-red-600">-{details.summary.totalDeletions}</span>
+                                  <span className="text-[hsl(var(--success))]">+{details.summary.totalInsertions}</span>
+                                  <span className="text-[hsl(var(--danger))]">-{details.summary.totalDeletions}</span>
                                 </div>
                               </div>
                               <div className="space-y-1 max-h-64 overflow-y-auto">
                                 {details.files.map((file, idx) => (
                                   <div
                                     key={idx}
-                                    className={`flex items-center justify-between text-xs p-2 rounded border ${
-                                      file.isUntracked ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                                    className={`flex items-center justify-between text-xs p-2 rounded-lg border ${
+                                      file.isUntracked
+                                        ? 'bg-[hsla(var(--info),0.1)] border-[hsla(var(--info),0.2)]'
+                                        : 'bg-[hsl(var(--background-elevated))] border-[hsl(var(--border))]'
                                     }`}
                                   >
-                                    <span className="font-mono text-gray-700 truncate flex-1" title={file.file}>
+                                    <span className="terminal-text text-[hsl(var(--foreground))] truncate flex-1" title={file.file}>
                                       {file.file}
                                     </span>
                                     <div className="flex gap-2 ml-2 flex-shrink-0">
                                       {file.isUntracked ? (
-                                        <span className="text-blue-600 text-xs">new file</span>
+                                        <span className="text-[hsl(var(--info))] text-xs">new file</span>
                                       ) : (
                                         <>
                                           {file.insertions > 0 && (
-                                            <span className="text-green-600">+{file.insertions}</span>
+                                            <span className="text-[hsl(var(--success))]">+{file.insertions}</span>
                                           )}
                                           {file.deletions > 0 && (
-                                            <span className="text-red-600">-{file.deletions}</span>
+                                            <span className="text-[hsl(var(--danger))]">-{file.deletions}</span>
                                           )}
                                         </>
                                       )}
@@ -419,12 +421,12 @@ export default function StashManager({ repoPaths, onStashApplied }: StashManager
         </div>
       )}
 
-      <div className="mt-4 text-xs text-gray-500 border-t pt-3">
+      <div className="mt-4 text-xs text-[hsl(var(--foreground-muted))] border-t border-[hsl(var(--border))] pt-3">
         <p className="mb-1">
-          <strong>Apply:</strong> Restore stashed changes and keep them in the stash list
+          <strong className="text-[hsl(var(--foreground))]">Apply:</strong> Restore stashed changes and keep them in the stash list
         </p>
         <p>
-          <strong>Pop:</strong> Restore stashed changes and remove from the stash list
+          <strong className="text-[hsl(var(--foreground))]">Pop:</strong> Restore stashed changes and remove from the stash list
         </p>
       </div>
     </div>

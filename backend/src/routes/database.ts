@@ -54,6 +54,19 @@ const upload = multer({
   },
 })
 
+// Security: Validate SQLite file magic bytes
+function isValidSQLiteFile(filePath: string): boolean {
+  try {
+    const buffer = fs.readFileSync(filePath)
+    if (buffer.length < 16) return false
+    // SQLite databases start with "SQLite format 3" or "SQLite format 2"
+    const header = buffer.slice(0, 15).toString('utf8')
+    return header.startsWith('SQLite format')
+  } catch (error) {
+    return false
+  }
+}
+
 /**
  * GET /api/database/stats
  * Get database statistics
@@ -131,7 +144,13 @@ router.post('/restore', upload.single('database'), (req: Request, res: Response)
     const uploadedFilePath = req.file.path
     const dbPath = path.join(__dirname, '../../devhub.db')
 
-    // Validate it's a SQLite database
+    // Validate it's a SQLite database (magic bytes check)
+    if (!isValidSQLiteFile(uploadedFilePath)) {
+      fs.unlinkSync(uploadedFilePath) // Clean up invalid file
+      return res.status(400).json({ success: false, error: 'Invalid SQLite database file (magic bytes check failed)' })
+    }
+
+    // Double-check with SQLite library
     try {
       const testDb = require('better-sqlite3')(uploadedFilePath, { readonly: true })
       testDb.close()
@@ -155,14 +174,12 @@ router.post('/restore', upload.single('database'), (req: Request, res: Response)
 
     res.json({
       success: true,
-      message: 'Database restored successfully. Please refresh the page.',
+      message: 'Database restored successfully. Please manually restart the application.',
       backup: backupPath,
     })
 
-    // Exit process to force restart (tsx watch will restart automatically)
-    setTimeout(() => {
-      process.exit(0)
-    }, 1000)
+    // NOTE: process.exit() removed for safety
+    // User should manually restart: npm run dev
   } catch (error: any) {
     // Clean up uploaded file on error
     if (req.file) {

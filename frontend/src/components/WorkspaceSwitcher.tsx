@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Folder, Plus, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronDown, Folder, Plus, Loader2, AlertCircle, Check, Sparkles } from 'lucide-react'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import toast from 'react-hot-toast'
 
@@ -52,16 +52,16 @@ export default function WorkspaceSwitcher() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading workspaces...</span>
+      <div className="flex items-center gap-3 text-sm text-[hsl(var(--foreground-muted))]">
+        <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--primary))]" />
+        <span className="font-mono text-xs">Loading workspaces...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 text-sm text-red-600">
+      <div className="flex items-center gap-2 text-sm text-[hsl(var(--danger))]">
         <AlertCircle className="h-4 w-4" />
         <span>{error}</span>
       </div>
@@ -71,16 +71,19 @@ export default function WorkspaceSwitcher() {
   if (!activeWorkspace) {
     return (
       <div className="relative">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-yellow-600" />
-          <span className="text-sm text-yellow-600">No active workspace</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-lg">
+            <AlertCircle className="h-4 w-4 text-[hsl(var(--warning))]" />
+            <span className="text-sm text-[hsl(var(--warning))]">No active workspace</span>
+          </div>
           <button
             onClick={() => {
               setIsCreating(true)
               setIsOpen(true)
             }}
-            className="ml-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="btn-glow px-4 py-2 text-sm font-medium text-[hsl(var(--background))] rounded-lg flex items-center gap-2"
           >
+            <Plus className="h-4 w-4" />
             Create Workspace
           </button>
         </div>
@@ -96,12 +99,13 @@ export default function WorkspaceSwitcher() {
             }} />
 
             {/* Menu */}
-            <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-              <div className="p-2">
+            <div className="absolute top-full left-0 mt-2 w-80 glass-card rounded-xl z-20 animate-slide-down overflow-hidden">
+              <div className="p-4">
                 {/* Create New Workspace Form */}
                 {isCreating && (
-                  <form onSubmit={handleCreateWorkspace} className="px-3 py-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <form onSubmit={handleCreateWorkspace}>
+                    <label className="flex items-center gap-2 text-sm font-medium text-[hsl(var(--foreground))] mb-3">
+                      <Sparkles className="h-4 w-4 text-[hsl(var(--primary))]" />
                       Create Your First Workspace
                     </label>
                     <input
@@ -109,14 +113,14 @@ export default function WorkspaceSwitcher() {
                       value={newWorkspaceName}
                       onChange={e => setNewWorkspaceName(e.target.value)}
                       placeholder="Workspace name..."
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="input-field text-sm mb-3"
                       autoFocus
                       disabled={isSwitching}
                     />
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex gap-2">
                       <button
                         type="submit"
-                        className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        className="flex-1 btn-glow px-4 py-2 text-sm font-medium text-[hsl(var(--background))] rounded-lg disabled:opacity-50"
                         disabled={isSwitching}
                       >
                         {isSwitching ? 'Creating...' : 'Create'}
@@ -128,7 +132,7 @@ export default function WorkspaceSwitcher() {
                           setIsOpen(false)
                           setNewWorkspaceName('')
                         }}
-                        className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                        className="px-4 py-2 text-sm text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] rounded-lg transition-colors"
                         disabled={isSwitching}
                       >
                         Cancel
@@ -145,22 +149,24 @@ export default function WorkspaceSwitcher() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-4">
       {/* Current Workspace Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-3 px-4 py-2.5 glass-card rounded-xl hover:border-[hsla(175,85%,50%,0.3)] transition-all duration-200 group"
         disabled={isSwitching}
       >
-        <Folder className="h-4 w-4 text-blue-600" />
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(175,85%,50%)] to-[hsl(195,90%,45%)] flex items-center justify-center shadow-lg shadow-[hsla(175,85%,50%,0.2)]">
+          <Folder className="h-4 w-4 text-[hsl(var(--background))]" />
+        </div>
         <div className="flex flex-col items-start">
-          <span className="text-xs text-gray-500">Current Workspace</span>
-          <span className="text-sm font-medium text-gray-900">{activeWorkspace.name}</span>
+          <span className="text-xs text-[hsl(var(--foreground-muted))] uppercase tracking-wider">Workspace</span>
+          <span className="text-sm font-semibold text-[hsl(var(--foreground))]">{activeWorkspace.name}</span>
         </div>
         {isSwitching ? (
-          <Loader2 className="h-4 w-4 animate-spin text-gray-400 ml-2" />
+          <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--primary))] ml-2" />
         ) : (
-          <ChevronDown className={`h-4 w-4 text-gray-400 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 text-[hsl(var(--foreground-muted))] ml-2 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} group-hover:text-[hsl(var(--primary))]`} />
         )}
       </button>
 
@@ -171,69 +177,86 @@ export default function WorkspaceSwitcher() {
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
 
           {/* Menu */}
-          <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+          <div className="absolute top-full left-0 mt-2 w-80 glass-card rounded-xl z-20 animate-slide-down overflow-hidden">
             <div className="p-2">
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Workspaces ({allWorkspaces.length})
+              <div className="px-3 py-2 text-xs font-semibold text-[hsl(var(--foreground-muted))] uppercase tracking-wider flex items-center justify-between">
+                <span>Workspaces</span>
+                <span className="px-2 py-0.5 rounded-full bg-[hsl(var(--border))] text-[hsl(var(--foreground-muted))] font-mono">
+                  {allWorkspaces.length}
+                </span>
               </div>
 
               {/* Workspace List */}
               <div className="max-h-64 overflow-y-auto">
-                {allWorkspaces.map(workspace => (
-                  <button
-                    key={workspace.id}
-                    onClick={() => handleSwitchWorkspace(workspace.id)}
-                    className={`w-full flex items-start gap-3 px-3 py-2 rounded hover:bg-gray-100 transition-colors ${
-                      workspace.id === activeWorkspace.id ? 'bg-blue-50' : ''
-                    }`}
-                    disabled={isSwitching}
-                  >
-                    <Folder
-                      className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
-                        workspace.id === activeWorkspace.id ? 'text-blue-600' : 'text-gray-400'
-                      }`}
-                    />
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm font-medium ${
-                            workspace.id === activeWorkspace.id ? 'text-blue-600' : 'text-gray-900'
-                          }`}
-                        >
-                          {workspace.name}
-                        </span>
-                        {workspace.id === activeWorkspace.id && (
-                          <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">Active</span>
+                {allWorkspaces.map((workspace, index) => {
+                  const isActive = workspace.id === activeWorkspace.id
+                  return (
+                    <button
+                      key={workspace.id}
+                      onClick={() => handleSwitchWorkspace(workspace.id)}
+                      className={`
+                        w-full flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 animate-fade-in
+                        ${isActive
+                          ? 'bg-[hsla(175,85%,50%,0.1)] border border-[hsla(175,85%,50%,0.2)]'
+                          : 'hover:bg-[hsl(var(--border))]'
+                        }
+                      `}
+                      style={{ animationDelay: `${index * 0.03}s` }}
+                      disabled={isSwitching}
+                    >
+                      <div className={`
+                        w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                        ${isActive
+                          ? 'bg-gradient-to-br from-[hsl(175,85%,50%)] to-[hsl(195,90%,45%)]'
+                          : 'bg-[hsl(var(--border))]'
+                        }
+                      `}>
+                        {isActive ? (
+                          <Check className="h-4 w-4 text-[hsl(var(--background))]" />
+                        ) : (
+                          <Folder className="h-4 w-4 text-[hsl(var(--foreground-muted))]" />
                         )}
                       </div>
-                      {workspace.description && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{workspace.description}</p>
-                      )}
-                      {workspace.folderPath && (
-                        <p className="text-xs text-gray-400 mt-0.5 font-mono line-clamp-1">{workspace.folderPath}</p>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium truncate ${isActive ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'}`}>
+                            {workspace.name}
+                          </span>
+                          {isActive && (
+                            <span className="px-1.5 py-0.5 text-xs font-medium bg-[hsla(175,85%,50%,0.2)] text-[hsl(var(--primary))] rounded">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        {workspace.description && (
+                          <p className="text-xs text-[hsl(var(--foreground-muted))] mt-0.5 truncate">{workspace.description}</p>
+                        )}
+                        {workspace.folderPath && (
+                          <p className="text-xs text-[hsl(var(--foreground-muted))] opacity-60 mt-0.5 font-mono truncate">{workspace.folderPath}</p>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Create New Workspace */}
-              <div className="border-t border-gray-200 mt-2 pt-2">
+              <div className="border-t border-[hsl(var(--border))] mt-2 pt-2">
                 {isCreating ? (
-                  <form onSubmit={handleCreateWorkspace} className="px-3 py-2">
+                  <form onSubmit={handleCreateWorkspace} className="p-3">
                     <input
                       type="text"
                       value={newWorkspaceName}
                       onChange={e => setNewWorkspaceName(e.target.value)}
                       placeholder="Workspace name..."
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="input-field text-sm mb-3"
                       autoFocus
                       disabled={isSwitching}
                     />
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2">
                       <button
                         type="submit"
-                        className="flex-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        className="flex-1 btn-glow px-3 py-2 text-sm font-medium text-[hsl(var(--background))] rounded-lg disabled:opacity-50"
                         disabled={isSwitching}
                       >
                         {isSwitching ? 'Creating...' : 'Create'}
@@ -244,7 +267,7 @@ export default function WorkspaceSwitcher() {
                           setIsCreating(false)
                           setNewWorkspaceName('')
                         }}
-                        className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                        className="px-3 py-2 text-sm text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] rounded-lg transition-colors"
                         disabled={isSwitching}
                       >
                         Cancel
@@ -254,11 +277,11 @@ export default function WorkspaceSwitcher() {
                 ) : (
                   <button
                     onClick={() => setIsCreating(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[hsl(var(--primary))] hover:bg-[hsla(175,85%,50%,0.1)] rounded-lg transition-colors"
                     disabled={isSwitching}
                   >
                     <Plus className="h-4 w-4" />
-                    <span>Create New Workspace</span>
+                    <span className="font-medium">Create New Workspace</span>
                   </button>
                 )}
               </div>

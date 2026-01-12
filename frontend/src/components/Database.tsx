@@ -336,7 +336,7 @@ export default function Database() {
 
     // Confirm action
     const confirmed = window.confirm(
-      `⚠️ WARNING: This will restore the database and replace ALL existing data!\n\n` +
+      `WARNING: This will restore the database and replace ALL existing data!\n\n` +
       `Database: ${serviceDbInfo?.database}\n` +
       `File: ${file.name}\n\n` +
       `This action cannot be undone. Are you sure?`
@@ -380,89 +380,89 @@ export default function Database() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Database Management</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] mb-2">Database Management</h1>
+          <p className="text-[hsl(var(--foreground-muted))]">
             Backup, restore, and manage your DevHub database
           </p>
         </div>
 
         {/* Statistics Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="glass-card rounded-xl p-6 mb-6 card-hover">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <HardDrive size={24} className="text-blue-600" />
+            <h2 className="text-xl font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
+              <HardDrive size={24} className="text-[hsl(var(--primary))]" />
               Database Statistics
             </h2>
             <button
               onClick={fetchStats}
               disabled={loading}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+              className="p-2 text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--border))] rounded-xl"
             >
               <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
 
           {loading && !stats ? (
-            <div className="text-center py-8 text-gray-500">Loading statistics...</div>
+            <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">Loading statistics...</div>
           ) : stats ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-900">{stats.sizeFormatted}</div>
-                <div className="text-sm text-blue-600">Database Size</div>
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-2xl font-bold text-[hsl(var(--foreground))]">{stats.sizeFormatted}</div>
+                <div className="text-sm text-[hsl(var(--primary))]">Database Size</div>
               </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-900">{stats.services}</div>
-                <div className="text-sm text-green-600">Services</div>
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-2xl font-bold text-[hsl(var(--success))]">{stats.services}</div>
+                <div className="text-sm text-[hsl(var(--foreground-muted))]">Services</div>
               </div>
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-900">{stats.workspaces}</div>
-                <div className="text-sm text-purple-600">Workspaces</div>
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-2xl font-bold text-[hsl(var(--foreground))]">{stats.workspaces}</div>
+                <div className="text-sm text-[hsl(var(--foreground-muted))]">Workspaces</div>
               </div>
-              <div className="p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-900">{stats.envProfiles}</div>
-                <div className="text-sm text-orange-600">Env Profiles</div>
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-2xl font-bold text-[hsl(var(--warning))]">{stats.envProfiles}</div>
+                <div className="text-sm text-[hsl(var(--foreground-muted))]">Env Profiles</div>
               </div>
-              <div className="p-4 bg-indigo-50 rounded-lg">
-                <div className="text-2xl font-bold text-indigo-900">{stats.notes}</div>
-                <div className="text-sm text-indigo-600">Notes</div>
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-2xl font-bold text-[hsl(var(--foreground))]">{stats.notes}</div>
+                <div className="text-sm text-[hsl(var(--foreground-muted))]">Notes</div>
               </div>
-              <div className="p-4 bg-pink-50 rounded-lg">
-                <div className="text-2xl font-bold text-pink-900">{stats.groups}</div>
-                <div className="text-sm text-pink-600">Groups</div>
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-2xl font-bold text-[hsl(var(--foreground))]">{stats.groups}</div>
+                <div className="text-sm text-[hsl(var(--foreground-muted))]">Groups</div>
               </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900">{stats.logs.toLocaleString()}</div>
-                <div className="text-sm text-gray-600">Log Entries</div>
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-2xl font-bold text-[hsl(var(--foreground))]">{stats.logs.toLocaleString()}</div>
+                <div className="text-sm text-[hsl(var(--foreground-muted))]">Log Entries</div>
               </div>
-              <div className="p-4 bg-yellow-50 rounded-lg">
-                <div className="text-sm font-bold text-yellow-900">
+              <div className="metric-card p-4 rounded-xl">
+                <div className="text-sm font-bold text-[hsl(var(--warning))]">
                   {stats.lastBackup ? new Date(stats.lastBackup).toLocaleDateString() : 'Never'}
                 </div>
-                <div className="text-sm text-yellow-600">Last Backup</div>
+                <div className="text-sm text-[hsl(var(--foreground-muted))]">Last Backup</div>
               </div>
             </div>
           ) : null}
         </div>
 
         {/* Backup & Restore Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <DatabaseIcon size={24} className="text-blue-600" />
+        <div className="glass-card rounded-xl p-6 mb-6 card-hover">
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+            <DatabaseIcon size={24} className="text-[hsl(var(--primary))]" />
             Backup & Restore
           </h2>
 
           <div className="space-y-4">
             {/* Download Backup */}
-            <div className="flex items-start gap-4 p-4 bg-blue-50 rounded-lg">
-              <Download className="text-blue-600 mt-1" size={24} />
+            <div className="flex items-start gap-4 p-4 bg-[hsla(var(--primary),0.08)] rounded-xl border border-[hsl(var(--border))]">
+              <Download className="text-[hsl(var(--primary))] mt-1" size={24} />
               <div className="flex-1">
-                <h3 className="font-semibold text-blue-900 mb-1">Download Backup</h3>
-                <p className="text-sm text-blue-700 mb-3">
+                <h3 className="font-semibold text-[hsl(var(--foreground))] mb-1">Download Backup</h3>
+                <p className="text-sm text-[hsl(var(--foreground-muted))] mb-3">
                   Create a backup of your entire database. Recommended before major changes.
                 </p>
                 <button
                   onClick={handleDownloadBackup}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl flex items-center gap-2"
                 >
                   <Download size={18} />
                   Download Backup
@@ -471,14 +471,14 @@ export default function Database() {
             </div>
 
             {/* Upload Restore */}
-            <div className="flex items-start gap-4 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
-              <Upload className="text-yellow-600 mt-1" size={24} />
+            <div className="flex items-start gap-4 p-4 bg-[hsla(var(--warning),0.1)] rounded-xl border-2 border-[hsl(var(--warning))]">
+              <Upload className="text-[hsl(var(--warning))] mt-1" size={24} />
               <div className="flex-1">
-                <h3 className="font-semibold text-yellow-900 mb-1">Restore from Backup</h3>
-                <p className="text-sm text-yellow-700 mb-3">
-                  ⚠️ This will replace ALL current data with the backup file. Cannot be undone!
+                <h3 className="font-semibold text-[hsl(var(--warning))] mb-1">Restore from Backup</h3>
+                <p className="text-sm text-[hsl(var(--foreground-muted))] mb-3">
+                  This will replace ALL current data with the backup file. Cannot be undone!
                 </p>
-                <label className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 cursor-pointer inline-flex items-center gap-2">
+                <label className="px-4 py-2 bg-[hsl(var(--warning))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 cursor-pointer inline-flex items-center gap-2">
                   <Upload size={18} />
                   Upload & Restore
                   <input
@@ -495,22 +495,22 @@ export default function Database() {
         </div>
 
         {/* Maintenance Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <AlertTriangle size={24} className="text-orange-600" />
+        <div className="glass-card rounded-xl p-6 mb-6 card-hover">
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+            <AlertTriangle size={24} className="text-[hsl(var(--warning))]" />
             Maintenance
           </h2>
 
           <div className="space-y-3">
             {/* Clear Old Logs */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-[hsl(var(--background-elevated))] rounded-xl border border-[hsl(var(--border))]">
               <div>
-                <h3 className="font-semibold text-gray-900">Clear Old Logs</h3>
-                <p className="text-sm text-gray-600">Delete service logs older than 7 days</p>
+                <h3 className="font-semibold text-[hsl(var(--foreground))]">Clear Old Logs</h3>
+                <p className="text-sm text-[hsl(var(--foreground-muted))]">Delete service logs older than 7 days</p>
               </div>
               <button
                 onClick={handleClearLogs}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2"
+                className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsla(var(--border),0.8)] flex items-center gap-2"
               >
                 <Trash2 size={18} />
                 Clear Logs
@@ -518,14 +518,14 @@ export default function Database() {
             </div>
 
             {/* Vacuum Database */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-[hsl(var(--background-elevated))] rounded-xl border border-[hsl(var(--border))]">
               <div>
-                <h3 className="font-semibold text-gray-900">Optimize Database</h3>
-                <p className="text-sm text-gray-600">Vacuum and reclaim unused space</p>
+                <h3 className="font-semibold text-[hsl(var(--foreground))]">Optimize Database</h3>
+                <p className="text-sm text-[hsl(var(--foreground-muted))]">Vacuum and reclaim unused space</p>
               </div>
               <button
                 onClick={handleVacuum}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl flex items-center gap-2"
               >
                 <CheckCircle size={18} />
                 Vacuum
@@ -535,27 +535,27 @@ export default function Database() {
         </div>
 
         {/* Service Databases Card */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Server size={24} className="text-purple-600" />
+        <div className="glass-card rounded-xl p-6 card-hover">
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+            <Server size={24} className="text-[hsl(var(--primary))]" />
             Service Databases
           </h2>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-[hsl(var(--foreground-muted))] mb-4">
             Connect to your services' databases using environment variables
           </p>
 
           {!activeWorkspace ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">
               Please select a workspace to view service databases
             </div>
           ) : (
             <div className="space-y-4">
               {/* Connection String Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
                   Select Database Connection String
                   {loadingEnvVars && (
-                    <span className="ml-2 text-purple-600 text-xs">
+                    <span className="ml-2 text-[hsl(var(--primary))] text-xs">
                       <Loader size={14} className="inline animate-spin" /> Loading...
                     </span>
                   )}
@@ -567,7 +567,7 @@ export default function Database() {
                     setServiceDbInfo(null)
                   }}
                   disabled={loadingEnvVars}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="input-field w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">
                     {loadingEnvVars ? 'Loading environment variables...' : '-- Select an environment variable --'}
@@ -579,7 +579,7 @@ export default function Database() {
                   ))}
                 </select>
                 {!loadingEnvVars && envVars.length === 0 && (
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-[hsl(var(--foreground-muted))] mt-2">
                     No database-related environment variables found. Add them in the Environment tab.
                   </p>
                 )}
@@ -591,7 +591,7 @@ export default function Database() {
                   <button
                     onClick={handleTestConnection}
                     disabled={testingConnection}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                    className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl disabled:opacity-50 flex items-center gap-2"
                   >
                     {testingConnection ? (
                       <>
@@ -610,39 +610,39 @@ export default function Database() {
 
               {/* Connection Results */}
               {serviceDbInfo && (
-                <div className={`p-4 rounded-lg border-2 ${
+                <div className={`p-4 rounded-xl border-2 ${
                   serviceDbInfo.connected
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-red-50 border-red-200'
+                    ? 'bg-[hsla(var(--success),0.1)] border-[hsl(var(--success))]'
+                    : 'bg-[hsla(var(--danger),0.1)] border-[hsl(var(--danger))]'
                 }`}>
                   <div className="flex items-start gap-3">
                     {serviceDbInfo.connected ? (
-                      <CheckCircle2 size={24} className="text-green-600 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 size={24} className="text-[hsl(var(--success))] flex-shrink-0 mt-0.5" />
                     ) : (
-                      <XCircle size={24} className="text-red-600 flex-shrink-0 mt-0.5" />
+                      <XCircle size={24} className="text-[hsl(var(--danger))] flex-shrink-0 mt-0.5" />
                     )}
                     <div className="flex-1">
                       {serviceDbInfo.connected ? (
                         <>
-                          <h3 className="font-semibold text-green-900 mb-2">Connection Successful</h3>
-                          <div className="space-y-1 text-sm text-green-800">
+                          <h3 className="font-semibold text-[hsl(var(--success))] mb-2">Connection Successful</h3>
+                          <div className="space-y-1 text-sm text-[hsl(var(--foreground))]">
                             <div><strong>Type:</strong> {serviceDbInfo.type}</div>
-                            <div><strong>Host:</strong> {serviceDbInfo.host}</div>
-                            <div><strong>Database:</strong> {serviceDbInfo.database}</div>
+                            <div><strong>Host:</strong> <span className="terminal-text">{serviceDbInfo.host}</span></div>
+                            <div><strong>Database:</strong> <span className="terminal-text">{serviceDbInfo.database}</span></div>
                             {serviceDbInfo.tableCount !== undefined && (
                               <div><strong>Tables:</strong> {serviceDbInfo.tableCount}</div>
                             )}
                           </div>
                           {serviceDbInfo.tables && serviceDbInfo.tables.length > 0 && (
                             <div className="mt-3">
-                              <div className="font-semibold text-green-900 mb-1 flex items-center gap-1">
+                              <div className="font-semibold text-[hsl(var(--success))] mb-1 flex items-center gap-1">
                                 <Table size={16} />
                                 Tables:
                               </div>
-                              <div className="max-h-40 overflow-y-auto bg-white rounded p-2">
-                                <ul className="text-sm text-gray-700 space-y-1">
+                              <div className="max-h-40 overflow-y-auto bg-[hsl(var(--background-elevated))] rounded-xl p-2 border border-[hsl(var(--border))]">
+                                <ul className="text-sm text-[hsl(var(--foreground))] space-y-1">
                                   {serviceDbInfo.tables.map((table, idx) => (
-                                    <li key={idx} className="font-mono">{table}</li>
+                                    <li key={idx} className="terminal-text">{table}</li>
                                   ))}
                                 </ul>
                               </div>
@@ -650,16 +650,16 @@ export default function Database() {
                           )}
 
                           {/* Backup & Restore Actions */}
-                          <div className="mt-4 pt-4 border-t border-green-200">
+                          <div className="mt-4 pt-4 border-t border-[hsl(var(--success))]">
                             <div className="flex gap-3">
                               <button
                                 onClick={handleBackupDatabase}
-                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                                className="flex-1 px-4 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 flex items-center justify-center gap-2"
                               >
                                 <Download size={18} />
                                 Download Backup
                               </button>
-                              <label className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 cursor-pointer flex items-center justify-center gap-2">
+                              <label className="flex-1 px-4 py-2 bg-[hsl(var(--warning))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 cursor-pointer flex items-center justify-center gap-2">
                                 <Upload size={18} />
                                 Restore from Backup
                                 <input
@@ -670,15 +670,15 @@ export default function Database() {
                                 />
                               </label>
                             </div>
-                            <p className="text-xs text-green-700 mt-2">
-                              ⚠️ Restore will replace ALL data in the database. Make a backup first!
+                            <p className="text-xs text-[hsl(var(--foreground-muted))] mt-2">
+                              Restore will replace ALL data in the database. Make a backup first!
                             </p>
                           </div>
                         </>
                       ) : (
                         <>
-                          <h3 className="font-semibold text-red-900 mb-1">Connection Failed</h3>
-                          <p className="text-sm text-red-700">{serviceDbInfo.error}</p>
+                          <h3 className="font-semibold text-[hsl(var(--danger))] mb-1">Connection Failed</h3>
+                          <p className="text-sm text-[hsl(var(--foreground-muted))]">{serviceDbInfo.error}</p>
                         </>
                       )}
                     </div>

@@ -515,14 +515,14 @@ export default function Environment() {
     : filteredServices
 
   return (
-    <div>
+    <div className="p-8">
       {/* No Workspace Warning */}
       {!activeWorkspace && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+        <div className="bg-[hsla(var(--warning),0.1)] border-l-4 border-[hsl(var(--warning))] p-4 mb-6 rounded-xl">
           <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-yellow-400 mr-3" />
+            <AlertCircle className="h-5 w-5 text-[hsl(var(--warning))] mr-3" />
             <div>
-              <p className="text-sm text-yellow-700">
+              <p className="text-sm text-[hsl(var(--warning))]">
                 <strong className="font-medium">No active workspace.</strong> Please create or activate a workspace to manage environment variables.
               </p>
             </div>
@@ -532,17 +532,17 @@ export default function Environment() {
 
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Environment Variables</h1>
+          <h1 className="text-3xl font-bold text-[hsl(var(--foreground))]">Environment Variables</h1>
           {activeWorkspace && (
-            <p className="text-gray-600 mt-1">
-              Managing environment variables in <span className="text-blue-600 font-medium">{activeWorkspace.name}</span>
+            <p className="text-[hsl(var(--foreground-muted))] mt-1">
+              Managing environment variables in <span className="text-[hsl(var(--primary))] font-medium">{activeWorkspace.name}</span>
             </p>
           )}
         </div>
         <button
           data-testid="env-refresh-button"
           onClick={fetchProfiles}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--border))]/80 transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -551,13 +551,13 @@ export default function Environment() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profiles Sidebar */}
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="glass-card rounded-xl p-4">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Profiles</h2>
+            <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Profiles</h2>
             <button
               data-testid="env-add-profile-button"
               onClick={() => setShowAddProfileForm(true)}
-              className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="p-2 btn-glow text-[hsl(var(--background))] rounded-xl"
               title="Add Profile"
             >
               <Plus className="w-4 h-4" />
@@ -568,13 +568,13 @@ export default function Environment() {
           {profiles.length > 0 && (
             <div className="mb-3">
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[hsl(var(--foreground-muted))]" size={16} />
                 <input
                   type="text"
                   value={profileSearchTerm}
                   onChange={(e) => setProfileSearchTerm(e.target.value)}
                   placeholder="Search profiles..."
-                  className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-field w-full pl-8 pr-3 py-2 text-sm"
                   data-testid="env-profile-search-input"
                 />
               </div>
@@ -583,14 +583,14 @@ export default function Environment() {
 
           {/* Add Profile Form */}
           {showAddProfileForm && (
-            <div data-testid="env-profile-form" className="mb-4 p-3 bg-gray-50 rounded">
+            <div data-testid="env-profile-form" className="mb-4 p-3 bg-[hsl(var(--background-elevated))] rounded-xl border border-[hsl(var(--border))]">
               <input
                 data-testid="env-profile-name-input"
                 type="text"
                 value={profileForm.name}
                 onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                 placeholder="Profile name (e.g., dev, staging)"
-                className="w-full px-3 py-2 border rounded mb-2"
+                className="input-field w-full mb-2"
               />
               <input
                 data-testid="env-profile-description-input"
@@ -598,20 +598,20 @@ export default function Environment() {
                 value={profileForm.description}
                 onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
                 placeholder="Description (optional)"
-                className="w-full px-3 py-2 border rounded mb-2"
+                className="input-field w-full mb-2"
               />
               <div className="flex gap-2">
                 <button
                   data-testid="env-create-profile-button"
                   onClick={handleAddProfile}
-                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                  className="px-3 py-1 btn-glow text-[hsl(var(--background))] rounded-xl text-sm"
                 >
                   Add
                 </button>
                 <button
                   data-testid="env-cancel-profile-button"
                   onClick={() => setShowAddProfileForm(false)}
-                  className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                  className="px-3 py-1 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--border))]/80 text-sm transition-colors"
                 >
                   Cancel
                 </button>
@@ -622,15 +622,15 @@ export default function Environment() {
           {/* Profiles List - Hierarchical Grouping */}
           <div data-testid="env-profile-list" className="space-y-3">
             {profiles.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 text-sm">
+              <div className="text-center py-8 text-[hsl(var(--foreground-muted))] text-sm">
                 No profiles. Create one to get started.
               </div>
             ) : filteredProfiles.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 text-sm">
+              <div className="text-center py-8 text-[hsl(var(--foreground-muted))] text-sm">
                 No profiles match your search.
                 <button
                   onClick={() => setProfileSearchTerm('')}
-                  className="block mx-auto mt-2 text-blue-600 hover:underline text-sm"
+                  className="block mx-auto mt-2 text-[hsl(var(--primary))] hover:underline text-sm"
                 >
                   Clear search
                 </button>
@@ -643,21 +643,21 @@ export default function Environment() {
                                  FileText
 
                 return (
-                  <div key={group.name} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div key={group.name} className="border border-[hsl(var(--border))] rounded-xl overflow-hidden">
                     {/* Group Header */}
                     <button
                       onClick={() => toggleGroup(group.name)}
-                      className="w-full flex items-center justify-between p-3 bg-gray-100 hover:bg-gray-150 transition-colors"
+                      className="w-full flex items-center justify-between p-3 bg-[hsl(var(--border))]/50 hover:bg-[hsl(var(--border))]/70 transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                          <ChevronDown className="w-4 h-4 text-[hsl(var(--foreground-muted))]" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                          <ChevronRight className="w-4 h-4 text-[hsl(var(--foreground-muted))]" />
                         )}
-                        {React.createElement(groupIcon, { className: "w-4 h-4 text-gray-700" })}
-                        <span className="font-semibold text-sm text-gray-900">{group.name}</span>
-                        <span className="text-xs text-gray-500 ml-1">
+                        {React.createElement(groupIcon, { className: "w-4 h-4 text-[hsl(var(--foreground))]" })}
+                        <span className="font-semibold text-sm text-[hsl(var(--foreground))]">{group.name}</span>
+                        <span className="text-xs text-[hsl(var(--foreground-muted))] ml-1">
                           ({group.profiles.length} profile{group.profiles.length !== 1 ? 's' : ''})
                         </span>
                       </div>
@@ -665,7 +665,7 @@ export default function Environment() {
 
                     {/* Group Profiles */}
                     {isExpanded && (
-                      <div className="divide-y divide-gray-200">
+                      <div className="divide-y divide-[hsl(var(--border))]">
                         {group.profiles.map(profile => (
                           <div
                             key={profile.id}
@@ -673,17 +673,17 @@ export default function Environment() {
                             onClick={() => setSelectedProfile(profile.id)}
                             className={`p-3 cursor-pointer transition-colors ${
                               selectedProfile === profile.id
-                                ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                                : 'bg-white hover:bg-gray-50'
+                                ? 'bg-[hsla(var(--primary),0.08)] border-l-4 border-l-[hsl(var(--primary))]'
+                                : 'bg-[hsl(var(--background-elevated))] hover:bg-[hsl(var(--border))]/30'
                             }`}
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <h3 className={`font-semibold text-sm ${selectedProfile === profile.id ? 'text-blue-900' : 'text-gray-900'}`}>
+                                <h3 className={`font-semibold text-sm ${selectedProfile === profile.id ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'}`}>
                                   {profile.name}
                                 </h3>
                                 {profile.description && (
-                                  <p className="text-xs text-gray-600 mt-1">{profile.description}</p>
+                                  <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1">{profile.description}</p>
                                 )}
                               </div>
                               <div className="flex gap-1 ml-2">
@@ -693,7 +693,7 @@ export default function Environment() {
                                     e.stopPropagation()
                                     handleCopyProfile(profile.id)
                                   }}
-                                  className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded"
+                                  className="p-1 text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80 hover:bg-[hsla(var(--primary),0.1)] rounded-xl"
                                   title="Copy Profile"
                                 >
                                   <Copy className="w-3.5 h-3.5" />
@@ -704,7 +704,7 @@ export default function Environment() {
                                     e.stopPropagation()
                                     handleDeleteProfile(profile.id)
                                   }}
-                                  className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+                                  className="p-1 text-[hsl(var(--danger))] hover:text-[hsl(var(--danger))]/80 hover:bg-[hsla(var(--danger),0.1)] rounded-xl"
                                   title="Delete Profile"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -723,16 +723,16 @@ export default function Environment() {
         </div>
 
         {/* Variables Panel */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow p-4">
+        <div className="lg:col-span-2 glass-card rounded-xl p-4">
           {selectedProfile ? (
             <>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Variables</h2>
+                <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Variables</h2>
                 <div className="flex gap-2">
                   <button
                     data-testid="env-import-button"
                     onClick={() => setShowImportForm(true)}
-                    className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                    className="flex items-center gap-1 px-3 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:bg-[hsl(var(--success))]/80 text-sm transition-colors"
                   >
                     <Upload className="w-4 h-4" />
                     Import
@@ -740,7 +740,7 @@ export default function Environment() {
                   <button
                     data-testid="env-export-button"
                     onClick={() => setShowExportForm(true)}
-                    className="flex items-center gap-1 px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+                    className="flex items-center gap-1 px-3 py-2 bg-[hsl(var(--info))] text-[hsl(var(--background))] rounded-xl hover:bg-[hsl(var(--info))]/80 text-sm transition-colors"
                   >
                     <Download className="w-4 h-4" />
                     Export
@@ -748,7 +748,7 @@ export default function Environment() {
                   <button
                     data-testid="env-sync-button"
                     onClick={handleOpenSyncModal}
-                    className="flex items-center gap-1 px-3 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm"
+                    className="flex items-center gap-1 px-3 py-2 bg-[hsl(var(--warning))] text-[hsl(var(--background))] rounded-xl hover:bg-[hsl(var(--warning))]/80 text-sm transition-colors"
                   >
                     <Zap className="w-4 h-4" />
                     Sync to Service
@@ -756,7 +756,7 @@ export default function Environment() {
                   <button
                     data-testid="env-add-variable-button"
                     onClick={() => setShowAddVariableForm(true)}
-                    className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    className="flex items-center gap-1 px-3 py-2 btn-glow text-[hsl(var(--background))] rounded-xl text-sm"
                   >
                     <Plus className="w-4 h-4" />
                     Add Variable
@@ -768,18 +768,18 @@ export default function Environment() {
               {variables.length > 0 && (
                 <div className="mb-4">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[hsl(var(--foreground-muted))]" size={18} />
                     <input
                       type="text"
                       value={variableSearchTerm}
                       onChange={(e) => setVariableSearchTerm(e.target.value)}
                       placeholder="Search variables by key, value, or description..."
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="input-field w-full pl-10 pr-4 py-2"
                       data-testid="env-variable-search-input"
                     />
                   </div>
                   {variableSearchTerm && (
-                    <p className="text-sm text-gray-600 mt-2">
+                    <p className="text-sm text-[hsl(var(--foreground-muted))] mt-2">
                       Found {filteredVariables.length} variable{filteredVariables.length !== 1 ? 's' : ''} matching "{variableSearchTerm}"
                     </p>
                   )}
@@ -788,28 +788,28 @@ export default function Environment() {
 
               {/* Import Form */}
               {showImportForm && (
-                <div data-testid="env-import-form" className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
-                  <h3 className="font-semibold mb-2">Import from .env file</h3>
+                <div data-testid="env-import-form" className="mb-4 p-4 bg-[hsla(var(--success),0.1)] border border-[hsl(var(--success))]/30 rounded-xl">
+                  <h3 className="font-semibold mb-2 text-[hsl(var(--foreground))]">Import from .env file</h3>
                   <input
                     data-testid="env-import-filepath-input"
                     type="text"
                     value={importForm.filePath}
                     onChange={(e) => setImportForm({ filePath: e.target.value })}
                     placeholder="/path/to/.env"
-                    className="w-full px-3 py-2 border rounded mb-2"
+                    className="input-field w-full mb-2"
                   />
                   <div className="flex gap-2">
                     <button
                       data-testid="env-submit-import-button"
                       onClick={handleImport}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      className="px-4 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:bg-[hsl(var(--success))]/80 transition-colors"
                     >
                       Import
                     </button>
                     <button
                       data-testid="env-cancel-import-button"
                       onClick={() => setShowImportForm(false)}
-                      className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--border))]/80 transition-colors"
                     >
                       Cancel
                     </button>
@@ -819,28 +819,28 @@ export default function Environment() {
 
               {/* Export Form */}
               {showExportForm && (
-                <div data-testid="env-export-form" className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded">
-                  <h3 className="font-semibold mb-2">Export to .env file</h3>
+                <div data-testid="env-export-form" className="mb-4 p-4 bg-[hsla(var(--info),0.1)] border border-[hsl(var(--info))]/30 rounded-xl">
+                  <h3 className="font-semibold mb-2 text-[hsl(var(--foreground))]">Export to .env file</h3>
                   <input
                     data-testid="env-export-filepath-input"
                     type="text"
                     value={exportForm.filePath}
                     onChange={(e) => setExportForm({ filePath: e.target.value })}
                     placeholder="/path/to/.env"
-                    className="w-full px-3 py-2 border rounded mb-2"
+                    className="input-field w-full mb-2"
                   />
                   <div className="flex gap-2">
                     <button
                       data-testid="env-submit-export-button"
                       onClick={handleExport}
-                      className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                      className="px-4 py-2 bg-[hsl(var(--info))] text-[hsl(var(--background))] rounded-xl hover:bg-[hsl(var(--info))]/80 transition-colors"
                     >
                       Export
                     </button>
                     <button
                       data-testid="env-cancel-export-button"
                       onClick={() => setShowExportForm(false)}
-                      className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--border))]/80 transition-colors"
                     >
                       Cancel
                     </button>
@@ -850,16 +850,16 @@ export default function Environment() {
 
               {/* Sync to Service Modal */}
               {showSyncModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] flex flex-col" data-testid="env-sync-modal">
-                    <h2 className="text-xl font-bold mb-2">Sync to Service</h2>
-                    <p className="text-gray-600 mb-4">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+                  <div className="glass-card rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col" data-testid="env-sync-modal">
+                    <h2 className="text-xl font-bold mb-2 text-[hsl(var(--foreground))]">Sync to Service</h2>
+                    <p className="text-[hsl(var(--foreground-muted))] mb-4">
                       Select a service to sync this profile's variables to its .env file.
                     </p>
 
                     {services.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Zap size={48} className="mx-auto mb-4 text-gray-400" />
+                      <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">
+                        <Zap size={48} className="mx-auto mb-4 text-[hsl(var(--foreground-muted))]" />
                         <p>No services found.</p>
                         <p className="text-sm mt-2">Add services from the Service Manager first.</p>
                       </div>
@@ -867,8 +867,8 @@ export default function Environment() {
                       <>
                         {/* Show matching service notice */}
                         {matchingService && !showAllServices && !serviceSearchTerm && (
-                          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm text-blue-900">
+                          <div className="mb-4 p-3 bg-[hsla(var(--primary),0.08)] border border-[hsl(var(--primary))]/30 rounded-xl">
+                            <p className="text-sm text-[hsl(var(--primary))]">
                               <strong>Recommended:</strong> This profile matches the <strong>{matchingService.name}</strong> service.
                             </p>
                           </div>
@@ -878,18 +878,18 @@ export default function Environment() {
                         {(showAllServices || serviceSearchTerm) && (
                           <div className="mb-4">
                             <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[hsl(var(--foreground-muted))]" size={18} />
                               <input
                                 type="text"
                                 value={serviceSearchTerm}
                                 onChange={(e) => setServiceSearchTerm(e.target.value)}
                                 placeholder="Search services by name or path..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="input-field w-full pl-10 pr-4 py-2"
                                 data-testid="env-sync-service-search"
                               />
                             </div>
                             {serviceSearchTerm && (
-                              <p className="text-sm text-gray-600 mt-2">
+                              <p className="text-sm text-[hsl(var(--foreground-muted))] mt-2">
                                 Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} matching "{serviceSearchTerm}"
                               </p>
                             )}
@@ -899,11 +899,11 @@ export default function Environment() {
                         {/* Service List */}
                         <div className="flex-1 overflow-y-auto space-y-2 mb-4" data-testid="env-sync-service-list">
                           {servicesToShow.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
+                            <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">
                               <p>No services match your search.</p>
                               <button
                                 onClick={() => setServiceSearchTerm('')}
-                                className="mt-2 text-blue-600 hover:underline text-sm"
+                                className="mt-2 text-[hsl(var(--primary))] hover:underline text-sm"
                               >
                                 Clear search
                               </button>
@@ -913,27 +913,27 @@ export default function Environment() {
                           <div
                             key={service.id}
                             onClick={() => !syncing && handleSyncToService(service.id)}
-                            className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                            className={`p-4 border rounded-xl cursor-pointer transition-all ${
                               syncing
                                 ? 'opacity-50 cursor-not-allowed'
-                                : 'border-gray-200 hover:bg-gray-50 hover:border-blue-500'
+                                : 'border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))] hover:bg-[hsl(var(--border))]/30 hover:border-[hsl(var(--primary))]'
                             }`}
                             data-testid={`env-sync-service-${service.id}`}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                                  <h3 className="font-semibold text-[hsl(var(--foreground))]">{service.name}</h3>
                                   {service.running?.status === 'running' && (
-                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                    <span className="px-2 py-0.5 bg-[hsla(var(--success),0.1)] text-[hsl(var(--success))] text-xs rounded-full">
                                       Running
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-sm text-gray-500 truncate">{service.repoPath}</p>
-                                <p className="text-xs text-blue-600 mt-1">→ {service.repoPath}/.env</p>
+                                <p className="text-sm text-[hsl(var(--foreground-muted))] truncate">{service.repoPath}</p>
+                                <p className="text-xs text-[hsl(var(--primary))] mt-1">→ {service.repoPath}/.env</p>
                               </div>
-                              <Zap className="w-5 h-5 text-orange-600" />
+                              <Zap className="w-5 h-5 text-[hsl(var(--warning))]" />
                             </div>
                           </div>
                             ))
@@ -945,7 +945,7 @@ export default function Environment() {
                           <div className="mb-4">
                             <button
                               onClick={() => setShowAllServices(true)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
+                              className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--border))]/30 text-[hsl(var(--foreground))] text-sm transition-colors"
                               data-testid="env-show-all-services-button"
                             >
                               Or choose a different service ({services.length - 1} more)
@@ -959,7 +959,7 @@ export default function Environment() {
                       <button
                         onClick={() => setShowSyncModal(false)}
                         disabled={syncing}
-                        className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
+                        className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--border))]/80 disabled:opacity-50 transition-colors"
                         data-testid="env-sync-cancel-button"
                       >
                         {syncing ? 'Syncing...' : 'Cancel'}
@@ -971,8 +971,8 @@ export default function Environment() {
 
               {/* Add Variable Form */}
               {showAddVariableForm && (
-                <div data-testid="env-variable-form" className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
-                  <h3 className="font-semibold mb-2">Add New Variable</h3>
+                <div data-testid="env-variable-form" className="mb-4 p-4 bg-[hsla(var(--primary),0.08)] border border-[hsl(var(--primary))]/30 rounded-xl">
+                  <h3 className="font-semibold mb-2 text-[hsl(var(--foreground))]">Add New Variable</h3>
                   <div className="space-y-2">
                     <input
                       data-testid="env-variable-key-input"
@@ -980,7 +980,7 @@ export default function Environment() {
                       value={variableForm.key}
                       onChange={(e) => setVariableForm({ ...variableForm, key: e.target.value })}
                       placeholder="KEY (e.g., DATABASE_URL)"
-                      className="w-full px-3 py-2 border rounded font-mono"
+                      className="input-field w-full terminal-text"
                     />
                     <input
                       data-testid="env-variable-value-input"
@@ -988,7 +988,7 @@ export default function Environment() {
                       value={variableForm.value}
                       onChange={(e) => setVariableForm({ ...variableForm, value: e.target.value })}
                       placeholder="Value"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full"
                     />
                     <input
                       data-testid="env-variable-description-input"
@@ -996,14 +996,15 @@ export default function Environment() {
                       value={variableForm.description}
                       onChange={(e) => setVariableForm({ ...variableForm, description: e.target.value })}
                       placeholder="Description (optional)"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full"
                     />
-                    <label className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-[hsl(var(--foreground))]">
                       <input
                         data-testid="env-variable-secret-checkbox"
                         type="checkbox"
                         checked={variableForm.isSecret}
                         onChange={(e) => setVariableForm({ ...variableForm, isSecret: e.target.checked })}
+                        className="accent-[hsl(var(--primary))]"
                       />
                       <Lock className="w-4 h-4" />
                       <span className="text-sm">Mark as secret (encrypted)</span>
@@ -1013,14 +1014,14 @@ export default function Environment() {
                     <button
                       data-testid="env-create-variable-button"
                       onClick={handleAddVariable}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                     >
                       Add
                     </button>
                     <button
                       data-testid="env-cancel-variable-button"
                       onClick={() => setShowAddVariableForm(false)}
-                      className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--border))]/80 transition-colors"
                     >
                       Cancel
                     </button>
@@ -1032,15 +1033,15 @@ export default function Environment() {
               {loading ? (
                 <SkeletonLoader count={3} />
               ) : variables.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">
                   No variables in this profile. Add one to get started.
                 </div>
               ) : filteredVariables.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">
                   No variables match your search.
                   <button
                     onClick={() => setVariableSearchTerm('')}
-                    className="block mx-auto mt-2 text-blue-600 hover:underline text-sm"
+                    className="block mx-auto mt-2 text-[hsl(var(--primary))] hover:underline text-sm"
                   >
                     Clear search
                   </button>
@@ -1051,50 +1052,51 @@ export default function Environment() {
                     <div
                       key={variable.id}
                       data-testid={`env-variable-item-${variable.id}`}
-                      className="p-3 bg-gray-50 rounded border border-gray-200"
+                      className="p-3 bg-[hsl(var(--background-elevated))] rounded-xl border border-[hsl(var(--border))]"
                     >
                       {editingVariableId === variable.id ? (
                         // Edit Mode
                         <div className="space-y-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Key</label>
+                            <label className="block text-xs font-medium text-[hsl(var(--foreground-muted))] mb-1">Key</label>
                             <input
                               data-testid={`env-edit-variable-key-input-${variable.id}`}
                               type="text"
                               value={editVariableForm.key}
                               onChange={(e) => setEditVariableForm({ ...editVariableForm, key: e.target.value })}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded font-mono"
+                              className="input-field w-full text-sm terminal-text"
                               placeholder="KEY"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Value</label>
+                            <label className="block text-xs font-medium text-[hsl(var(--foreground-muted))] mb-1">Value</label>
                             <input
                               data-testid={`env-edit-variable-value-input-${variable.id}`}
                               type="text"
                               value={editVariableForm.value}
                               onChange={(e) => setEditVariableForm({ ...editVariableForm, value: e.target.value })}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                              className="input-field w-full text-sm"
                               placeholder="Value"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Description (optional)</label>
+                            <label className="block text-xs font-medium text-[hsl(var(--foreground-muted))] mb-1">Description (optional)</label>
                             <input
                               data-testid={`env-edit-variable-description-input-${variable.id}`}
                               type="text"
                               value={editVariableForm.description}
                               onChange={(e) => setEditVariableForm({ ...editVariableForm, description: e.target.value })}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+                              className="input-field w-full text-sm"
                               placeholder="Description"
                             />
                           </div>
-                          <label className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 text-[hsl(var(--foreground))]">
                             <input
                               data-testid={`env-edit-variable-secret-checkbox-${variable.id}`}
                               type="checkbox"
                               checked={editVariableForm.isSecret}
                               onChange={(e) => setEditVariableForm({ ...editVariableForm, isSecret: e.target.checked })}
+                              className="accent-[hsl(var(--primary))]"
                             />
                             <Lock className="w-4 h-4" />
                             <span className="text-sm">Mark as secret (encrypted)</span>
@@ -1103,7 +1105,7 @@ export default function Environment() {
                             <button
                               data-testid={`env-save-variable-button-${variable.id}`}
                               onClick={handleUpdateVariable}
-                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:bg-[hsl(var(--success))]/80 text-sm transition-colors"
                             >
                               <Check className="w-4 h-4" />
                               Save
@@ -1111,7 +1113,7 @@ export default function Environment() {
                             <button
                               data-testid={`env-cancel-edit-button-${variable.id}`}
                               onClick={handleCancelEdit}
-                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:bg-[hsl(var(--border))]/80 text-sm transition-colors"
                             >
                               <X className="w-4 h-4" />
                               Cancel
@@ -1124,14 +1126,14 @@ export default function Environment() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               {variable.isSecret ? (
-                                <Lock className="w-4 h-4 text-yellow-600" />
+                                <Lock className="w-4 h-4 text-[hsl(var(--warning))]" />
                               ) : (
-                                <Unlock className="w-4 h-4 text-gray-400" />
+                                <Unlock className="w-4 h-4 text-[hsl(var(--foreground-muted))]" />
                               )}
-                              <span className="font-mono font-semibold">{variable.key}</span>
+                              <span className="terminal-text font-semibold text-[hsl(var(--foreground))]">{variable.key}</span>
                             </div>
                             <div className="mt-1 flex items-center gap-2">
-                              <code className="text-sm bg-white px-2 py-1 rounded">
+                              <code className="text-sm bg-[hsl(var(--border))]/50 text-[hsl(var(--foreground))] px-2 py-1 rounded-lg">
                                 {variable.isSecret && !revealedSecrets.has(variable.id)
                                   ? maskValue(variable.value)
                                   : variable.value}
@@ -1140,7 +1142,7 @@ export default function Environment() {
                                 <button
                                   data-testid={`env-toggle-secret-button-${variable.id}`}
                                   onClick={() => toggleRevealSecret(variable.id)}
-                                  className="text-blue-600 hover:text-blue-800"
+                                  className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80"
                                   title={revealedSecrets.has(variable.id) ? 'Hide' : 'Reveal'}
                                 >
                                   {revealedSecrets.has(variable.id) ? (
@@ -1152,14 +1154,14 @@ export default function Environment() {
                               )}
                             </div>
                             {variable.description && (
-                              <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
+                              <p className="text-sm text-[hsl(var(--foreground-muted))] mt-1">{variable.description}</p>
                             )}
                           </div>
                           <div className="flex gap-2">
                             <button
                               data-testid={`env-edit-variable-button-${variable.id}`}
                               onClick={() => handleEditVariable(variable)}
-                              className="text-gray-600 hover:text-gray-800"
+                              className="text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]"
                               title="Edit"
                             >
                               <Edit className="w-4 h-4" />
@@ -1167,7 +1169,7 @@ export default function Environment() {
                             <button
                               data-testid={`env-copy-variable-button-${variable.id}`}
                               onClick={() => handleCopyVariable(variable)}
-                              className="text-blue-600 hover:text-blue-800"
+                              className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80"
                               title="Copy KEY=VALUE"
                             >
                               <Copy className="w-4 h-4" />
@@ -1175,7 +1177,7 @@ export default function Environment() {
                             <button
                               data-testid={`env-delete-variable-button-${variable.id}`}
                               onClick={() => handleDeleteVariable(variable.id)}
-                              className="text-red-600 hover:text-red-800"
+                              className="text-[hsl(var(--danger))] hover:text-[hsl(var(--danger))]/80"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1189,8 +1191,8 @@ export default function Environment() {
               )}
             </>
           ) : (
-            <div className="text-center py-16 text-gray-500">
-              <Lock className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <div className="text-center py-16 text-[hsl(var(--foreground-muted))]">
+              <Lock className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--border))]" />
               <p>Select a profile to view and manage variables</p>
             </div>
           )}

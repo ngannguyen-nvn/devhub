@@ -1,8 +1,26 @@
 import { Router, Request, Response } from 'express'
 import { EnvManager, Database } from '@devhub/core'
+import * as path from 'path'
+import * as fs from 'fs'
 
 const router = Router()
 const envManager = new EnvManager()
+
+// Security: Path traversal protection
+function validatePath(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/')
+  return !normalized.includes('../') && !normalized.includes('..\\')
+}
+
+// Security: Validate file path exists
+function validateFile(filePath: string): boolean {
+  try {
+    if (!validatePath(filePath)) return false
+    return fs.existsSync(filePath)
+  } catch (error) {
+    return false
+  }
+}
 
 /**
  * Middleware to get active workspace ID
@@ -377,6 +395,11 @@ router.post('/profiles/:profileId/import', async (req: Request, res: Response) =
       return res.status(400).json({ success: false, error: 'filePath is required' })
     }
 
+    // Security: Validate path (prevent traversal)
+    if (!validateFile(filePath)) {
+      return res.status(400).json({ success: false, error: 'File path is invalid or does not exist' })
+    }
+
     // Verify profile belongs to accessible workspace
     const profile = envManager.getProfile(profileId)
     if (!profile) {
@@ -405,6 +428,11 @@ router.post('/profiles/:profileId/export', async (req: Request, res: Response) =
 
     if (!filePath) {
       return res.status(400).json({ success: false, error: 'filePath is required' })
+    }
+
+    // Security: Validate path (prevent traversal, but allow parent directories for export)
+    if (!validatePath(filePath)) {
+      return res.status(400).json({ success: false, error: 'Path contains invalid sequences (../ or ..\\)' })
     }
 
     // Verify profile belongs to accessible workspace

@@ -8,6 +8,26 @@ import { serviceManager } from './services'
 
 const router = Router()
 
+// Security: Path traversal protection
+function validatePath(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/')
+  return !normalized.includes('../') && !normalized.includes('..\\')
+}
+
+// Security: Sanitize string input
+function sanitizeString(input: any, maxLength = 1000): string {
+  if (typeof input !== 'string') return ''
+  return input.slice(0, maxLength).trim()
+}
+
+// Security: Validate name (alphanumeric, spaces, hyphens, underscores)
+function validateName(name: string): boolean {
+  if (typeof name !== 'string' || name.length === 0 || name.length > 200) {
+    return false
+  }
+  return /^[a-zA-Z0-9\s\-_().]+$/.test(name)
+}
+
 // Initialize all managers
 const dockerManager = new DockerManager()
 const envManager = new EnvManager()
@@ -126,8 +146,18 @@ router.post('/snapshots/scan', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Path is required' })
     }
 
+    // Security: Validate path (prevent traversal)
+    if (!validatePath(path)) {
+      return res.status(400).json({ success: false, error: 'Path contains invalid sequences (../ or ..\\)' })
+    }
+
+    // Security: Validate name if provided
+    if (name && !validateName(name)) {
+      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, and parentheses' })
+    }
+
     // Scan folder
-    const repositories = await repoScanner.scanDirectory(path, parseInt(depth as string))
+    const repositories = await repoScanner.scanDirectory(sanitizeString(path, 500), parseInt(depth as string))
 
     if (repositories.length === 0) {
       return res.status(400).json({ success: false, error: 'No git repositories found in path' })
@@ -452,10 +482,20 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Name is required' })
     }
 
+    // Security: Validate name
+    if (!validateName(name)) {
+      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, and parentheses' })
+    }
+
+    // Security: Validate folder path if provided (prevent traversal)
+    if (folderPath && !validatePath(folderPath)) {
+      return res.status(400).json({ success: false, error: 'Path contains invalid sequences (../ or ..\\)' })
+    }
+
     const workspace = workspaceManager.createWorkspace({
-      name,
-      description,
-      folderPath,
+      name: sanitizeString(name, 200),
+      description: description ? sanitizeString(description, 1000) : undefined,
+      folderPath: folderPath ? sanitizeString(folderPath, 500) : undefined,
       tags,
       setAsActive,
     })
@@ -612,8 +652,18 @@ router.post('/:workspaceId/scan', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Path is required' })
     }
 
+    // Security: Validate path (prevent traversal)
+    if (!validatePath(path)) {
+      return res.status(400).json({ success: false, error: 'Path contains invalid sequences (../ or ..\\)' })
+    }
+
+    // Security: Validate name if provided
+    if (name && !validateName(name)) {
+      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, and parentheses' })
+    }
+
     // Scan folder
-    const repositories = await repoScanner.scanDirectory(path, parseInt(depth as string))
+    const repositories = await repoScanner.scanDirectory(sanitizeString(path, 500), parseInt(depth as string))
 
     if (repositories.length === 0) {
       return res.status(400).json({ success: false, error: 'No git repositories found in path' })

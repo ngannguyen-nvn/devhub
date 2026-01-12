@@ -429,17 +429,17 @@ export default function Docker() {
   if (!dockerAvailable) {
     return (
       <div className="p-8" data-testid="docker-unavailable-container">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div className="glass-card border border-[hsl(var(--border))] rounded-xl p-6 bg-[hsla(var(--warning),0.1)]">
           <div className="flex items-center gap-3">
-            <Container className="w-8 h-8 text-yellow-600" />
+            <Container className="w-8 h-8 text-[hsl(var(--warning))]" />
             <div>
-              <h3 className="text-lg font-semibold text-yellow-900">Docker Not Available</h3>
-              <p className="text-yellow-700 mt-1">
+              <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">Docker Not Available</h3>
+              <p className="text-[hsl(var(--foreground-muted))] mt-1">
                 Docker is not running or not installed. Please start Docker and refresh.
               </p>
               <button
                 onClick={checkDocker}
-                className="mt-3 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                className="mt-3 px-4 py-2 bg-[hsl(var(--warning))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 transition-opacity"
                 data-testid="docker-check-again-button"
               >
                 Check Again
@@ -454,10 +454,10 @@ export default function Docker() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Docker Management</h1>
+        <h1 className="text-3xl font-bold text-[hsl(var(--foreground))]">Docker Management</h1>
         <button
           onClick={() => activeTab === 'images' ? fetchImages() : fetchContainers()}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80 transition-opacity"
           data-testid="docker-refresh-button"
         >
           <RefreshCw className="w-4 h-4" />
@@ -466,13 +466,13 @@ export default function Docker() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 mb-6 border-b">
+      <div className="flex gap-4 mb-6 border-b border-[hsl(var(--border))]">
         <button
           onClick={() => setActiveTab('images')}
           className={`px-4 py-2 font-medium ${
             activeTab === 'images'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'border-b-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
+              : 'text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]'
           }`}
           data-testid="docker-images-tab"
         >
@@ -483,8 +483,8 @@ export default function Docker() {
           onClick={() => setActiveTab('containers')}
           className={`px-4 py-2 font-medium ${
             activeTab === 'containers'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'border-b-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
+              : 'text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]'
           }`}
           data-testid="docker-containers-tab"
         >
@@ -495,8 +495,8 @@ export default function Docker() {
           onClick={() => setActiveTab('compose')}
           className={`px-4 py-2 font-medium ${
             activeTab === 'compose'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'border-b-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
+              : 'text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]'
           }`}
           data-testid="docker-compose-tab"
         >
@@ -511,7 +511,7 @@ export default function Docker() {
           <div className="mb-4">
             <button
               onClick={() => setShowBuildForm(!showBuildForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="flex items-center gap-2 px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
               data-testid="docker-build-image-button"
             >
               <Plus className="w-4 h-4" />
@@ -521,45 +521,45 @@ export default function Docker() {
 
           {/* Build Form */}
           {showBuildForm && (
-            <div className="bg-white p-6 rounded-lg shadow-md mb-6" data-testid="docker-build-form">
-              <h2 className="text-xl font-bold mb-4">Build Docker Image</h2>
+            <div className="glass-card card-hover p-6 rounded-xl mb-6" data-testid="docker-build-form">
+              <h2 className="text-xl font-bold mb-4 text-[hsl(var(--foreground))]">Build Docker Image</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Context Path</label>
+                  <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Context Path</label>
                   <input
                     type="text"
                     value={buildForm.contextPath}
                     onChange={(e) => setBuildForm({ ...buildForm, contextPath: e.target.value })}
                     placeholder="/path/to/project"
-                    className="w-full px-3 py-2 border rounded"
+                    className="input-field w-full terminal-text"
                     data-testid="docker-context-path-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Dockerfile Path</label>
+                  <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Dockerfile Path</label>
                   <input
                     type="text"
                     value={buildForm.dockerfilePath}
                     onChange={(e) => setBuildForm({ ...buildForm, dockerfilePath: e.target.value })}
                     placeholder="Dockerfile"
-                    className="w-full px-3 py-2 border rounded"
+                    className="input-field w-full terminal-text"
                     data-testid="docker-dockerfile-path-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Image Tag</label>
+                  <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Image Tag</label>
                   <input
                     type="text"
                     value={buildForm.tag}
                     onChange={(e) => setBuildForm({ ...buildForm, tag: e.target.value })}
                     placeholder="my-app:latest"
-                    className="w-full px-3 py-2 border rounded"
+                    className="input-field w-full terminal-text"
                     data-testid="docker-image-tag-input"
                   />
                 </div>
 
                 {building && buildLogs.length > 0 && (
-                  <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-48 overflow-y-auto" data-testid="docker-build-logs">
+                  <div className="bg-[hsl(var(--background))] text-[hsl(var(--success))] p-4 rounded-xl terminal-text text-sm h-48 overflow-y-auto border border-[hsl(var(--border))]" data-testid="docker-build-logs">
                     {buildLogs.map((log, i) => (
                       <div key={i}>{log}</div>
                     ))}
@@ -570,14 +570,14 @@ export default function Docker() {
                   <button
                     onClick={handleBuildImage}
                     disabled={building}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl disabled:opacity-50"
                     data-testid="docker-build-submit-button"
                   >
                     {building ? 'Building...' : 'Build'}
                   </button>
                   <button
                     onClick={() => setShowBuildForm(false)}
-                    className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                    className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80 transition-opacity"
                     data-testid="docker-build-cancel-button"
                   >
                     Cancel
@@ -592,27 +592,27 @@ export default function Docker() {
             {loading && images.length === 0 ? (
               <SkeletonLoader count={3} />
             ) : images.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No Docker images found</div>
+              <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">No Docker images found</div>
             ) : (
               images.map(image => (
-                <div key={image.id} className="bg-white p-4 rounded-lg shadow hover:shadow-md" data-testid={`docker-image-item-${image.id}`}>
+                <div key={image.id} className="glass-card card-hover p-4 rounded-xl" data-testid={`docker-image-item-${image.id}`}>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <Package className="w-5 h-5 text-blue-600" />
-                        <h3 className="font-semibold text-lg">
+                        <Package className="w-5 h-5 text-[hsl(var(--primary))]" />
+                        <h3 className="font-semibold text-lg text-[hsl(var(--foreground))] terminal-text">
                           {image.repoTags[0]}
                         </h3>
                       </div>
-                      <div className="mt-2 text-sm text-gray-600 space-y-1">
-                        <div>ID: {image.id}</div>
+                      <div className="mt-2 text-sm text-[hsl(var(--foreground-muted))] space-y-1">
+                        <div className="terminal-text">ID: {image.id}</div>
                         <div>Size: {formatBytes(image.size)}</div>
                         <div>Created: {formatDate(image.created)}</div>
                       </div>
                     </div>
                     <button
                       onClick={() => handleRemoveImage(image.id, image.repoTags[0] || 'Unknown')}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-[hsl(var(--danger))] hover:opacity-80 transition-opacity"
                       title="Remove Image"
                       data-testid="docker-delete-image-button"
                     >
@@ -634,7 +634,7 @@ export default function Docker() {
             <div className="mb-4">
               <button
                 onClick={() => setShowRunForm(!showRunForm)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 transition-opacity"
                 data-testid="docker-run-container-button"
               >
                 <Plus className="w-4 h-4" />
@@ -644,64 +644,64 @@ export default function Docker() {
 
             {/* Run Form */}
             {showRunForm && (
-              <div className="bg-white p-6 rounded-lg shadow-md mb-4" data-testid="docker-run-form">
-                <h2 className="text-xl font-bold mb-4">Run New Container</h2>
+              <div className="glass-card card-hover p-6 rounded-xl mb-4" data-testid="docker-run-form">
+                <h2 className="text-xl font-bold mb-4 text-[hsl(var(--foreground))]">Run New Container</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Image Name</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Image Name</label>
                     <input
                       type="text"
                       value={runForm.imageName}
                       onChange={(e) => setRunForm({ ...runForm, imageName: e.target.value })}
                       placeholder="nginx:latest"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full terminal-text"
                       data-testid="docker-image-name-input"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Container Name</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Container Name</label>
                     <input
                       type="text"
                       value={runForm.containerName}
                       onChange={(e) => setRunForm({ ...runForm, containerName: e.target.value })}
                       placeholder="my-container"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full terminal-text"
                       data-testid="docker-container-name-input"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Port Mappings</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Port Mappings</label>
                     <input
                       type="text"
                       value={runForm.ports}
                       onChange={(e) => setRunForm({ ...runForm, ports: e.target.value })}
                       placeholder="80:8080, 443:8443"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full terminal-text"
                       data-testid="docker-port-mappings-input"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Environment Variables</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Environment Variables</label>
                     <input
                       type="text"
                       value={runForm.env}
                       onChange={(e) => setRunForm({ ...runForm, env: e.target.value })}
                       placeholder="KEY=value, FOO=bar"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full terminal-text"
                       data-testid="docker-env-vars-input"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={handleRunContainer}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      className="px-4 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 transition-opacity"
                       data-testid="docker-run-submit-button"
                     >
                       Run
                     </button>
                     <button
                       onClick={() => setShowRunForm(false)}
-                      className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80 transition-opacity"
                       data-testid="docker-run-cancel-button"
                     >
                       Cancel
@@ -716,37 +716,37 @@ export default function Docker() {
               {loading && containers.length === 0 ? (
                 <SkeletonLoader count={3} />
               ) : containers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No containers found</div>
+                <div className="text-center py-8 text-[hsl(var(--foreground-muted))]">No containers found</div>
               ) : (
                 containers.map(container => (
                   <div
                     key={container.id}
                     onClick={() => setSelectedContainer(container.id)}
-                    className={`bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md ${
-                      selectedContainer === container.id ? 'ring-2 ring-blue-500' : ''
+                    className={`glass-card card-hover p-4 rounded-xl cursor-pointer ${
+                      selectedContainer === container.id ? 'ring-2 ring-[hsl(var(--primary))]' : ''
                     }`}
                     data-testid={`docker-container-item-${container.id}`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <Container className="w-5 h-5 text-green-600" />
-                          <h3 className="font-semibold">{container.name}</h3>
+                          <Container className="w-5 h-5 text-[hsl(var(--success))]" />
+                          <h3 className="font-semibold text-[hsl(var(--foreground))]">{container.name}</h3>
                           <span
-                            className={`px-2 py-1 text-xs rounded ${
+                            className={`px-2 py-1 text-xs rounded-xl ${
                               container.state === 'running'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
+                                ? 'bg-[hsla(var(--success),0.1)] text-[hsl(var(--success))]'
+                                : 'bg-[hsl(var(--border))] text-[hsl(var(--foreground-muted))]'
                             }`}
                           >
                             {container.state}
                           </span>
                         </div>
-                        <div className="mt-2 text-sm text-gray-600 space-y-1">
-                          <div>Image: {container.image}</div>
-                          <div>ID: {container.id}</div>
+                        <div className="mt-2 text-sm text-[hsl(var(--foreground-muted))] space-y-1">
+                          <div className="terminal-text">Image: {container.image}</div>
+                          <div className="terminal-text">ID: {container.id}</div>
                           {container.ports.length > 0 && (
-                            <div>
+                            <div className="terminal-text">
                               Ports: {container.ports.map(p =>
                                 p.publicPort ? `${p.publicPort}:${p.privatePort}` : p.privatePort
                               ).join(', ')}
@@ -761,7 +761,7 @@ export default function Docker() {
                               e.stopPropagation()
                               handleStopContainer(container.id)
                             }}
-                            className="text-yellow-600 hover:text-yellow-800"
+                            className="text-[hsl(var(--warning))] hover:opacity-80 transition-opacity"
                             title="Stop"
                             data-testid="docker-stop-container-button"
                           >
@@ -773,7 +773,7 @@ export default function Docker() {
                               e.stopPropagation()
                               handleStartContainer(container.id)
                             }}
-                            className="text-green-600 hover:text-green-800"
+                            className="text-[hsl(var(--success))] hover:opacity-80 transition-opacity"
                             title="Start"
                             data-testid="docker-start-container-button"
                           >
@@ -785,7 +785,7 @@ export default function Docker() {
                             e.stopPropagation()
                             handleRemoveContainer(container.id, container.name)
                           }}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-[hsl(var(--danger))] hover:opacity-80 transition-opacity"
                           title="Remove"
                           data-testid="docker-delete-container-button"
                         >
@@ -801,20 +801,20 @@ export default function Docker() {
 
           {/* Container Logs */}
           {selectedContainer && (
-            <div className="bg-white p-4 rounded-lg shadow" data-testid="docker-container-logs-panel">
+            <div className="glass-card p-4 rounded-xl" data-testid="docker-container-logs-panel">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Container Logs</h2>
+                <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Container Logs</h2>
                 <button
                   onClick={() => fetchContainerLogs(selectedContainer)}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-[hsl(var(--primary))] hover:opacity-80 transition-opacity"
                   data-testid="docker-refresh-logs-button"
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>
               </div>
-              <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto" data-testid="docker-container-logs">
+              <div className="bg-[hsl(var(--background))] text-[hsl(var(--success))] p-4 rounded-xl terminal-text text-sm h-96 overflow-y-auto border border-[hsl(var(--border))]" data-testid="docker-container-logs">
                 {containerLogs.length === 0 ? (
-                  <div className="text-gray-500">No logs available</div>
+                  <div className="text-[hsl(var(--foreground-muted))]">No logs available</div>
                 ) : (
                   containerLogs.map((log, i) => (
                     <div key={i}>{log}</div>
@@ -832,11 +832,11 @@ export default function Docker() {
           {/* Left: Services Configuration */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Services</h2>
+              <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Services</h2>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowAddServiceForm(!showAddServiceForm)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="flex items-center gap-2 px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                 >
                   <Plus className="w-4 h-4" />
                   Add Service
@@ -844,7 +844,7 @@ export default function Docker() {
                 {composeServices.length > 0 && (
                   <button
                     onClick={handleClearCompose}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="px-4 py-2 bg-[hsl(var(--danger))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 transition-opacity"
                   >
                     Clear All
                   </button>
@@ -854,31 +854,31 @@ export default function Docker() {
 
             {/* Add Service Form */}
             {showAddServiceForm && (
-              <div className="bg-white p-6 rounded-lg shadow-md mb-4">
-                <h3 className="text-lg font-bold mb-4">Add Service to Compose</h3>
+              <div className="glass-card card-hover p-6 rounded-xl mb-4">
+                <h3 className="text-lg font-bold mb-4 text-[hsl(var(--foreground))]">Add Service to Compose</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Service Name *</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Service Name *</label>
                     <input
                       type="text"
                       value={newComposeService.name}
                       onChange={(e) => setNewComposeService({ ...newComposeService, name: e.target.value })}
                       placeholder="my-service"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Image</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Image</label>
                     <input
                       type="text"
                       value={newComposeService.image || ''}
                       onChange={(e) => setNewComposeService({ ...newComposeService, image: e.target.value })}
                       placeholder="nginx:latest"
-                      className="w-full px-3 py-2 border rounded"
+                      className="input-field w-full terminal-text"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Ports (one per line)</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Ports (one per line)</label>
                     <textarea
                       value={newComposeService.ports?.join('\n') || ''}
                       onChange={(e) => setNewComposeService({
@@ -887,11 +887,11 @@ export default function Docker() {
                       })}
                       placeholder="8080:80&#10;443:443"
                       rows={3}
-                      className="w-full px-3 py-2 border rounded font-mono text-sm"
+                      className="input-field w-full terminal-text text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Environment (KEY=value, one per line)</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Environment (KEY=value, one per line)</label>
                     <textarea
                       value={Object.entries(newComposeService.environment || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
                       onChange={(e) => {
@@ -904,11 +904,11 @@ export default function Docker() {
                       }}
                       placeholder="NODE_ENV=production&#10;PORT=3000"
                       rows={3}
-                      className="w-full px-3 py-2 border rounded font-mono text-sm"
+                      className="input-field w-full terminal-text text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Volumes (one per line)</label>
+                    <label className="block text-sm font-medium mb-1 text-[hsl(var(--foreground))]">Volumes (one per line)</label>
                     <textarea
                       value={newComposeService.volumes?.join('\n') || ''}
                       onChange={(e) => setNewComposeService({
@@ -917,19 +917,19 @@ export default function Docker() {
                       })}
                       placeholder="./data:/app/data&#10;./logs:/app/logs"
                       rows={3}
-                      className="w-full px-3 py-2 border rounded font-mono text-sm"
+                      className="input-field w-full terminal-text text-sm"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={handleAddComposeService}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl"
                     >
                       Add Service
                     </button>
                     <button
                       onClick={() => setShowAddServiceForm(false)}
-                      className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                      className="px-4 py-2 bg-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-xl hover:opacity-80 transition-opacity"
                     >
                       Cancel
                     </button>
@@ -941,19 +941,19 @@ export default function Docker() {
             {/* Services List */}
             <div className="space-y-4">
               {composeServices.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 bg-white rounded-lg">
+                <div className="text-center py-8 text-[hsl(var(--foreground-muted))] glass-card rounded-xl">
                   No services added yet. Click "Add Service" to get started.
                 </div>
               ) : (
                 composeServices.map((service, index) => (
-                  <div key={index} className="bg-white p-4 rounded-lg shadow">
+                  <div key={index} className="glass-card card-hover p-4 rounded-xl">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{service.name}</h3>
-                        <div className="mt-2 text-sm text-gray-600 space-y-1">
-                          {service.image && <div>Image: {service.image}</div>}
+                        <h3 className="font-semibold text-lg text-[hsl(var(--foreground))]">{service.name}</h3>
+                        <div className="mt-2 text-sm text-[hsl(var(--foreground-muted))] space-y-1">
+                          {service.image && <div className="terminal-text">Image: {service.image}</div>}
                           {service.ports && service.ports.length > 0 && (
-                            <div>Ports: {service.ports.join(', ')}</div>
+                            <div className="terminal-text">Ports: {service.ports.join(', ')}</div>
                           )}
                           {service.volumes && service.volumes.length > 0 && (
                             <div>Volumes: {service.volumes.length}</div>
@@ -965,7 +965,7 @@ export default function Docker() {
                       </div>
                       <button
                         onClick={() => handleRemoveComposeService(index)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-[hsl(var(--danger))] hover:opacity-80 transition-opacity"
                         title="Remove"
                       >
                         <Trash2 className="w-5 h-5" />
@@ -979,26 +979,26 @@ export default function Docker() {
 
           {/* Right: YAML Preview and Actions */}
           <div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-bold mb-4">Docker Compose YAML</h2>
+            <div className="glass-card p-6 rounded-xl">
+              <h2 className="text-xl font-bold mb-4 text-[hsl(var(--foreground))]">Docker Compose YAML</h2>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <button
                   onClick={handleGenerateCompose}
                   disabled={composeServices.length === 0}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-[hsl(var(--success))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Generate YAML
                 </button>
                 <button
                   onClick={handleDownloadCompose}
                   disabled={!generatedYaml}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 btn-glow text-[hsl(var(--background))] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Download
                 </button>
-                <label className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 cursor-pointer">
+                <label className="px-4 py-2 bg-[hsl(var(--info))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 transition-opacity cursor-pointer">
                   Import File
                   <input
                     type="file"
@@ -1015,11 +1015,11 @@ export default function Docker() {
               </div>
 
               {/* YAML Preview */}
-              <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto">
+              <div className="bg-[hsl(var(--background))] text-[hsl(var(--success))] p-4 rounded-xl terminal-text text-sm h-96 overflow-y-auto border border-[hsl(var(--border))]">
                 {generatedYaml ? (
                   <pre className="whitespace-pre-wrap">{generatedYaml}</pre>
                 ) : (
-                  <div className="text-gray-500">
+                  <div className="text-[hsl(var(--foreground-muted))]">
                     Add services and click "Generate YAML" to preview
                   </div>
                 )}

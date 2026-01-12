@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Sparkles } from 'lucide-react'
 
 interface EmptyStateProps {
   icon?: ReactNode
@@ -33,34 +33,54 @@ export function EmptyState({
     <div
       className={`
         flex flex-col items-center justify-center text-center
-        ${fullHeight ? 'flex-1 min-h-[400px]' : 'py-12 px-4'}
+        ${fullHeight ? 'flex-1 min-h-[400px]' : 'py-16 px-4'}
         ${className}
       `}
     >
-      {loading ? (
-        <RefreshCw size={48} className="mb-4 text-gray-400 animate-spin" />
-      ) : icon ? (
-        <div className="mb-4 text-gray-400">
-          {icon}
-        </div>
-      ) : null}
+      {/* Decorative background */}
+      <div className="relative">
+        {loading ? (
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--border))] flex items-center justify-center mb-6">
+              <RefreshCw size={28} className="text-[hsl(var(--primary))] animate-spin" />
+            </div>
+            <div
+              className="absolute inset-0 rounded-2xl animate-ping opacity-20"
+              style={{ background: 'hsl(var(--primary))' }}
+            />
+          </div>
+        ) : icon ? (
+          <div className="relative mb-6">
+            <div className="w-16 h-16 rounded-2xl glass-card flex items-center justify-center">
+              <div className="text-[hsl(var(--foreground-muted))]">
+                {icon}
+              </div>
+            </div>
+            {/* Decorative sparkle */}
+            <Sparkles
+              size={16}
+              className="absolute -top-1 -right-1 text-[hsl(var(--primary))] animate-pulse"
+            />
+          </div>
+        ) : null}
+      </div>
 
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-2">
         {loading ? 'Loading...' : title}
       </h3>
 
       {description && (
-        <p className="text-gray-600 max-w-sm mb-4">
+        <p className="text-[hsl(var(--foreground-muted))] max-w-sm mb-6 text-sm leading-relaxed">
           {description}
         </p>
       )}
 
       {!loading && (action || secondaryAction) && (
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center gap-3">
           {action && (
             <button
               onClick={action.onClick}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+              className="btn-glow px-5 py-2.5 text-[hsl(var(--background))] rounded-xl font-medium flex items-center gap-2 transition-all"
             >
               {action.icon}
               {action.label}
@@ -69,7 +89,7 @@ export function EmptyState({
           {secondaryAction && (
             <button
               onClick={secondaryAction.onClick}
-              className="px-4 py-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+              className="px-4 py-2 text-[hsl(var(--primary))] hover:bg-[hsla(var(--primary),0.1)] rounded-xl transition-colors font-medium"
             >
               {secondaryAction.label}
             </button>

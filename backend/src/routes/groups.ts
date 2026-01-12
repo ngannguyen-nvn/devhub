@@ -3,6 +3,29 @@ import { groupManager } from '@devhub/core'
 
 const router = express.Router()
 
+// Security: Validate group name (alphanumeric, spaces, hyphens, underscores)
+function validateGroupName(name: string): boolean {
+  if (typeof name !== 'string' || name.length === 0 || name.length > 100) {
+    return false
+  }
+  return /^[a-zA-Z0-9\s\-_]+$/.test(name)
+}
+
+// Security: Validate color (hex color or CSS color name)
+function validateColor(color: string): boolean {
+  if (typeof color !== 'string' || color.length === 0 || color.length > 50) {
+    return false
+  }
+  // Allow hex colors (#fff, #ffffff) or simple color names
+  return /^(#[a-fA-F0-9]{3,8}|[a-zA-Z]+)$/.test(color)
+}
+
+// Security: Sanitize string input
+function sanitizeString(input: any, maxLength = 100): string {
+  if (typeof input !== 'string') return ''
+  return input.slice(0, maxLength).trim()
+}
+
 /**
  * GET /api/groups/:workspaceId
  * Get all groups in a workspace
@@ -49,7 +72,21 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'workspaceId and name are required' })
     }
 
-    const group = groupManager.createGroup(workspaceId, name, { description, color, icon })
+    // Security: Validate group name
+    if (!validateGroupName(name)) {
+      return res.status(400).json({ success: false, error: 'Invalid group name. Use only alphanumeric characters, spaces, hyphens, and underscores (max 100 chars)' })
+    }
+
+    // Security: Validate color if provided
+    if (color && !validateColor(color)) {
+      return res.status(400).json({ success: false, error: 'Invalid color format. Use hex colors (#fff) or color names' })
+    }
+
+    const group = groupManager.createGroup(workspaceId, sanitizeString(name, 100), {
+      description: description ? sanitizeString(description, 500) : undefined,
+      color: color ? sanitizeString(color, 50) : undefined,
+      icon: icon ? sanitizeString(icon, 50) : undefined,
+    })
     res.json({ success: true, group })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
@@ -63,9 +100,26 @@ router.post('/', (req: Request, res: Response) => {
 router.put('/:groupId', (req: Request, res: Response) => {
   try {
     const { groupId } = req.params
-    const updates = req.body
+    const { name, description, color, icon } = req.body
 
-    const success = groupManager.updateGroup(groupId, updates)
+    // Security: Validate name if provided
+    if (name !== undefined && !validateGroupName(name)) {
+      return res.status(400).json({ success: false, error: 'Invalid group name. Use only alphanumeric characters, spaces, hyphens, and underscores (max 100 chars)' })
+    }
+
+    // Security: Validate color if provided
+    if (color !== undefined && color !== null && !validateColor(color)) {
+      return res.status(400).json({ success: false, error: 'Invalid color format. Use hex colors (#fff) or color names' })
+    }
+
+    const sanitizedUpdates = {
+      name: name !== undefined ? sanitizeString(name, 100) : undefined,
+      description: description !== undefined ? sanitizeString(description, 500) : undefined,
+      color: color !== undefined ? sanitizeString(color, 50) : undefined,
+      icon: icon !== undefined ? sanitizeString(icon, 50) : undefined,
+    }
+
+    const success = groupManager.updateGroup(groupId, sanitizedUpdates)
 
     if (!success) {
       return res.status(404).json({ success: false, error: 'Group not found or no changes made' })

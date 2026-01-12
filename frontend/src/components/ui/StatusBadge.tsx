@@ -1,4 +1,4 @@
-import { Play, Square, AlertCircle, Clock } from 'lucide-react'
+import { Play, Square, AlertCircle, Clock, CheckCircle, XCircle, HelpCircle } from 'lucide-react'
 
 type StatusType = 'running' | 'stopped' | 'error' | 'healthy' | 'unhealthy' | 'unknown' | 'pending'
 
@@ -8,77 +8,101 @@ interface StatusBadgeProps {
   size?: 'sm' | 'md' | 'lg'
   showLabel?: boolean
   animated?: boolean
-  pulseColor?: string
   className?: string
 }
 
-const statusConfig: Record<StatusType, { label: string; color: string; bgColor: string; borderColor: string; icon: typeof Play | null }> = {
+const statusConfig: Record<StatusType, {
+  label: string
+  color: string
+  bgColor: string
+  borderColor: string
+  glowColor: string
+  dotColor: string
+  icon: typeof Play | null
+}> = {
   running: {
     label: 'Running',
-    color: 'text-green-700',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
+    color: 'text-[hsl(var(--success))]',
+    bgColor: 'bg-[hsla(var(--success),0.15)]',
+    borderColor: 'border-[hsla(var(--success),0.3)]',
+    glowColor: 'shadow-[0_0_12px_-2px_hsla(var(--success),0.5)]',
+    dotColor: 'bg-[hsl(var(--success))]',
     icon: Play,
   },
   stopped: {
     label: 'Stopped',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-100',
-    borderColor: 'border-gray-200',
+    color: 'text-[hsl(var(--foreground-muted))]',
+    bgColor: 'bg-[hsl(var(--border))]',
+    borderColor: 'border-[hsl(var(--border))]',
+    glowColor: '',
+    dotColor: 'bg-[hsl(var(--foreground-muted))]',
     icon: Square,
   },
   error: {
     label: 'Error',
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    icon: AlertCircle,
+    color: 'text-[hsl(var(--danger))]',
+    bgColor: 'bg-[hsla(var(--danger),0.15)]',
+    borderColor: 'border-[hsla(var(--danger),0.3)]',
+    glowColor: 'shadow-[0_0_12px_-2px_hsla(var(--danger),0.5)]',
+    dotColor: 'bg-[hsl(var(--danger))]',
+    icon: XCircle,
   },
   healthy: {
     label: 'Healthy',
-    color: 'text-green-700',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
-    icon: Play,
+    color: 'text-[hsl(var(--success))]',
+    bgColor: 'bg-[hsla(var(--success),0.15)]',
+    borderColor: 'border-[hsla(var(--success),0.3)]',
+    glowColor: 'shadow-[0_0_12px_-2px_hsla(var(--success),0.5)]',
+    dotColor: 'bg-[hsl(var(--success))]',
+    icon: CheckCircle,
   },
   unhealthy: {
     label: 'Unhealthy',
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    color: 'text-[hsl(var(--danger))]',
+    bgColor: 'bg-[hsla(var(--danger),0.15)]',
+    borderColor: 'border-[hsla(var(--danger),0.3)]',
+    glowColor: 'shadow-[0_0_12px_-2px_hsla(var(--danger),0.5)]',
+    dotColor: 'bg-[hsl(var(--danger))]',
     icon: AlertCircle,
   },
   unknown: {
     label: 'Unknown',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-100',
-    borderColor: 'border-gray-200',
-    icon: null,
+    color: 'text-[hsl(var(--foreground-muted))]',
+    bgColor: 'bg-[hsl(var(--border))]',
+    borderColor: 'border-[hsl(var(--border))]',
+    glowColor: '',
+    dotColor: 'bg-[hsl(var(--foreground-muted))]',
+    icon: HelpCircle,
   },
   pending: {
     label: 'Pending',
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-200',
+    color: 'text-[hsl(var(--warning))]',
+    bgColor: 'bg-[hsla(var(--warning),0.15)]',
+    borderColor: 'border-[hsla(var(--warning),0.3)]',
+    glowColor: 'shadow-[0_0_12px_-2px_hsla(var(--warning),0.5)]',
+    dotColor: 'bg-[hsl(var(--warning))]',
     icon: Clock,
   },
 }
 
 const sizeConfig = {
   sm: {
-    dot: 'w-1.5 h-1.5',
-    badge: 'px-1.5 py-0.5 text-xs',
-    pill: 'px-2 py-0.5 text-xs',
+    dot: 'w-2 h-2',
+    badge: 'px-2 py-0.5 text-xs gap-1',
+    pill: 'px-2.5 py-0.5 text-xs gap-1.5',
+    icon: 10,
   },
   md: {
-    dot: 'w-2 h-2',
-    badge: 'px-2 py-1 text-sm',
-    pill: 'px-2.5 py-1 text-sm',
+    dot: 'w-2.5 h-2.5',
+    badge: 'px-2.5 py-1 text-xs gap-1.5',
+    pill: 'px-3 py-1 text-sm gap-1.5',
+    icon: 12,
   },
   lg: {
-    dot: 'w-2.5 h-2.5',
-    badge: 'px-2.5 py-1.5 text-base',
-    pill: 'px-3 py-1.5 text-base',
+    dot: 'w-3 h-3',
+    badge: 'px-3 py-1.5 text-sm gap-2',
+    pill: 'px-4 py-1.5 text-sm gap-2',
+    icon: 14,
   },
 }
 
@@ -88,7 +112,6 @@ function StatusBadge({
   size = 'md',
   showLabel = true,
   animated = false,
-  pulseColor = 'bg-green-500',
   className = '',
 }: StatusBadgeProps) {
   if (!status) {
@@ -98,19 +121,30 @@ function StatusBadge({
   const config = statusConfig[status] || statusConfig.unknown
   const sizes = sizeConfig[size]
   const Icon = config.icon
+  const isActive = status === 'running' || status === 'healthy'
 
   if (variant === 'dot') {
     return (
       <span
-        className={`inline-flex items-center ${animated ? 'animate-pulse' : ''}`}
+        className={`relative inline-flex ${className}`}
         title={config.label}
       >
         <span
-          className={`${sizes.dot} rounded-full ${pulseColor}`}
-          style={{
-            ...(status === 'running' ? {} : {}),
-          }}
+          className={`
+            ${sizes.dot} rounded-full
+            ${config.dotColor}
+            ${animated && isActive ? '' : ''}
+          `}
         />
+        {animated && isActive && (
+          <span
+            className={`
+              absolute inset-0 ${sizes.dot} rounded-full
+              ${config.dotColor}
+              animate-ping opacity-75
+            `}
+          />
+        )}
       </span>
     )
   }
@@ -119,19 +153,20 @@ function StatusBadge({
     return (
       <span
         className={`
-          inline-flex items-center gap-1.5 font-medium rounded-full border
+          inline-flex items-center font-medium rounded-full border
           ${config.bgColor} ${config.color} ${config.borderColor}
+          ${animated && isActive ? config.glowColor : ''}
           ${sizes.pill}
           ${className}
         `}
       >
-        {animated && status === 'running' && (
-          <span className={`relative flex ${sizes.dot}`}>
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${pulseColor} opacity-75`}></span>
-            <span className={`relative inline-flex rounded-full ${sizes.dot} ${pulseColor}`}></span>
+        {animated && isActive && (
+          <span className="relative flex h-2 w-2 mr-0.5">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${config.dotColor} opacity-75`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${config.dotColor}`} />
           </span>
         )}
-        {!animated && Icon && <Icon size={12} className="flex-shrink-0" />}
+        {!animated && Icon && <Icon size={sizes.icon} className="flex-shrink-0" />}
         {showLabel && <span>{config.label}</span>}
       </span>
     )
@@ -140,19 +175,20 @@ function StatusBadge({
   return (
     <span
       className={`
-        inline-flex items-center gap-1.5 font-medium rounded border
+        inline-flex items-center font-medium rounded-lg border
         ${config.bgColor} ${config.color} ${config.borderColor}
+        ${animated && isActive ? config.glowColor : ''}
         ${sizes.badge}
         ${className}
       `}
     >
-      {animated && status === 'running' && (
-        <span className={`relative flex ${sizes.dot}`}>
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${pulseColor} opacity-75`}></span>
-          <span className={`relative inline-flex rounded-full ${sizes.dot} ${pulseColor}`}></span>
+      {animated && isActive && (
+        <span className="relative flex h-2 w-2 mr-0.5">
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${config.dotColor} opacity-75`} />
+          <span className={`relative inline-flex rounded-full h-2 w-2 ${config.dotColor}`} />
         </span>
       )}
-      {!animated && Icon && <Icon size={12} className="flex-shrink-0" />}
+      {!animated && Icon && <Icon size={sizes.icon} className="flex-shrink-0" />}
       {showLabel && <span>{config.label}</span>}
     </span>
   )
@@ -182,7 +218,7 @@ export function ServiceStatusBadge({
           status={healthStatus === 'healthy' ? 'healthy' : healthStatus === 'unhealthy' ? 'unhealthy' : 'unknown'}
           variant="dot"
           size="sm"
-          pulseColor={healthStatus === 'healthy' ? 'bg-green-500' : healthStatus === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'}
+          animated
         />
       )}
     </div>

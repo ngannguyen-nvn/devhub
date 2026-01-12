@@ -10,17 +10,49 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 border border-transparent',
-  secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500 border border-transparent',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 border border-transparent',
-  ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500 border border-transparent',
-  outline: 'bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500 border border-gray-300',
+  primary: `
+    bg-gradient-to-r from-[hsl(175,85%,45%)] to-[hsl(195,90%,40%)]
+    text-[hsl(var(--background))] font-semibold
+    shadow-lg shadow-[hsla(175,85%,50%,0.25)]
+    hover:shadow-[hsla(175,85%,50%,0.4)] hover:translate-y-[-1px]
+    focus:ring-[hsl(var(--primary))] focus:ring-offset-[hsl(var(--background))]
+    border border-transparent
+  `,
+  secondary: `
+    bg-[hsl(var(--background-card))]
+    text-[hsl(var(--foreground))]
+    border border-[hsl(var(--border))]
+    hover:bg-[hsl(var(--border))] hover:border-[hsla(175,50%,50%,0.3)]
+    focus:ring-[hsl(var(--primary))] focus:ring-offset-[hsl(var(--background))]
+  `,
+  danger: `
+    bg-gradient-to-r from-[hsl(0,85%,55%)] to-[hsl(15,90%,50%)]
+    text-white font-semibold
+    shadow-lg shadow-[hsla(0,85%,60%,0.25)]
+    hover:shadow-[hsla(0,85%,60%,0.4)] hover:translate-y-[-1px]
+    focus:ring-[hsl(var(--danger))] focus:ring-offset-[hsl(var(--background))]
+    border border-transparent
+  `,
+  ghost: `
+    bg-transparent
+    text-[hsl(var(--foreground-muted))]
+    hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--border))]
+    focus:ring-[hsl(var(--primary))] focus:ring-offset-[hsl(var(--background))]
+    border border-transparent
+  `,
+  outline: `
+    bg-transparent
+    text-[hsl(var(--foreground))]
+    border border-[hsl(var(--border))]
+    hover:bg-[hsla(175,50%,50%,0.1)] hover:border-[hsla(175,85%,50%,0.3)] hover:text-[hsl(var(--primary))]
+    focus:ring-[hsl(var(--primary))] focus:ring-offset-[hsl(var(--background))]
+  `,
 }
 
 const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm gap-1.5',
-  md: 'px-4 py-2 text-sm gap-2',
-  lg: 'px-6 py-3 text-base gap-2',
+  sm: 'px-3 py-1.5 text-xs gap-1.5 rounded-lg',
+  md: 'px-4 py-2 text-sm gap-2 rounded-lg',
+  lg: 'px-6 py-3 text-base gap-2.5 rounded-xl',
 }
 
 export function Button({
@@ -40,9 +72,11 @@ export function Button({
   return (
     <button
       className={`
-        inline-flex items-center justify-center font-medium rounded-lg
-        transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
-        disabled:opacity-50 disabled:cursor-not-allowed
+        inline-flex items-center justify-center font-medium
+        transition-all duration-200 ease-out
+        focus:outline-none focus:ring-2 focus:ring-offset-2
+        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0
+        active:scale-[0.98]
         ${variantClasses[variant]}
         ${sizeClasses[size]}
         ${fullWidth ? 'w-full' : ''}
@@ -94,9 +128,9 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const iconSizeClasses = {
-  sm: 'p-1',
-  md: 'p-2',
-  lg: 'p-3',
+  sm: 'p-1.5 rounded-lg',
+  md: 'p-2 rounded-lg',
+  lg: 'p-3 rounded-xl',
 }
 
 export function IconButton({
@@ -111,9 +145,11 @@ export function IconButton({
   return (
     <button
       className={`
-        inline-flex items-center justify-center rounded-lg
-        transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
+        inline-flex items-center justify-center
+        transition-all duration-200 ease-out
+        focus:outline-none focus:ring-2 focus:ring-offset-2
         disabled:opacity-50 disabled:cursor-not-allowed
+        active:scale-[0.95]
         ${variantClasses[variant]}
         ${iconSizeClasses[size]}
         ${className}

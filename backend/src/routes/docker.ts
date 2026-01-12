@@ -4,6 +4,26 @@ import { DockerManager } from '@devhub/core'
 const router = Router()
 const dockerManager = new DockerManager()
 
+// Security: Path traversal protection
+function validatePath(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/')
+  return !normalized.includes('../') && !normalized.includes('..\\')
+}
+
+// Security: Validate container/image name (alphanumeric, underscores, hyphens, dots, colons)
+function validateDockerName(name: string): boolean {
+  if (typeof name !== 'string' || name.length === 0 || name.length > 200) {
+    return false
+  }
+  return /^[a-zA-Z0-9_.\-/:]+$/.test(name)
+}
+
+// Security: Sanitize string input
+function sanitizeString(input: any, maxLength = 200): string {
+  if (typeof input !== 'string') return ''
+  return input.slice(0, maxLength).trim()
+}
+
 /**
  * Ping Docker to check if it's available
  */
@@ -55,15 +75,31 @@ router.post('/images/build', async (req: Request, res: Response) => {
       })
     }
 
+    // Security: Validate paths (prevent traversal)
+    if (!validatePath(contextPath) || !validatePath(dockerfilePath)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Path contains invalid sequences (../ or ..\\)',
+      })
+    }
+
+    // Security: Validate tag name
+    if (!validateDockerName(tag)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid tag name. Use only alphanumeric characters, underscores, hyphens, dots, and colons',
+      })
+    }
+
     // Set up SSE for build progress
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
 
     await dockerManager.buildImage(
-      contextPath,
-      dockerfilePath,
-      tag,
+      sanitizeString(contextPath, 500),
+      sanitizeString(dockerfilePath, 500),
+      sanitizeString(tag, 200),
       (progress) => {
         res.write(`data: ${JSON.stringify(progress)}\n\n`)
       }
@@ -120,9 +156,25 @@ router.post('/containers/run', async (req: Request, res: Response) => {
       })
     }
 
+    // Security: Validate image name
+    if (!validateDockerName(imageName)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid image name. Use only alphanumeric characters, underscores, hyphens, dots, and colons',
+      })
+    }
+
+    // Security: Validate container name
+    if (!validateDockerName(containerName)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid container name. Use only alphanumeric characters, underscores, hyphens, dots, and colons',
+      })
+    }
+
     const containerId = await dockerManager.runContainer(
-      imageName,
-      containerName,
+      sanitizeString(imageName, 200),
+      sanitizeString(containerName, 200),
       { ports, env, volumes, command }
     )
 
