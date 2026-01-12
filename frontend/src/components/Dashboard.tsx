@@ -53,7 +53,7 @@ interface UncommittedChange {
 }
 
 export default function Dashboard({ onViewChange }: DashboardProps) {
-  const { allWorkspaces, createWorkspace, refreshWorkspaces, activeWorkspace } = useWorkspace()
+  const { createWorkspace, refreshWorkspaces, activeWorkspace } = useWorkspace()
 
   const [repos, setRepos] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
@@ -70,15 +70,10 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
   const [recentSnapshots, setRecentSnapshots] = useState<Snapshot[]>([])
   const [dashboardLoading, setDashboardLoading] = useState(true)
 
-  // Save to workspace modal state
-  const [showSaveModal, setShowSaveModal] = useState(false)
-  const [workspaceMode, setWorkspaceMode] = useState<'new' | 'existing'>('new')
-  const [newWorkspaceName, setNewWorkspaceName] = useState('')
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('')
-  const [snapshotName, setSnapshotName] = useState('')
-  const [snapshotDescription, setSnapshotDescription] = useState('')
+  // Save to workspace state
   const [saving, setSaving] = useState(false)
-  const [importEnvFiles, setImportEnvFiles] = useState(false)
+  const [importEnvFiles, setImportEnvFiles] = useState(true)
+  const [createWorkspaceOnScan, setCreateWorkspaceOnScan] = useState(true)
 
   // Uncommitted changes dialog state
   const [uncommittedChangesDialog, setUncommittedChangesDialog] = useState<{
@@ -466,70 +461,78 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
     }
   }
 
-  const handleSaveToWorkspace = async () => {
+  const handleImportServices = async () => {
     if (selectedRepos.size === 0) {
       toast.error('Please select at least one repository')
       return
     }
 
-    if (workspaceMode === 'new' && !newWorkspaceName.trim()) {
-      toast.error('Please enter a workspace name')
-      return
-    }
-
-    if (workspaceMode === 'existing' && !selectedWorkspaceId) {
-      toast.error('Please select a workspace')
-      return
-    }
-
     setSaving(true)
     try {
-      let workspaceId = selectedWorkspaceId
+      let workspaceId = activeWorkspace?.id
 
-      // Create new workspace if needed
-      if (workspaceMode === 'new') {
+      // Create new workspace if checkbox is checked
+      if (createWorkspaceOnScan) {
+        // Extract folder name from scan path for workspace name
+        const folderName = scanPath.split('/').filter(Boolean).pop() || 'New Workspace'
+        const workspaceName = `${folderName} - ${new Date().toLocaleDateString()}`
+
         const workspace = await createWorkspace(
-          newWorkspaceName,
-          `Workspace for ${scanPath}`,
+          workspaceName,
+          `Auto-created from scan with ${selectedRepos.size} repositories`,
           scanPath
         )
         workspaceId = workspace.id
 
         // Activate the newly created workspace
         await axios.post(`/api/workspaces/${workspaceId}/activate`)
-        await refreshWorkspaces() // Refresh to update active status
+        await refreshWorkspaces()
 
-        toast.success(`Created and activated workspace: ${newWorkspaceName}`)
+        toast.success(`Created and activated workspace: ${workspaceName}`)
       }
 
-      // Create snapshot with selected repos
+      if (!workspaceId) {
+        toast.error('No active workspace. Please create or activate a workspace first.')
+        setSaving(false)
+        return
+      }
+
       const repoPaths = Array.from(selectedRepos)
-      const finalSnapshotName = snapshotName || `Scan - ${new Date().toLocaleString()}`
-      const response = await axios.post(`/api/workspaces/${workspaceId}/snapshots`, {
-        name: finalSnapshotName,
-        description: snapshotDescription || `Scanned ${selectedRepos.size} repositories from ${scanPath}`,
-        repoPaths,
-        scannedPath: scanPath,
+      const snapshotName = `Scan - ${new Date().toLocaleString()}`
+
+      // Batch analyze repos and create services
+      const analyzeBatchResponse = await axios.post('/api/repos/analyze-batch', {
+        repoPaths
       })
 
-      if (response.data.success) {
-        toast.success(`Saved ${selectedRepos.size} repositories to workspace`)
+      const successfulAnalyses = analyzeBatchResponse.data.results.filter((r: any) => r.success)
+      const servicesToCreate = successfulAnalyses.map((result: any) => ({
+        name: result.analysis.name,
+        repoPath: result.repoPath,
+        command: result.analysis.command || 'npm start',
+        port: result.analysis.port || undefined,
+      }))
 
-        // Import .env files if checkbox is enabled
-        if (importEnvFiles) {
-          await importEnvFilesToWorkspace(workspaceId, Array.from(selectedRepos), finalSnapshotName)
-        }
-
-        setShowSaveModal(false)
-        // Reset form
-        setNewWorkspaceName('')
-        setSnapshotName('')
-        setSnapshotDescription('')
-        setImportEnvFiles(false)
-        await refreshWorkspaces()
+      if (servicesToCreate.length > 0) {
+        const batchCreateResponse = await axios.post('/api/services/batch', {
+          services: servicesToCreate,
+          workspace_id: workspaceId,
+        })
+        toast.success(`Created ${batchCreateResponse.data.summary.created} service(s)`)
       }
+
+      // Import .env files if checkbox is enabled
+      if (importEnvFiles) {
+        await importEnvFilesToWorkspace(workspaceId, repoPaths, snapshotName)
+      }
+
+      // Clear repos after import
+      setRepos([])
+      setSelectedRepos(new Set())
+      await refreshWorkspaces()
+      fetchDashboardData()
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'Failed to save to workspace'
+      const errorMsg = err.response?.data?.error || 'Failed to import services'
       toast.error(errorMsg)
       console.error(err)
     } finally {
@@ -543,17 +546,6 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
       scanPathInputRef.current.select()
     }
   }, [])
-
-  // Auto-populate workspace name when modal opens in "Create New" mode
-  useEffect(() => {
-    if (showSaveModal && workspaceMode === 'new') {
-      // Extract folder name from path (e.g., /home/user/devhub -> devhub)
-      const folderName = scanPath.split('/').filter(Boolean).pop() || 'workspace'
-      // Capitalize first letter for nicer workspace name
-      const workspaceName = folderName.charAt(0).toUpperCase() + folderName.slice(1)
-      setNewWorkspaceName(workspaceName)
-    }
-  }, [showSaveModal, workspaceMode, scanPath])
 
   useEffect(() => {
     fetchDashboardData()
@@ -835,7 +827,7 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
 
           {repos.length > 0 && (
             <>
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
@@ -855,14 +847,56 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
                     </span>
                   </div>
                   <button
-                    onClick={() => setShowSaveModal(true)}
-                    disabled={selectedRepos.size === 0}
+                    onClick={handleImportServices}
+                    disabled={selectedRepos.size === 0 || saving}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    data-testid="dashboard-save-to-workspace-button"
+                    data-testid="dashboard-import-services-button"
                   >
-                    <Save size={18} />
-                    Save to Workspace
+                    {saving ? (
+                      <>
+                        <RefreshCw size={18} className="animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={18} />
+                        Import Selected
+                      </>
+                    )}
                   </button>
+                </div>
+
+                {/* Scanner Options */}
+                <div className="flex flex-wrap gap-6 pt-2 border-t border-blue-200">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={createWorkspaceOnScan}
+                      onChange={(e) => setCreateWorkspaceOnScan(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      data-testid="dashboard-create-workspace-checkbox"
+                    />
+                    <span>Automatically create new workspace for this scan</span>
+                  </label>
+
+                  {(() => {
+                    const envFileCount = repos.filter(r => selectedRepos.has(r.path) && r.hasEnvFile).length
+                    if (envFileCount > 0) {
+                      return (
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={importEnvFiles}
+                            onChange={(e) => setImportEnvFiles(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            data-testid="dashboard-import-env-checkbox"
+                          />
+                          <span>Import .env files ({envFileCount} detected)</span>
+                        </label>
+                      )
+                    }
+                    return null
+                  })()}
                 </div>
               </div>
 
@@ -947,169 +981,6 @@ export default function Dashboard({ onViewChange }: DashboardProps) {
           )}
         </div>
       </div>
-
-      {/* Save to Workspace Modal */}
-      {showSaveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Save to Workspace</h2>
-            <p className="text-gray-600 mb-6">
-              Save {selectedRepos.size} selected {selectedRepos.size === 1 ? 'repository' : 'repositories'} to a workspace
-            </p>
-
-            {/* Workspace Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Workspace
-              </label>
-              <div className="flex gap-4 mb-4">
-                <button
-                  onClick={() => setWorkspaceMode('new')}
-                  className={`flex-1 px-4 py-2 rounded-lg border ${
-                    workspaceMode === 'new'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700'
-                  }`}
-                  data-testid="dashboard-workspace-mode-new-button"
-                >
-                  Create New
-                </button>
-                <button
-                  onClick={() => setWorkspaceMode('existing')}
-                  className={`flex-1 px-4 py-2 rounded-lg border ${
-                    workspaceMode === 'existing'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700'
-                  }`}
-                  data-testid="dashboard-workspace-mode-existing-button"
-                >
-                  Use Existing
-                </button>
-              </div>
-
-              {workspaceMode === 'new' ? (
-                <input
-                  type="text"
-                  value={newWorkspaceName}
-                  onChange={(e) => setNewWorkspaceName(e.target.value)}
-                  placeholder="Enter workspace name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="dashboard-workspace-name-input"
-                />
-              ) : (
-                <select
-                  value={selectedWorkspaceId}
-                  onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  data-testid="dashboard-workspace-select"
-                >
-                  <option value="">Select a workspace</option>
-                  {allWorkspaces.map((workspace) => (
-                    <option key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {/* Snapshot Details */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Snapshot Name (optional)
-              </label>
-              <input
-                type="text"
-                value={snapshotName}
-                onChange={(e) => setSnapshotName(e.target.value)}
-                placeholder="Auto-generated: Scan YYYY-MM-DD HH:MM:SS"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="dashboard-snapshot-name-input"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description (optional)
-              </label>
-              <textarea
-                value={snapshotDescription}
-                onChange={(e) => setSnapshotDescription(e.target.value)}
-                placeholder={`Scanned ${selectedRepos.size} repositories from ${scanPath}`}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="dashboard-snapshot-description-input"
-              />
-            </div>
-
-            {/* Environment Variables Import */}
-            {(() => {
-              const envFileCount = repos.filter(r => selectedRepos.has(r.path) && r.hasEnvFile).length
-              if (envFileCount > 0) {
-                return (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={importEnvFiles}
-                        onChange={(e) => setImportEnvFiles(e.target.checked)}
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        data-testid="dashboard-import-env-checkbox"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          Import .env files to environment profiles
-                        </span>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {envFileCount} .env file{envFileCount > 1 ? 's' : ''} detected • Will create {envFileCount} profile{envFileCount > 1 ? 's' : ''}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Profile format: "{snapshotName || 'Scan - ...'} - {'{RepoName}'}"
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                          <AlertCircle size={12} />
-                          Env vars will be encrypted and stored securely
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                )
-              }
-              return null
-            })()}
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowSaveModal(false)}
-                disabled={saving}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                data-testid="dashboard-modal-cancel-button"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveToWorkspace}
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-                data-testid="dashboard-modal-save-button"
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw size={18} className="animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    Save
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Uncommitted Changes Dialog */}
       <UncommittedChangesDialog

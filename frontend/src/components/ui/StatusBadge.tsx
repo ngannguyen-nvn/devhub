@@ -1,6 +1,6 @@
 import { Play, Square, AlertCircle, Clock } from 'lucide-react'
 
-export type StatusType = 'running' | 'stopped' | 'error' | 'healthy' | 'unhealthy' | 'unknown' | 'pending'
+type StatusType = 'running' | 'stopped' | 'error' | 'healthy' | 'unhealthy' | 'unknown' | 'pending'
 
 interface StatusBadgeProps {
   status: StatusType | undefined | null
@@ -82,7 +82,7 @@ const sizeConfig = {
   },
 }
 
-export function StatusBadge({
+function StatusBadge({
   status,
   variant = 'badge',
   size = 'md',

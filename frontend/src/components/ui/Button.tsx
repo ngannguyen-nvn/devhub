@@ -150,16 +150,3 @@ export function IconButton({
     </button>
   )
 }
-
-interface ButtonGroupProps {
-  children: ReactNode
-  className?: string
-}
-
-export function ButtonGroup({ children, className = '' }: ButtonGroupProps) {
-  return (
-    <div className={`inline-flex items-center ${className}`}>
-      {children}
-    </div>
-  )
-}
