@@ -118,24 +118,25 @@ if (targetPlatform) {
 
 // Download prebuilds for both Electron and Node.js runtimes
 // VSCode can run with either Electron (desktop) or Node.js (remote/server)
+// NOTE: The prebuild naming uses NODE_MODULE_VERSION (ABI), e.g., electron-v140 = Electron 39.x with ABI 140
 const runtimeVersions = [
-  // Electron versions for desktop VSCode
-  'electron-v121', // Electron 26.x - VSCode 1.82-1.83
-  'electron-v123', // Electron 27.x - VSCode 1.83-1.84
-  'electron-v125', // Electron 27.x
-  'electron-v128', // Electron 28.x - VSCode 1.85-1.86
-  'electron-v130', // Electron 29.x - VSCode 1.87+
-  'electron-v132', // Electron 29.x
-  'electron-v133', // Electron 30.x - VSCode 1.88
-  'electron-v135', // Electron 31.x - VSCode 1.89-1.90
-  'electron-v136', // Electron 32.x - VSCode 1.91-1.92
-  'electron-v137', // Electron 33.x - VSCode 1.93
-  'electron-v139', // Electron 34.x - VSCode 1.94-1.95
-  'electron-v140', // Electron 35.x - VSCode 1.96
-  'electron-v141', // Electron 36.x - VSCode 1.97
-  'electron-v142', // Electron 37.x - VSCode 1.98+
-  'electron-v143', // Electron 38.x - VSCode Insiders
-  'electron-v144', // Electron 39.x - Future
+  // Electron versions for desktop VSCode (named by ABI version)
+  'electron-v121', // ABI 121 - Electron 26.x
+  'electron-v123', // ABI 123 - Electron 27.x
+  'electron-v125', // ABI 125 - Electron 27.x
+  'electron-v128', // ABI 128 - Electron 28.x
+  'electron-v130', // ABI 130 - Electron 29.x
+  'electron-v132', // ABI 132 - Electron 29.x
+  'electron-v133', // ABI 133 - Electron 30.x
+  'electron-v135', // ABI 135 - Electron 31.x
+  'electron-v136', // ABI 136 - Electron 32.x (VSCode 1.96)
+  'electron-v137', // ABI 137 - Electron 33.x (VSCode 1.97)
+  'electron-v139', // ABI 139 - Electron 34.x (VSCode 1.98-1.106)
+  'electron-v140', // ABI 140 - Electron 39.x (VSCode 1.107-1.108) <-- CURRENT
+  'electron-v141', // ABI 141 - Electron 40.x (future)
+  'electron-v142', // ABI 142 - Electron 41.x (future)
+  'electron-v143', // ABI 143 - Electron 42.x (future)
+  'electron-v144', // ABI 144 - Electron 43.x (future)
   // Node.js versions for remote/server VSCode
   'node-v108', // Node.js 18
   'node-v115', // Node.js 20

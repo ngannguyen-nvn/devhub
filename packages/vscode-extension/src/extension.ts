@@ -18,7 +18,7 @@ import type { ServicesTreeProvider } from './views/ServicesTreeProvider'
 import type { WorkspaceTreeProvider } from './views/WorkspaceTreeProvider'
 import type { DashboardTreeProvider } from './views/DashboardTreeProvider'
 import type { DockerTreeProvider } from './views/DockerTreeProvider'
-import type { EnvironmentTreeProvider } from './views/EnvironmentTreeProvider'
+import type { EnvironmentTreeProvider, EnvironmentTreeItem } from './views/EnvironmentTreeProvider'
 import type { NotesTreeProvider } from './views/NotesTreeProvider'
 
 let devhubManager: DevHubManager | undefined

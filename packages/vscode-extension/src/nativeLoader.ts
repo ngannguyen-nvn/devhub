@@ -29,6 +29,7 @@ export function loadBetterSqlite3(extensionPath: string) {
   if (electronVersion) {
     // Running in Electron - use electron-vXXX prebuilds
     // Map NODE_MODULE_VERSION to electron-vXXX
+    // The prebuild naming uses the ABI version (e.g., electron-v140 for Electron 39 with ABI 140)
     const abiToElectronMap: Record<string, string> = {
       '116': 'electron-v121',
       '119': 'electron-v123',
@@ -41,6 +42,12 @@ export function loadBetterSqlite3(extensionPath: string) {
       '131': 'electron-v135',
       '132': 'electron-v136',
       '137': 'electron-v139',
+      '139': 'electron-v139', // Electron 34.x (VSCode 1.94-1.106)
+      '140': 'electron-v140', // Electron 39.x (VSCode 1.107-1.108)
+      '141': 'electron-v141', // Electron 40.x (future)
+      '142': 'electron-v142', // Electron 41.x (future)
+      '143': 'electron-v143', // Electron 42.x (future)
+      '144': 'electron-v144', // Electron 43.x (future)
     };
 
     const electronABI = abiToElectronMap[moduleVersion];

@@ -13,14 +13,21 @@
     "theme": "dark"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Debuggers",
+    "Visualization"
   ],
   "keywords": [
     "microservices",
     "docker",
-    "developer-tools",
+    "services",
+    "environment",
     "devops",
-    "productivity"
+    "productivity",
+    "workspace",
+    "documentation",
+    "wiki",
+    "containers"
   ],
   "repository": {
     "type": "git",
@@ -312,9 +319,10 @@
     "package:win32-x64": "VSCE_TARGET=win32-x64 vsce package --target win32-x64 --no-dependencies",
     "package:win32-arm64": "VSCE_TARGET=win32-arm64 vsce package --target win32-arm64 --no-dependencies",
     "package:all": "npm run package:linux-x64 && npm run package:linux-arm64 && npm run package:darwin-x64 && npm run package:darwin-arm64 && npm run package:win32-x64 && npm run package:win32-arm64",
+    "publish": "vsce publish --packagePath devhub-linux-x64-*.vsix devhub-linux-arm64-*.vsix devhub-darwin-x64-*.vsix devhub-darwin-arm64-*.vsix devhub-win32-x64-*.vsix devhub-win32-arm64-*.vsix",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
-    "reinstall": "npm run package && code --uninstall-extension devhub.devhub && code --install-extension devhub-2.0.0.vsix --force"
+    "reinstall": "npm run package && code --uninstall-extension devhub.devhub && code --install-extension devhub-*.vsix --force"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.0",

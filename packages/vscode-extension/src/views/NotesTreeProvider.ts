@@ -19,8 +19,9 @@ export class NotesTreeProvider implements vscode.TreeDataProvider<NotesTreeItem>
     if (!element) {
       // Root level - show categories or all notes
       try {
+        const workspaceId = this.devhubManager.getActiveWorkspaceId()
         const notesManager = this.devhubManager.getNotesManager()
-        const notes = await notesManager.getAllNotes()
+        const notes = await notesManager.getAllNotes(workspaceId)
 
         if (notes.length === 0) {
           return [new NotesTreeItem('No notes found', '', vscode.TreeItemCollapsibleState.None, 'info')]

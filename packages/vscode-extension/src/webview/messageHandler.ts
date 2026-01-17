@@ -114,7 +114,7 @@ export class MessageHandler {
 
       if (type === 'docker.runContainer') {
         const { imageName, containerName, ports, env } = payload
-        const container = await this.devhubManager.getDockerManager().runContainer(imageName, containerName, ports, env)
+        const container = await this.devhubManager.getDockerManager().runContainer(imageName, containerName, { ports, env })
         return { success: true, container }
       }
 
@@ -205,7 +205,7 @@ export class MessageHandler {
         const { snapshotId, syncEnvFiles } = payload
         return await this.devhubManager.getWorkspaceManager().restoreSnapshot(
           snapshotId,
-          { syncEnvFiles }
+          syncEnvFiles ?? false
         )
       }
 
@@ -404,8 +404,15 @@ export class MessageHandler {
       }
 
       if (type === 'env.syncToService') {
+        // Export profile variables to the service's .env file
         const { profileId, serviceId } = payload
-        return this.devhubManager.getEnvManager().syncProfileToService(profileId, serviceId)
+        const allServices = this.devhubManager.getServiceManager().getAllServices(workspaceId)
+        const service = allServices.find(s => s.id === serviceId)
+        if (!service) {
+          throw new Error('Service not found')
+        }
+        const envFilePath = `${service.repoPath}/.env`
+        return this.devhubManager.getEnvManager().exportToEnvFile(profileId, envFilePath, serviceId)
       }
 
       // Notes operations
@@ -443,11 +450,11 @@ export class MessageHandler {
       }
 
       if (type === 'notes.getCategories') {
-        return this.devhubManager.getNotesManager().getCategories(workspaceId)
+        return this.devhubManager.getNotesManager().getCategories()
       }
 
       if (type === 'notes.getTags') {
-        return this.devhubManager.getNotesManager().getTags(workspaceId)
+        return this.devhubManager.getNotesManager().getTags()
       }
 
       if (type === 'notes.getTemplates') {
@@ -455,11 +462,11 @@ export class MessageHandler {
       }
 
       if (type === 'notes.getLinks') {
-        return this.devhubManager.getNotesManager().getNoteLinks(payload.noteId)
+        return this.devhubManager.getNotesManager().getLinkedNotes(payload.noteId)
       }
 
       if (type === 'notes.getBacklinks') {
-        return this.devhubManager.getNotesManager().getNoteBacklinks(payload.noteId)
+        return this.devhubManager.getNotesManager().getBacklinks(payload.noteId)
       }
 
       // Health check operations
