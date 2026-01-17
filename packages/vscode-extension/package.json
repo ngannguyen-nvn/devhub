@@ -1,11 +1,16 @@
 {
+  "publisher": "NganNguyen",
   "name": "devhub",
   "displayName": "DevHub - Developer Mission Control",
   "description": "Manage microservices, Docker, environment variables, and documentation from within VSCode",
-  "version": "2.0.0",
-  "publisher": "devhub",
+  "version": "2.0.2",
   "engines": {
     "vscode": "^1.85.0"
+  },
+  "icon": "images/devhub-icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
   },
   "categories": [
     "Other"
