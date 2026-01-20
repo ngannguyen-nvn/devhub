@@ -69,6 +69,13 @@
   min-width: 180px;
   cursor: pointer;
   outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23cccccc' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
 }
 
 .group-filter:focus {
@@ -78,7 +85,16 @@
 }
 
 .group-filter:hover {
+  background-color: var(--vscode-dropdown-listBackground);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23cccccc' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.group-filter option {
   background: var(--vscode-dropdown-listBackground);
+  color: var(--vscode-dropdown-foreground);
+  padding: 8px 12px;
 }
 
 /* Central Logs */
