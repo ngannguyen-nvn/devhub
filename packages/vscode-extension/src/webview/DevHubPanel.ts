@@ -20,7 +20,7 @@ export class DevHubPanel {
     private context: vscode.ExtensionContext,
     private devhubManager: DevHubManager
   ) {
-    this.messageHandler = new MessageHandler(devhubManager)
+    this.messageHandler = new MessageHandler(devhubManager, (msg) => this.postMessage(msg))
   }
 
   /**

@@ -13,6 +13,8 @@ export interface Repository {
     author: string
   } | null
   hasDockerfile: boolean
+  hasDockerCompose: boolean
+  dockerComposeFiles: string[] // List of docker-compose files found
   hasEnvFile: boolean // Deprecated: kept for backward compatibility
   envFiles: string[] // List of .env files found (.env, .env.development, etc.)
 }
@@ -105,6 +107,10 @@ export class RepoScanner {
       // Check for Dockerfile
       const hasDockerfile = await this.checkFileExists(repoPath, 'Dockerfile')
 
+      // Check for docker-compose files (multiple variants)
+      const dockerComposeFiles = await this.findDockerComposeFiles(repoPath)
+      const hasDockerCompose = dockerComposeFiles.length > 0
+
       // Check for .env files (multiple variants)
       const envFiles = await this.findEnvFiles(repoPath)
       const hasEnvFile = envFiles.length > 0 // Backward compatibility
@@ -116,6 +122,8 @@ export class RepoScanner {
         hasChanges,
         lastCommit,
         hasDockerfile,
+        hasDockerCompose,
+        dockerComposeFiles,
         hasEnvFile,
         envFiles,
       }
@@ -166,6 +174,118 @@ export class RepoScanner {
     } catch (error) {
       console.warn(`Error finding .env files in ${repoPath}:`, error)
       return []
+    }
+  }
+
+  /**
+   * Check if a filename is a docker-compose file
+   * Matches: docker-compose.yml, docker-compose.yaml, compose.yml, compose.yaml
+   * Also matches variants: docker-compose.staging.yml, docker-compose.prod.yml, etc.
+   */
+  private isDockerComposeFile(fileName: string): boolean {
+    // Check for standard patterns
+    const standardPatterns = [
+      'docker-compose.yml',
+      'docker-compose.yaml',
+      'compose.yml',
+      'compose.yaml',
+    ]
+    if (standardPatterns.includes(fileName)) return true
+    
+    // Check for variant patterns: docker-compose.*.yml or docker-compose.*.yaml
+    if (fileName.startsWith('docker-compose.') && (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))) {
+      return true
+    }
+    
+    // Check for variant patterns: compose.*.yml or compose.*.yaml
+    if (fileName.startsWith('compose.') && (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))) {
+      return true
+    }
+    
+    return false
+  }
+
+  /**
+   * Find all docker-compose files in the repository
+   * Scans for docker-compose.yml, docker-compose.yaml, and their variants
+   * Recursively searches subdirectories up to depth 4
+   * Also finds variant files like docker-compose.staging.yml
+   */
+  private async findDockerComposeFiles(repoPath: string): Promise<string[]> {
+    const composeFiles: string[] = []
+    const composePatterns = [
+      'docker-compose.yml',
+      'docker-compose.yaml',
+      'compose.yml',
+      'compose.yaml',
+    ]
+
+    // Directories to skip
+    const skipDirs = ['node_modules', '.git', 'dist', 'build', 'coverage', '.next', 'vendor']
+
+    try {
+      // Recursively search for compose files (up to 4 levels deep)
+      await this.findComposeFilesRecursive(repoPath, repoPath, skipDirs, composeFiles, 0, 4)
+
+      // Sort to ensure consistent order (docker-compose first, then compose, then by path depth)
+      composeFiles.sort((a, b) => {
+        // Extract just the filename for comparison
+        const fileNameA = path.basename(a)
+        const fileNameB = path.basename(b)
+        
+        const aIsDockerCompose = fileNameA.startsWith('docker-compose')
+        const bIsDockerCompose = fileNameB.startsWith('docker-compose')
+        if (aIsDockerCompose && !bIsDockerCompose) return -1
+        if (!aIsDockerCompose && bIsDockerCompose) return 1
+        
+        // Sort by path depth (root level first)
+        const depthA = a.split('/').length
+        const depthB = b.split('/').length
+        if (depthA !== depthB) return depthA - depthB
+        
+        return a.localeCompare(b)
+      })
+
+      return composeFiles
+    } catch (error) {
+      console.warn(`Error finding docker-compose files in ${repoPath}:`, error)
+      return []
+    }
+  }
+
+  /**
+   * Recursively search for docker-compose files in subdirectories
+   * @param repoPath - The root repository path (for calculating relative paths)
+   * @param currentDir - The current directory being searched
+   */
+  private async findComposeFilesRecursive(
+    repoPath: string,
+    currentDir: string,
+    skipDirs: string[],
+    composeFiles: string[],
+    currentDepth: number,
+    maxDepth: number
+  ): Promise<void> {
+    if (currentDepth > maxDepth) return
+
+    try {
+      const entries = await fs.readdir(currentDir, { withFileTypes: true })
+
+      for (const entry of entries) {
+        const fullPath = path.join(currentDir, entry.name)
+
+        if (entry.isFile() && this.isDockerComposeFile(entry.name)) {
+          // Calculate relative path from repo root
+          const relativePath = fullPath.substring(repoPath.length).replace(/^[//\\]/, '')
+          composeFiles.push(relativePath || entry.name)
+        } else if (entry.isDirectory() && !skipDirs.includes(entry.name)) {
+          // Recurse into subdirectories (but not skipped ones)
+          await this.findComposeFilesRecursive(repoPath, fullPath, skipDirs, composeFiles, currentDepth + 1, maxDepth)
+        }
+      }
+    } catch (error) {
+      // Skip directories we can't read
+      console.warn(`Skipping directory ${currentDir}:`, error)
     }
   }
 }

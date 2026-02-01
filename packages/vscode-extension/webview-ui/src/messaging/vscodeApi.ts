@@ -29,6 +29,12 @@ const pendingMessages = new Map<number, {
   reject: (error: any) => void
 }>()
 
+// Streaming callbacks
+const streamingCallbacks = new Map<string, {
+  onProgress: (log: string, progress?: any) => void
+  onComplete: (success: boolean, error?: string, logs?: string[]) => void
+}>()
+
 /**
  * Send message to extension host and wait for response
  */
@@ -66,6 +72,25 @@ window.addEventListener('message', (event) => {
       reject(new Error(message.error))
     } else {
       resolve(message.response)
+    }
+  }
+
+  // Handle streaming progress messages
+  if (message.type === 'docker.buildProgress') {
+    const { requestId, log, progress } = message.payload
+    const callbacks = streamingCallbacks.get(requestId)
+    if (callbacks) {
+      callbacks.onProgress(log, progress)
+    }
+  }
+
+  // Handle streaming completion
+  if (message.type === 'docker.buildComplete') {
+    const { requestId, success, error, logs } = message.payload
+    const callbacks = streamingCallbacks.get(requestId)
+    if (callbacks) {
+      callbacks.onComplete(success, error, logs)
+      streamingCallbacks.delete(requestId)
     }
   }
 })
@@ -117,6 +142,15 @@ export const dockerApi = {
   ping: () => sendMessage('docker.ping'),
   listImages: () => sendMessage('docker.listImages'),
   buildImage: (data: any) => sendMessage('docker.buildImage', data),
+  buildImageStream: (
+    data: any,
+    onProgress: (log: string, progress?: any) => void,
+    onComplete: (success: boolean, error?: string, logs?: string[]) => void
+  ) => {
+    const requestId = `build-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    streamingCallbacks.set(requestId, { onProgress, onComplete })
+    return sendMessage('docker.buildImageStream', { ...data, requestId })
+  },
   removeImage: (id: string) => sendMessage('docker.removeImage', { id }),
   listContainers: () => sendMessage('docker.listContainers'),
   runContainer: (data: any) => sendMessage('docker.runContainer', data),
@@ -124,7 +158,22 @@ export const dockerApi = {
   stopContainer: (id: string) => sendMessage('docker.stopContainer', { id }),
   removeContainer: (id: string) => sendMessage('docker.removeContainer', { id }),
   getContainerLogs: (id: string) => sendMessage('docker.getContainerLogs', { id }),
-  generateCompose: (data: any) => sendMessage('docker.generateCompose', data)
+  generateCompose: (data: any) => sendMessage('docker.generateCompose', data),
+  parseCompose: (filePath: string) => sendMessage('docker.parseCompose', { filePath }),
+  importCompose: (filePath: string, serviceNames?: string[]) =>
+    sendMessage('docker.importCompose', { filePath, serviceNames }),
+  validateCompose: (content: string) => sendMessage('docker.validateCompose', { content }),
+  saveCompose: (filePath: string, content: string) =>
+    sendMessage('docker.saveCompose', { filePath, content }),
+  composeUp: (filePath: string, options?: any) =>
+    sendMessage('docker.composeUp', { filePath, options }),
+  composeDown: (filePath: string, options?: any) =>
+    sendMessage('docker.composeDown', { filePath, options }),
+  composePs: (filePath: string) => sendMessage('docker.composePs', { filePath }),
+  composeLogs: (filePath: string, service?: string, tail?: number) =>
+    sendMessage('docker.composeLogs', { filePath, service, tail }),
+  composeScan: (scanPath: string, depth?: number) =>
+    sendMessage('docker.composeScan', { path: scanPath, depth })
 }
 
 // Workspace operations

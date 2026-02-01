@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import * as yaml from 'js-yaml'
 import { dockerApi } from '../messaging/vscodeApi'
 import '../styles/Docker.css'
 
@@ -43,6 +44,8 @@ interface ComposeService {
   environment?: Record<string, string>
   volumes?: string[]
   dependsOn?: string[]
+  command?: string
+  restart?: string
 }
 
 export default function Docker() {
@@ -188,19 +191,27 @@ export default function Docker() {
     setBuildLogs([])
 
     try {
-      const result = await dockerApi.buildImage(buildForm)
-
-      if (result.success) {
-        setShowBuildForm(false)
-        setBuildForm({ contextPath: '', dockerfilePath: 'Dockerfile', tag: '' })
-        fetchImages()
-      } else {
-        setError(result.error || 'Build failed')
-      }
+      await dockerApi.buildImageStream(
+        buildForm,
+        (log) => {
+          // On progress - add log line
+          setBuildLogs((prev) => [...prev, log])
+        },
+        (success, error) => {
+          // On complete
+          setBuilding(false)
+          if (success) {
+            setShowBuildForm(false)
+            setBuildForm({ contextPath: '', dockerfilePath: 'Dockerfile', tag: '' })
+            fetchImages()
+          } else {
+            setError(error || 'Build failed')
+          }
+        }
+      )
     } catch (err) {
       console.error('[Docker] Build error:', err)
       setError(err instanceof Error ? err.message : 'Build failed')
-    } finally {
       setBuilding(false)
     }
   }
@@ -325,6 +336,103 @@ export default function Docker() {
     })
     setShowAddServiceForm(false)
     setGeneratedYaml('')
+  }
+
+  const handleRunComposeService = async (service: ComposeService) => {
+    // Validate that service has either image or build
+    if (!service.image && !service.build) {
+      setError(`Service "${service.name}" must have either an image or a build context to run`)
+      return
+    }
+
+    try {
+      // Create service config conditionally - only add fields that exist
+      const serviceConfig: any = {}
+      if (service.image) serviceConfig.image = service.image
+      if (service.build) serviceConfig.build = service.build
+      if (service.ports && service.ports.length > 0) serviceConfig.ports = service.ports
+      if (service.environment && Object.keys(service.environment).length > 0) serviceConfig.environment = service.environment
+      if (service.volumes && service.volumes.length > 0) serviceConfig.volumes = service.volumes
+      if (service.dependsOn && service.dependsOn.length > 0) serviceConfig.depends_on = service.dependsOn
+      if (service.command) serviceConfig.command = service.command
+      if (service.restart) serviceConfig.restart = service.restart
+
+      // Create a temporary compose file with just this service
+      const singleServiceCompose = {
+        version: '3.8',
+        services: {
+          [service.name]: serviceConfig
+        }
+      }
+
+      // Convert to YAML using js-yaml
+      const yamlContent = yaml.dump(singleServiceCompose, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+      })
+
+      // Save to temp file
+      const tempFileName = `temp-${service.name}-${Date.now()}.yml`
+      const response = await dockerApi.saveCompose(`/tmp/${tempFileName}`, yamlContent)
+
+      if (response.success) {
+        // Run the service
+        const runResponse = await dockerApi.composeUp(`/tmp/${tempFileName}`, {
+          services: [service.name]
+        })
+
+        if (runResponse.success) {
+          setError(`Service "${service.name}" started successfully`)
+        } else {
+          setError(`Failed to start service: ${runResponse.error}${runResponse.errorOutput ? '\n\n' + runResponse.errorOutput : ''}`)
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to run service')
+    }
+  }
+
+  const handleBuildComposeImage = async (service: ComposeService) => {
+    // Check if service has build context
+    if (!service.build || !service.build.context) {
+      setError(`Service "${service.name}" must have a build context to build an image`)
+      return
+    }
+
+    setBuilding(true)
+    setBuildLogs([])
+
+    try {
+      // Use service name as tag if not specified
+      const tag = service.image || `${service.name}:latest`
+
+      await dockerApi.buildImageStream(
+        {
+          contextPath: service.build.context,
+          dockerfilePath: service.build.dockerfile || 'Dockerfile',
+          tag: tag,
+        },
+        (log) => {
+          // On progress - add log line
+          setBuildLogs((prev) => [...prev, log])
+        },
+        (success, error) => {
+          // On complete
+          setBuilding(false)
+          if (success) {
+            setError(`Image for service "${service.name}" built successfully`)
+            fetchImages()
+          } else {
+            setError(error || `Failed to build image for service "${service.name}"`)
+          }
+        }
+      )
+    } catch (err) {
+      console.error('[Docker] Build error:', err)
+      setError(err instanceof Error ? err.message : 'Build failed')
+      setBuilding(false)
+    }
   }
 
   const handleRemoveComposeService = (index: number) => {
@@ -703,7 +811,7 @@ export default function Docker() {
 
             {/* Container Logs */}
             {selectedContainer && (
-              <div className="logs-panel">
+              <div className="docker-logs-panel">
                 <div className="logs-header">
                   <h3>Container Logs</h3>
                   <button onClick={() => fetchContainerLogs(selectedContainer)}>
@@ -837,10 +945,28 @@ export default function Docker() {
                     No services added yet. Click "Add Service" to get started.
                   </div>
                 ) : (
-                  composeServices.map((service, index) => (
-                    <div key={index} className="compose-service-card">
-                      <div className="service-header">
-                        <h4>{service.name}</h4>
+                composeServices.map((service, index) => (
+                  <div key={index} className="compose-service-card">
+                    <div className="service-header">
+                      <h4>{service.name}</h4>
+                      <div className="service-actions">
+                        {service.build && (
+                          <button
+                            className="btn-primary-small"
+                            onClick={() => handleBuildComposeImage(service)}
+                            disabled={building}
+                            title="Build Image"
+                          >
+                            Build
+                          </button>
+                        )}
+                        <button
+                          className="btn-success-small"
+                          onClick={() => handleRunComposeService(service)}
+                          title="Run Service"
+                        >
+                          Run
+                        </button>
                         <button
                           className="btn-danger-small"
                           onClick={() => handleRemoveComposeService(index)}
@@ -849,6 +975,7 @@ export default function Docker() {
                           Remove
                         </button>
                       </div>
+                    </div>
                       <div className="service-details">
                         {service.image && (
                           <div className="detail-row">
@@ -880,6 +1007,25 @@ export default function Docker() {
                 )}
               </div>
             </div>
+
+            {/* Build Logs - Shows during image build */}
+            {building && (
+              <div className="compose-build-logs">
+                <div className="build-logs-header">
+                  <h3>Building Image...</h3>
+                  <span className="loading-indicator"></span>
+                </div>
+                <div className="build-logs-content">
+                  {buildLogs.length === 0 ? (
+                    <div className="build-logs-empty">Starting build...</div>
+                  ) : (
+                    buildLogs.map((log, i) => (
+                      <div key={i} className="build-log-line">{log}</div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Right: YAML Preview and Actions */}
             <div className="compose-preview">

@@ -23,6 +23,7 @@ import {
   LogManager,
   GroupManager,
   RepoScanner,
+  DockerComposeParser,
 } from '@devhub/core'
 import type { Service, Repository } from '@devhub/shared'
 
@@ -36,6 +37,7 @@ export class DevHubManager {
   private logManager!: LogManager
   private groupManager!: GroupManager
   private repoScanner!: RepoScanner
+  private dockerComposeParser!: DockerComposeParser
   private activeWorkspaceId: string | null = null
 
   private dbPath: string
@@ -68,6 +70,7 @@ export class DevHubManager {
       this.logManager = new LogManager()
       this.groupManager = new GroupManager()
       this.repoScanner = new RepoScanner()
+      this.dockerComposeParser = new DockerComposeParser()
 
       // WorkspaceManager needs other managers
       this.workspaceManager = new WorkspaceManager(
@@ -157,6 +160,10 @@ export class DevHubManager {
 
   getRepoScanner() {
     return this.repoScanner
+  }
+
+  getDockerComposeParser() {
+    return this.dockerComposeParser
   }
 
   getActiveWorkspaceId(): string {

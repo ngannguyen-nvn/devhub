@@ -11,6 +11,7 @@ import workspaceRoutes from './routes/workspaces'
 import notesRoutes from './routes/notes'
 import groupRoutes from './routes/groups'
 import databaseRoutes from './routes/database'
+import { serviceManager, healthCheckManager } from '@devhub/core'
 import '@devhub/core'
 
 dotenv.config()
@@ -67,6 +68,69 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 DevHub API running on http://localhost:${PORT}`)
+})
+
+/**
+ * Graceful shutdown handler
+ * Ensures all child processes are stopped before exiting
+ */
+async function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} received. Starting graceful shutdown...`)
+
+  // Set a timeout to force exit if graceful shutdown takes too long
+  const forceExitTimeout = setTimeout(() => {
+    console.error('Graceful shutdown timeout reached (10s). Forcing exit...')
+    process.exit(1)
+  }, 10000)
+
+  // Stop accepting new connections
+  server.close(() => {
+    console.log('✓ HTTP server closed')
+  })
+
+  // Stop all running services
+  try {
+    serviceManager.stopAll()
+    console.log('✓ All services stopped')
+  } catch (error) {
+    console.error('Error stopping services:', error)
+  }
+
+  // Cleanup health check intervals
+  try {
+    healthCheckManager.cleanup()
+    console.log('✓ Health checks cleaned up')
+  } catch (error) {
+    console.error('Error cleaning up health checks:', error)
+  }
+
+  // Dispose service manager (cleanup intervals)
+  try {
+    serviceManager.dispose()
+    console.log('✓ Service manager disposed')
+  } catch (error) {
+    console.error('Error disposing service manager:', error)
+  }
+
+  clearTimeout(forceExitTimeout)
+  console.log('Graceful shutdown complete. Exiting...')
+  process.exit(0)
+}
+
+// Handle termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error)
+  gracefulShutdown('uncaughtException')
+})
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+  gracefulShutdown('unhandledRejection')
 })

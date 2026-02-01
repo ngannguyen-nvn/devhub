@@ -9,7 +9,10 @@ export interface Repository {
     author: string
   } | null
   hasDockerfile: boolean
+  hasDockerCompose: boolean
+  dockerComposeFiles: string[] // List of docker-compose files found
   hasEnvFile: boolean
+  envFiles?: string[] // List of .env files found
 }
 
 export interface ScanResponse {

@@ -13,11 +13,13 @@
     "@devhub/shared": "*",
     "better-sqlite3": "^12.6.0",
     "dockerode": "^4.0.0",
+    "js-yaml": "^4.1.1",
     "simple-git": "^3.21.0",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
     "typescript": "^5.3.3"
   }

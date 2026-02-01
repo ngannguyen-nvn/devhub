@@ -13,7 +13,10 @@
 import { DevHubManager } from '../extensionHost/devhubManager'
 
 export class MessageHandler {
-  constructor(private devhubManager: DevHubManager) {}
+  constructor(
+    private devhubManager: DevHubManager,
+    private postMessage?: (message: any) => void
+  ) {}
 
   /**
    * Handle message from webview
@@ -102,6 +105,59 @@ export class MessageHandler {
         }
       }
 
+      if (type === 'docker.buildImageStream') {
+        const { contextPath, dockerfilePath, tag, requestId } = payload
+
+        if (!this.postMessage) {
+          return { success: false, error: 'Streaming not supported' }
+        }
+
+        try {
+          const buildLogs: string[] = []
+          await this.devhubManager.getDockerManager().buildImage(
+            contextPath,
+            dockerfilePath || 'Dockerfile',
+            tag,
+            (progress) => {
+              // Send progress updates to webview
+              const logLine = progress.stream || progress.status || JSON.stringify(progress)
+              buildLogs.push(logLine)
+              this.postMessage!({
+                type: 'docker.buildProgress',
+                payload: {
+                  requestId,
+                  log: logLine,
+                  progress,
+                },
+              })
+            }
+          )
+
+          // Send completion
+          this.postMessage!({
+            type: 'docker.buildComplete',
+            payload: {
+              requestId,
+              success: true,
+              logs: buildLogs,
+            },
+          })
+
+          return { success: true, streamed: true }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Build failed'
+          this.postMessage!({
+            type: 'docker.buildComplete',
+            payload: {
+              requestId,
+              success: false,
+              error: errorMessage,
+            },
+          })
+          return { success: false, error: errorMessage }
+        }
+      }
+
       if (type === 'docker.removeImage') {
         await this.devhubManager.getDockerManager().removeImage(payload.id)
         return { success: true }
@@ -142,6 +198,343 @@ export class MessageHandler {
         const { services } = payload
         const yaml = await this.devhubManager.getDockerManager().generateDockerCompose(services)
         return { yaml }
+      }
+
+      if (type === 'docker.parseCompose') {
+        const { filePath } = payload
+        if (!filePath || typeof filePath !== 'string') {
+          throw new Error('filePath is required')
+        }
+        const parsed = await this.devhubManager.getDockerComposeParser().parseFile(filePath)
+        if (!parsed) {
+          throw new Error('Failed to parse docker-compose file')
+        }
+        return { compose: parsed }
+      }
+
+      if (type === 'docker.importCompose') {
+        const { filePath, serviceNames } = payload
+        const workspaceId = this.devhubManager.getActiveWorkspaceId()
+        
+        if (!filePath || typeof filePath !== 'string') {
+          throw new Error('filePath is required')
+        }
+        
+        const parsed = await this.devhubManager.getDockerComposeParser().parseFile(filePath)
+        if (!parsed) {
+          throw new Error('Failed to parse docker-compose file')
+        }
+        
+        // Filter services if specific ones requested
+        const servicesToImport = serviceNames && Array.isArray(serviceNames)
+          ? parsed.services.filter(s => serviceNames.includes(s.name))
+          : parsed.services
+        
+        // Import each service
+        const importedServices = []
+        const path = require('path')
+        for (const composeService of servicesToImport) {
+          const repoPath = path.dirname(filePath)
+          const devhubService = this.devhubManager.getDockerComposeParser().convertToDevHubService(composeService, repoPath)
+          devhubService.workspaceId = workspaceId
+          importedServices.push(devhubService)
+        }
+        
+        return {
+          imported: importedServices.length,
+          services: importedServices,
+          compose: {
+            filePath: parsed.filePath,
+            fileName: parsed.fileName,
+            version: parsed.version,
+            networks: parsed.networks,
+            volumes: parsed.volumes,
+          },
+        }
+      }
+
+      if (type === 'docker.validateCompose') {
+        const { content } = payload
+        if (!content || typeof content !== 'string') {
+          throw new Error('content is required')
+        }
+        const result = this.devhubManager.getDockerComposeParser().validateContent(content)
+        return { valid: result.valid, error: result.error }
+      }
+
+      if (type === 'docker.saveCompose') {
+        const { filePath, content } = payload
+        if (!filePath || typeof filePath !== 'string') {
+          throw new Error('filePath is required')
+        }
+        if (!content || typeof content !== 'string') {
+          throw new Error('content is required')
+        }
+        
+        // Validate content first
+        const validation = this.devhubManager.getDockerComposeParser().validateContent(content)
+        if (!validation.valid) {
+          throw new Error(`Invalid docker-compose content: ${validation.error}`)
+        }
+        
+        const success = await this.devhubManager.getDockerComposeParser().saveFile(filePath, content)
+        if (!success) {
+          throw new Error('Failed to save file')
+        }
+        return { success: true, message: 'File saved successfully' }
+      }
+
+      if (type === 'docker.composeUp') {
+        const { filePath, options = {} } = payload
+        if (!filePath || typeof filePath !== 'string') {
+          throw new Error('filePath is required')
+        }
+        
+        const { spawn } = require('child_process')
+        const path = require('path')
+        const cwd = path.dirname(filePath)
+        const fileName = path.basename(filePath)
+        
+        const args = ['-f', fileName, 'up', '-d']
+        if (options.build) args.push('--build')
+        if (options.forceRecreate) args.push('--force-recreate')
+        if (options.services && Array.isArray(options.services)) {
+          args.push(...options.services)
+        }
+        
+        return new Promise((resolve, reject) => {
+          const composeProcess = spawn('docker-compose', args, {
+            cwd,
+            stdio: ['ignore', 'pipe', 'pipe'],
+          })
+          
+          let stdout = ''
+          let stderr = ''
+          
+          composeProcess.stdout?.on('data', (data: Buffer) => {
+            stdout += data.toString()
+          })
+          
+          composeProcess.stderr?.on('data', (data: Buffer) => {
+            stderr += data.toString()
+          })
+          
+          composeProcess.on('close', (code: number) => {
+            if (code === 0) {
+              resolve({ success: true, output: stdout })
+            } else {
+              reject(new Error(`docker-compose up failed with code ${code}: ${stderr}`))
+            }
+          })
+          
+          composeProcess.on('error', (error: Error) => {
+            reject(error)
+          })
+        })
+      }
+
+      if (type === 'docker.composeDown') {
+        const { filePath, options = {} } = payload
+        if (!filePath || typeof filePath !== 'string') {
+          throw new Error('filePath is required')
+        }
+        
+        const { spawn } = require('child_process')
+        const path = require('path')
+        const cwd = path.dirname(filePath)
+        const fileName = path.basename(filePath)
+        
+        const args = ['-f', fileName, 'down']
+        if (options.volumes) args.push('-v')
+        if (options.removeImages) args.push('--rmi', options.removeImages)
+        if (options.removeOrphans) args.push('--remove-orphans')
+        
+        return new Promise((resolve, reject) => {
+          const composeProcess = spawn('docker-compose', args, {
+            cwd,
+            stdio: ['ignore', 'pipe', 'pipe'],
+          })
+          
+          let stdout = ''
+          let stderr = ''
+          
+          composeProcess.stdout?.on('data', (data: Buffer) => {
+            stdout += data.toString()
+          })
+          
+          composeProcess.stderr?.on('data', (data: Buffer) => {
+            stderr += data.toString()
+          })
+          
+          composeProcess.on('close', (code: number) => {
+            if (code === 0) {
+              resolve({ success: true, output: stdout })
+            } else {
+              reject(new Error(`docker-compose down failed with code ${code}: ${stderr}`))
+            }
+          })
+          
+          composeProcess.on('error', (error: Error) => {
+            reject(error)
+          })
+        })
+      }
+
+      if (type === 'docker.composePs') {
+        const { filePath } = payload
+        if (!filePath || typeof filePath !== 'string') {
+          throw new Error('filePath is required')
+        }
+        
+        const { spawn } = require('child_process')
+        const path = require('path')
+        const cwd = path.dirname(filePath)
+        const fileName = path.basename(filePath)
+        
+        return new Promise((resolve, reject) => {
+          const composeProcess = spawn('docker-compose', ['-f', fileName, 'ps', '--format', 'json'], {
+            cwd,
+            stdio: ['ignore', 'pipe', 'pipe'],
+          })
+          
+          let stdout = ''
+          let stderr = ''
+          
+          composeProcess.stdout?.on('data', (data: Buffer) => {
+            stdout += data.toString()
+          })
+          
+          composeProcess.stderr?.on('data', (data: Buffer) => {
+            stderr += data.toString()
+          })
+          
+          composeProcess.on('close', (code: number) => {
+            if (code === 0) {
+              try {
+                const containers = stdout ? JSON.parse(stdout) : []
+                resolve({ success: true, containers })
+              } catch {
+                resolve({ success: true, containers: [], output: stdout })
+              }
+            } else {
+              reject(new Error(`docker-compose ps failed with code ${code}: ${stderr}`))
+            }
+          })
+          
+          composeProcess.on('error', (error: Error) => {
+            reject(error)
+          })
+        })
+      }
+
+      if (type === 'docker.composeLogs') {
+        const { filePath, service, tail = '100' } = payload
+        if (!filePath || typeof filePath !== 'string') {
+          throw new Error('filePath is required')
+        }
+        
+        const { spawn } = require('child_process')
+        const path = require('path')
+        const cwd = path.dirname(filePath)
+        const fileName = path.basename(filePath)
+        
+        const args = ['-f', fileName, 'logs', '--tail', String(tail)]
+        if (service && typeof service === 'string') {
+          args.push(service)
+        }
+        
+        return new Promise((resolve, reject) => {
+          const composeProcess = spawn('docker-compose', args, {
+            cwd,
+            stdio: ['ignore', 'pipe', 'pipe'],
+          })
+          
+          let stdout = ''
+          let stderr = ''
+          
+          composeProcess.stdout?.on('data', (data: Buffer) => {
+            stdout += data.toString()
+          })
+          
+          composeProcess.stderr?.on('data', (data: Buffer) => {
+            stderr += data.toString()
+          })
+          
+          composeProcess.on('close', (code: number) => {
+            // Compose logs returns exit code 0 even if some services are stopped
+            resolve({
+              success: true,
+              logs: stdout,
+              errors: stderr || undefined,
+            })
+          })
+          
+          composeProcess.on('error', (error: Error) => {
+            reject(error)
+          })
+        })
+      }
+
+      if (type === 'docker.composeScan') {
+        const { path: scanPath, depth = 4 } = payload
+        if (!scanPath || typeof scanPath !== 'string') {
+          throw new Error('path is required')
+        }
+        
+        const path = require('path')
+        const fs = require('fs')
+        
+        const maxDepth = parseInt(depth, 10) || 4
+        const composeFiles: string[] = []
+        
+        // Patterns to match docker-compose files
+        const isDockerComposeFile = (fileName: string): boolean => {
+          if (['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'].includes(fileName)) {
+            return true
+          }
+          if (fileName.startsWith('docker-compose.') && (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))) {
+            return true
+          }
+          if (fileName.startsWith('compose.') && (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))) {
+            return true
+          }
+          return false
+        }
+        
+        // Directories to skip
+        const skipDirs = ['node_modules', '.git', 'dist', 'build', 'coverage', '.next', 'vendor']
+        
+        // Recursive scan function
+        const scanDir = (currentDir: string, currentDepth: number): void => {
+          if (currentDepth > maxDepth) return
+          
+          try {
+            const entries = fs.readdirSync(currentDir, { withFileTypes: true })
+            
+            for (const entry of entries) {
+              const fullPath = path.join(currentDir, entry.name)
+              
+              if (entry.isFile() && isDockerComposeFile(entry.name)) {
+                composeFiles.push(fullPath)
+              } else if (entry.isDirectory() && 
+                         !entry.name.startsWith('.') && 
+                         !skipDirs.includes(entry.name)) {
+                scanDir(fullPath, currentDepth + 1)
+              }
+            }
+          } catch (error) {
+            // Skip directories we can't read
+          }
+        }
+        
+        scanDir(scanPath, 0)
+        
+        return {
+          success: true,
+          path: scanPath,
+          count: composeFiles.length,
+          files: composeFiles,
+        }
       }
 
       // Workspace operations

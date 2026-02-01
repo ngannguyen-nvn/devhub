@@ -19,6 +19,7 @@ export { HealthCheckManager, healthCheckManager } from './services/healthCheckMa
 export { LogManager, logManager } from './services/logManager'
 export { GroupManager, groupManager } from './services/groupManager'
 export { RepoScanner } from './services/repoScanner'
+export { DockerComposeParser, dockerComposeParser } from './services/dockerComposeParser'
 
 // Database
 export { default as Database, DatabaseInstance } from './db/index'

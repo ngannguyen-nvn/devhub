@@ -4,7 +4,9 @@ import { DockerManager } from '@devhub/core'
 import { EnvManager } from '@devhub/core'
 import { NotesManager } from '@devhub/core'
 import { RepoScanner } from '@devhub/core'
+import { dockerComposeParser } from '@devhub/core'
 import { serviceManager } from './services'
+import path from 'path'
 
 const router = Router()
 
@@ -20,12 +22,12 @@ function sanitizeString(input: any, maxLength = 1000): string {
   return input.slice(0, maxLength).trim()
 }
 
-// Security: Validate name (alphanumeric, spaces, hyphens, underscores)
+// Security: Validate name (alphanumeric, spaces, hyphens, underscores, slashes for dates)
 function validateName(name: string): boolean {
   if (typeof name !== 'string' || name.length === 0 || name.length > 200) {
     return false
   }
-  return /^[a-zA-Z0-9\s\-_().]+$/.test(name)
+  return /^[a-zA-Z0-9\s\-_().\/]+$/.test(name)
 }
 
 // Initialize all managers
@@ -140,24 +142,24 @@ router.post('/snapshots/quick', async (req: Request, res: Response) => {
  */
 router.post('/snapshots/scan', async (req: Request, res: Response) => {
   try {
-    const { path, name, description, depth = 3, tags } = req.body
+    const { path: scanPath, name, description, depth = 3, tags } = req.body
 
-    if (!path) {
+    if (!scanPath) {
       return res.status(400).json({ success: false, error: 'Path is required' })
     }
 
     // Security: Validate path (prevent traversal)
-    if (!validatePath(path)) {
-      return res.status(400).json({ success: false, error: 'Path contains invalid sequences (../ or ..\\)' })
+    if (!validatePath(scanPath)) {
+      return res.status(400).json({ success: false, error: 'Path contains invalid sequences (../ or ..\)' })
     }
 
     // Security: Validate name if provided
     if (name && !validateName(name)) {
-      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, and parentheses' })
+      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, parentheses, and slashes' })
     }
 
     // Scan folder
-    const repositories = await repoScanner.scanDirectory(sanitizeString(path, 500), parseInt(depth as string))
+    const repositories = await repoScanner.scanDirectory(sanitizeString(scanPath, 500), parseInt(depth as string))
 
     if (repositories.length === 0) {
       return res.status(400).json({ success: false, error: 'No git repositories found in path' })
@@ -167,19 +169,57 @@ router.post('/snapshots/scan', async (req: Request, res: Response) => {
     const repoPaths = repositories.map(r => r.path)
     const snapshot = await workspaceManager.createSnapshot(
       name || workspaceManager.generateSnapshotName('Scan'),
-      description || `Scanned from ${path}`,
+      description || `Scanned from ${scanPath}`,
       repoPaths,
       undefined,
       tags ? tags.split(',').map((t: string) => t.trim()) : undefined,
-      path
+      scanPath
     )
+
+    // Auto-import docker-compose files from scanned repositories
+    const importedComposeServices: { repoPath: string; fileName: string; services: string[] }[] = []
+    for (const repo of repositories) {
+      if (repo.dockerComposeFiles && repo.dockerComposeFiles.length > 0) {
+        for (const composeFile of repo.dockerComposeFiles) {
+          const fullPath = path.join(repo.path, composeFile)
+          try {
+            const parsed = await dockerComposeParser.parseFile(fullPath)
+            if (parsed && parsed.services.length > 0) {
+              // Import each compose service as a DevHub service
+              for (const composeService of parsed.services) {
+                const devhubService = dockerComposeParser.convertToDevHubService(composeService, repo.path)
+                devhubService.name = `${composeService.name} (${repo.name})`
+                
+                // Create the service in the workspace
+                try {
+                  serviceManager.createService(snapshot.workspaceId, devhubService)
+                } catch (err) {
+                  // Service might already exist, log but continue
+                  console.log(`Service ${devhubService.name} may already exist, skipping`)
+                }
+              }
+              
+              importedComposeServices.push({
+                repoPath: repo.path,
+                fileName: composeFile,
+                services: parsed.services.map(s => s.name)
+              })
+            }
+          } catch (err) {
+            console.error(`Failed to parse compose file ${fullPath}:`, err)
+          }
+        }
+      }
+    }
 
     res.json({
       success: true,
       snapshot,
       scanResult: {
         count: repositories.length,
-        repositories
+        repositories,
+        importedComposeFiles: importedComposeServices.length,
+        composeImports: importedComposeServices
       }
     })
   } catch (error: any) {
@@ -484,7 +524,7 @@ router.post('/', (req: Request, res: Response) => {
 
     // Security: Validate name
     if (!validateName(name)) {
-      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, and parentheses' })
+      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, parentheses, and slashes' })
     }
 
     // Security: Validate folder path if provided (prevent traversal)
@@ -659,7 +699,7 @@ router.post('/:workspaceId/scan', async (req: Request, res: Response) => {
 
     // Security: Validate name if provided
     if (name && !validateName(name)) {
-      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, and parentheses' })
+      return res.status(400).json({ success: false, error: 'Invalid name. Use only alphanumeric characters, spaces, hyphens, underscores, parentheses, and slashes' })
     }
 
     // Scan folder

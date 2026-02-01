@@ -6,12 +6,16 @@ import {
   Trash2,
   RefreshCw,
   Container,
-  Plus
+  Plus,
+  FileSearch,
+  Hammer
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ConfirmDialog'
 import { SkeletonLoader } from './Loading'
+import { useWorkspace } from '../contexts/WorkspaceContext'
+import * as yaml from 'js-yaml'
 
 interface DockerImage {
   id: string
@@ -43,9 +47,13 @@ interface ComposeService {
   environment?: Record<string, string>
   volumes?: string[]
   dependsOn?: string[]
+  command?: string
+  restart?: string
 }
 
 export default function Docker() {
+  const { activeWorkspace, getComposeFiles } = useWorkspace()
+  
   const [activeTab, setActiveTab] = useState<'images' | 'containers' | 'compose'>('images')
   const [images, setImages] = useState<DockerImage[]>([])
   const [containers, setContainers] = useState<DockerContainer[]>([])
@@ -98,6 +106,26 @@ export default function Docker() {
     volumes: [],
     dependsOn: [],
   })
+
+  // Compose file scan state - default to workspace folder path
+  const [scanPath, setScanPath] = useState(activeWorkspace?.folderPath || '/home/user')
+  const [foundComposeFiles, setFoundComposeFiles] = useState<string[]>([])
+  const [scanning, setScanning] = useState(false)
+
+  // Update scan path when workspace changes
+  useEffect(() => {
+    if (activeWorkspace?.folderPath) {
+      setScanPath(activeWorkspace.folderPath)
+    }
+  }, [activeWorkspace])
+
+  // Load compose files from context when compose tab is active
+  useEffect(() => {
+    if (activeTab === 'compose' && activeWorkspace) {
+      const files = getComposeFiles(activeWorkspace.id)
+      setFoundComposeFiles(files)
+    }
+  }, [activeTab, activeWorkspace, getComposeFiles])
 
   // Check Docker availability
   const checkDocker = async () => {
@@ -158,7 +186,7 @@ export default function Docker() {
         fetchImages()
         const interval = setInterval(fetchImages, 5000)
         return () => clearInterval(interval)
-      } else {
+      } else if (activeTab === 'containers') {
         fetchContainers()
         const interval = setInterval(fetchContainers, 3000)
         return () => clearInterval(interval)
@@ -362,6 +390,148 @@ export default function Docker() {
     toast.success('Service removed from compose')
   }
 
+  const handleRunComposeService = async (service: ComposeService) => {
+    // Validate that service has image or build
+    if (!service.image && !service.build) {
+      toast.error(`Service "${service.name}" cannot be run: missing image or build context. Please add an image (e.g., "nginx:latest") or build configuration.`)
+      return
+    }
+
+    try {
+      // Create a temporary compose file with just this service
+      const serviceConfig: any = {
+        ports: service.ports,
+        environment: service.environment,
+        volumes: service.volumes,
+        command: service.command,
+        restart: service.restart,
+      }
+
+      // Only add image if it exists
+      if (service.image) {
+        serviceConfig.image = service.image
+      }
+
+      // Only add build if it exists
+      if (service.build) {
+        serviceConfig.build = service.build
+      }
+
+      // Only add depends_on if it exists
+      if (service.dependsOn && service.dependsOn.length > 0) {
+        serviceConfig.depends_on = service.dependsOn
+      }
+
+      const singleServiceCompose = {
+        version: '3.8',
+        services: {
+          [service.name]: serviceConfig
+        }
+      }
+
+      // Convert to YAML using js-yaml
+      const yamlContent = yaml.dump(singleServiceCompose, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+      })
+
+      // Save to temp file
+      const tempFileName = `temp-${service.name}-${Date.now()}.yml`
+      const response = await axios.post('/api/docker/compose/save', {
+        filePath: `/tmp/${tempFileName}`,
+        content: yamlContent,
+      })
+
+      if (response.data.success) {
+        // Run the service
+        const runResponse = await axios.post('/api/docker/compose/up', {
+          filePath: `/tmp/${tempFileName}`,
+          options: {
+            services: [service.name]
+          }
+        })
+
+        if (runResponse.data.success) {
+          toast.success(`Service "${service.name}" started successfully`)
+        } else {
+          const errorMsg = runResponse.data.errorOutput || runResponse.data.error || 'Unknown error'
+          toast.error(`Failed to start service: ${errorMsg}`)
+        }
+      }
+    } catch (error: any) {
+      toast.error(`Error running service: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
+  const handleBuildComposeImage = async (service: ComposeService) => {
+    // Validate that service has build context
+    if (!service.build) {
+      toast.error(`Service "${service.name}" cannot be built: missing build context. Please add a build configuration with context path.`)
+      return
+    }
+
+    setBuilding(true)
+    setBuildLogs([])
+
+    try {
+      // Build the Docker image with streaming logs
+      const response = await fetch('/api/docker/images/build', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contextPath: service.build.context,
+          dockerfilePath: service.build.dockerfile || 'Dockerfile',
+          tag: service.image || `${service.name}:latest`,
+        }),
+      })
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('No response body')
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.stream) {
+                setBuildLogs((prev) => [...prev, data.stream])
+              } else if (data.error) {
+                setBuildLogs((prev) => [...prev, `Error: ${data.error}`])
+              } else if (data.success) {
+                setBuilding(false)
+                toast.success(`Image for service "${service.name}" built successfully`)
+                fetchImages() // Refresh images list
+                return
+              }
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+
+      setBuilding(false)
+    } catch (error: any) {
+      setBuilding(false)
+      toast.error(`Error building image: ${error.message}`)
+    }
+  }
+
   const handleGenerateCompose = async () => {
     if (composeServices.length === 0) {
       toast.error('Add at least one service to generate compose file')
@@ -412,6 +582,47 @@ export default function Docker() {
     setComposeServices([])
     setGeneratedYaml('')
     toast.success('Compose configuration cleared')
+  }
+
+  const handleScanComposeFiles = async () => {
+    try {
+      setScanning(true)
+      const response = await axios.get(`/api/docker/compose/scan?path=${encodeURIComponent(scanPath)}&depth=4`)
+      if (response.data.success) {
+        setFoundComposeFiles(response.data.files || [])
+        if (response.data.files?.length > 0) {
+          toast.success(`Found ${response.data.files.length} docker-compose file(s)`)
+        } else {
+          toast('No docker-compose files found')
+        }
+      }
+    } catch (error: any) {
+      toast.error(`Failed to scan: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  const handleLoadComposeFile = async (filePath: string) => {
+    try {
+      const response = await axios.post('/api/docker/compose/parse', { filePath })
+      if (response.data.success) {
+        setGeneratedYaml(response.data.compose.rawContent)
+        // Convert compose services to composeServices state
+        const services = response.data.compose.services.map((s: any) => ({
+          name: s.name,
+          image: s.image,
+          ports: s.ports || [],
+          environment: s.environment || {},
+          volumes: s.volumes || [],
+          dependsOn: s.depends_on || [],
+        }))
+        setComposeServices(services)
+        toast.success(`Loaded ${services.length} service(s) from ${filePath.split('/').pop()}`)
+      }
+    } catch (error: any) {
+      toast.error(`Failed to load compose file: ${error.response?.data?.error || error.message}`)
+    }
   }
 
   const formatBytes = (bytes: number) => {
@@ -963,13 +1174,31 @@ export default function Docker() {
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleRemoveComposeService(index)}
-                        className="text-[hsl(var(--danger))] hover:opacity-80 transition-opacity"
-                        title="Remove"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-2 ml-2">
+                        <button
+                          onClick={() => handleRunComposeService(service)}
+                          className="text-[hsl(var(--success))] hover:opacity-80 transition-opacity"
+                          title="Run Service"
+                        >
+                          <Play className="w-5 h-5" />
+                        </button>
+                        {service.build && (
+                          <button
+                            onClick={() => handleBuildComposeImage(service)}
+                            className="text-[hsl(var(--primary))] hover:opacity-80 transition-opacity"
+                            title="Build Image"
+                          >
+                            <Hammer className="w-5 h-5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleRemoveComposeService(index)}
+                          className="text-[hsl(var(--danger))] hover:opacity-80 transition-opacity"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1012,7 +1241,68 @@ export default function Docker() {
                     className="hidden"
                   />
                 </label>
+                <button
+                  onClick={handleScanComposeFiles}
+                  disabled={scanning}
+                  className="px-4 py-2 bg-[hsl(var(--warning))] text-[hsl(var(--background))] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  <FileSearch className="w-4 h-4 inline mr-2" />
+                  {scanning ? 'Scanning...' : 'Scan Directory'}
+                </button>
               </div>
+
+              {/* Scan Path Input */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={scanPath}
+                  onChange={(e) => setScanPath(e.target.value)}
+                  placeholder="/path/to/scan"
+                  className="input-field flex-1"
+                />
+              </div>
+
+              {/* Found Compose Files */}
+              {foundComposeFiles.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium mb-2 text-[hsl(var(--foreground))]">Found Compose Files:</h3>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {foundComposeFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-[hsl(var(--background))] rounded-lg border border-[hsl(var(--border))]"
+                      >
+                        <span className="text-xs text-[hsl(var(--foreground-muted))] truncate flex-1">{file}</span>
+                        <button
+                          onClick={() => handleLoadComposeFile(file)}
+                          className="ml-2 px-3 py-1 text-xs btn-glow text-[hsl(var(--background))] rounded-lg"
+                        >
+                          Load
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Build Logs */}
+              {building && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium text-[hsl(var(--foreground))]">Building Image...</h3>
+                    <div className="animate-pulse text-[hsl(var(--primary))]">●</div>
+                  </div>
+                  <div className="bg-[hsl(var(--background))] text-[hsl(var(--success))] p-3 rounded-xl terminal-text text-xs h-48 overflow-y-auto border border-[hsl(var(--border))]">
+                    {buildLogs.length === 0 ? (
+                      <div className="text-[hsl(var(--foreground-muted))]">Starting build...</div>
+                    ) : (
+                      buildLogs.map((log, i) => (
+                        <div key={i} className="mb-1">{log}</div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* YAML Preview */}
               <div className="bg-[hsl(var(--background))] text-[hsl(var(--success))] p-4 rounded-xl terminal-text text-sm h-96 overflow-y-auto border border-[hsl(var(--border))]">

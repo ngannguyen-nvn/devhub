@@ -42,7 +42,7 @@ type ViewLevel = 'workspace-list' | 'workspace-detail' | 'snapshot-detail'
 
 export default function Workspaces() {
   // Workspace context
-  const { refreshWorkspaces: refreshGlobalWorkspaces } = useWorkspace()
+  const { refreshWorkspaces: refreshGlobalWorkspaces, setComposeFiles } = useWorkspace()
 
   // Navigation state
   const [viewLevel, setViewLevel] = useState<ViewLevel>('workspace-list')
@@ -847,6 +847,16 @@ export default function Workspaces() {
       // Import .env files if checkbox is enabled
       if (scanForm.importEnvFiles && repositories.length > 0) {
         await importEnvFilesToWorkspace(snapshot.workspaceId, repositories, scanForm.name)
+      }
+
+      // Extract and store compose files from scan response
+      const composeImports = response.data.scanResult?.composeImports || []
+      if (composeImports.length > 0) {
+        const filePaths = composeImports.map((importItem: any) => 
+          `${importItem.repoPath}/${importItem.fileName}`
+        )
+        setComposeFiles(snapshot.workspaceId, filePaths)
+        toast.success(`Found ${composeImports.length} docker-compose file(s)`)
       }
 
       setShowScanForm(false)

@@ -53,7 +53,7 @@ router.get('/scan', async (req, res) => {
       success: true,
       count: repositories.length,
       repositories,
-      scannedPath: path,
+      scannedPath: scanPath,
     })
   } catch (error) {
     console.error('Error scanning repositories:', error)

@@ -7,9 +7,12 @@ interface WorkspaceContextType {
   allWorkspaces: Workspace[]
   isLoading: boolean
   error: string | null
+  composeFiles: Record<string, string[]>
   switchWorkspace: (workspaceId: string) => Promise<void>
   refreshWorkspaces: () => Promise<void>
   createWorkspace: (name: string, description?: string, folderPath?: string) => Promise<Workspace>
+  setComposeFiles: (workspaceId: string, files: string[]) => void
+  getComposeFiles: (workspaceId: string) => string[]
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined)
@@ -19,6 +22,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [allWorkspaces, setAllWorkspaces] = useState<Workspace[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [composeFiles, setComposeFilesState] = useState<Record<string, string[]>>(() => {
+    // Load from localStorage on mount
+    try {
+      const stored = localStorage.getItem('devhub-compose-files')
+      return stored ? JSON.parse(stored) : {}
+    } catch {
+      return {}
+    }
+  })
 
   /**
    * Fetch all workspaces and identify the active one
@@ -118,6 +130,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     await fetchWorkspaces()
   }
 
+  /**
+   * Set compose files for a workspace and persist to localStorage
+   */
+  const setComposeFiles = (workspaceId: string, files: string[]) => {
+    setComposeFilesState(prev => {
+      const updated = { ...prev, [workspaceId]: files }
+      // Persist to localStorage
+      localStorage.setItem('devhub-compose-files', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  /**
+   * Get compose files for a workspace
+   */
+  const getComposeFiles = (workspaceId: string): string[] => {
+    return composeFiles[workspaceId] || []
+  }
+
   // Fetch workspaces on mount
   useEffect(() => {
     fetchWorkspaces()
@@ -128,9 +159,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     allWorkspaces,
     isLoading,
     error,
+    composeFiles,
     switchWorkspace,
     refreshWorkspaces,
     createWorkspace,
+    setComposeFiles,
+    getComposeFiles,
   }
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
